@@ -151,3 +151,31 @@ test('canonical schemas stay simple while encoded assumptions and explicit scala
   assert.equal(invoked,false);
  }
 });
+
+test('all question summaries carry explicit proof limits and failure recovery reads the completed projection',async()=>{
+ let queries=0;S.query=async a=>{queries++;const r=raw();r.request={arguments:{from:{name:'charge',parameter:'discount'}}};return r;};
+ const failed=await T.call('code',{code:"const r=await tools.where_value_flows({analysis:'pin',entry:'charge',parameter:'discount',sink:'store',argument:2}); console.log('retrieved'); return r.proof.sourceCoverage.complete;"});
+ assert.equal(failed.ok,false);assert.equal(queries,1);
+ assert.match(failed.diagnostic.message,/proof and sourceCoverage separate/);
+ assert.equal(failed.toolResults[0].readScope,'tool-response');
+ const full=require('../lib/chat-context').read(failed.toolResults[0].read.arguments).value;
+ assert.equal(full.summary.argumentExpression,'net');
+ assert.equal(full.summary.proofLimits.proof.status,'inconclusive');
+ assert.equal(full.summary.proofLimits.sourceCoverage.truncated,true);
+ const recovered=await T.call('code',failed.diagnostic.retry.arguments);
+ assert.equal(recovered.ok,true,JSON.stringify(recovered));
+ assert.equal(recovered.returned.argumentExpression,'net');
+ assert.equal(recovered.returned.proofLimits.sourceCoverage.truncated,true);
+ assert.equal(queries,1,'local formatting recovery must not query the source again');
+});
+
+test('list_analyses inside code is an explicit permission-checked alias with canonical provenance',async()=>{
+ let reads=0;S.index=async()=>{reads++;return {analyses:[{id:'pin',repo:'P/repo',sha:'abc'}]};};
+ const r=await T.call('code',{code:'return await tools.list_analyses({});'});
+ assert.equal(r.ok,true);assert.equal(r.returned.analyses[0].id,'pin');
+ assert.deepEqual(r.provenance.successfulTools,['which_analyses_exist']);
+ assert.equal(reads,1);
+ const access=require('../lib/access');
+ const denied=await access.run({principalId:'limited',storyId:'limited',multiUser:true,role:'user',tools:['code']},()=>T.call('code',{code:'return await tools.list_analyses({});'}));
+ assert.equal(denied.ok,false);assert.equal(reads,1,'alias cannot bypass target grants');
+});

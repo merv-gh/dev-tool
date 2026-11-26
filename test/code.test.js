@@ -235,3 +235,52 @@ test('missing transport metadata has a source completeness diagnostic',async()=>
  assert.equal(r.ok,false);assert.match(r.diagnostic.message,/sourceCoverage.provenComplete/);
  assert.match(r.diagnostic.message,/does not prove upstream completeness/);
 });
+
+test('receipt snapshots keep selected fields when the evidence view contains a different raw shape',()=>{
+ const R=require('../lib/results'),raw={flowMap:{nodes:[{id:'a'}]}},sourceView=R.saveView('json',raw);
+ const response={summary:{entry:'run',proofLimits:{proof:{behaviorVerified:false},sourceCoverage:{complete:false}}},view:sourceView};
+ const receipt=require('../lib/code-result').receipt('what_happens_from',response);
+ assert.notEqual(receipt.view,sourceView);assert.equal(receipt.sourceView,sourceView);
+ assert.equal(receipt.readScope,'tool-response');
+ assert.deepEqual(require('../lib/chat-context').read(receipt.read.arguments).value,response);
+ assert.deepEqual(R.load(sourceView.split('/').pop()).data,raw);
+ const C=require('../lib/code-result');
+ assert.equal(C.resolveName('list_analyses',[{name:'list_analyses'},{name:'which_analyses_exist'}]),'list_analyses','exact registered names win');
+});
+
+test('full retained reads preserve the exact response instead of interpreting nested business views',async()=>{
+ const R=require('../lib/results'),C=require('../lib/code-result'),P=require('../lib/chat-pressure');
+ const sourceView=R.saveView('json',{different:'raw-source-only'}),value={summary:{entry:'selected'},view:sourceView,field:'selected-response'};
+ const receipt=C.receipt('example',value);
+ const read=await T().call('result_read',receipt.read.arguments);
+ assert.deepEqual(read.value,value);
+ assert.deepEqual(P.response('result_read',read,{all:true}).value.value,value);
+ const external={view:'https://external.invalid/show/'+sourceView.split('/').pop(),selected:true};
+ assert.deepEqual(require('../lib/tool-output').full(external),external,'foreign origins are business data, not hydration links');
+});
+
+test('receipt retention failures keep source bridges explicit instead of claiming an exact snapshot',()=>{
+ const R=require('../lib/results'),saved=R.saveTool,sourceView=R.saveView('json',{raw:'evidence'});
+ try{R.saveTool=()=>{throw Error('storage quota');};
+  const r=require('../lib/code-result').receipt('example',{summary:{entry:'selected'},view:sourceView});
+  assert.equal(r.readScope,'source-evidence');assert.equal(r.view,sourceView);
+  assert.equal(r.retentionError,'storage quota');
+  const unavailable=require('../lib/code-result').receipt('example',{value:1});
+  assert.equal(unavailable.read,null);assert.equal(unavailable.retentionError,'storage quota');
+ }finally{R.saveTool=saved;}
+});
+
+test('code tool metadata respects the same principal grants as native discovery',async()=>{
+ const r=await require('../lib/access').run({principalId:'metadata-limited',storyId:'metadata-limited',multiUser:true,role:'user',tools:['code']},()=>T().call('code',{code:'return await tools.list();'}));
+ assert.equal(r.ok,true);assert.deepEqual(r.returned,[]);
+ assert.equal(r.discoveryOnly,true);
+});
+
+test('proof limits in selected summaries stay typed through a large code-result preview',()=>{
+ const summary={entry:'run',behaviorVerified:false,proofLimits:{entryMap:{proof:{status:'partial-static-map',runtime:'unknown',behaviorVerified:false},sourceCoverage:{complete:false,truncated:true,gapCount:4}},valueTrace:{proof:{status:'inconclusive',runtime:'unknown',behaviorVerified:false},sourceCoverage:{complete:null,truncated:false,gapCount:2}}}};
+ const original={ok:true,returned:{summary,graph:Array.from({length:200},(_,id)=>({id,code:'x'.repeat(1000)}))}};
+ const delivered=require('../lib/chat-context').prepare('code',original);
+ assert.deepEqual(delivered.returned.summary,summary);
+ assert.equal(delivered.modelContext.compacted,true);
+ assert.ok(Buffer.byteLength(JSON.stringify(delivered))<=12288);
+});

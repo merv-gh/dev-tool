@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede",
+      sourceDigest: "ee14d3cb35e90e22d52c73c40beadcee193b85bdbd55856b7e9404f5c4ba61e2",
       machines: [
         {
           id: "IO.atomic-file",
@@ -72066,15 +72066,25 @@ var require_code_result = __commonJS({
         selected = { keys: Object.keys(value || {}).slice(0, 30).map((k) => k.slice(0, 100)) };
         for (const key of ["evidenceType", "state", "job", "mapView", "traceView", "analysisView"]) if (typeof value?.[key] === "string" && value[key].length <= 500) selected[key] = value[key];
         if (value?.summary && typeof value.summary === "object" && !Array.isArray(value.summary)) {
-          selected.summary = Object.fromEntries(Object.entries(value.summary).slice(0, 16).map(([k, v]) => [k, v === null || ["boolean", "number"].includes(typeof v) ? v : typeof v === "string" ? v.slice(0, 256) : { keys: Object.keys(v || {}).slice(0, 8) }]));
+          selected.summary = preview(value.summary, "$.summary", 0);
           while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && Object.keys(selected.summary).length) delete selected.summary[Object.keys(selected.summary).at(-1)];
         }
         while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && selected.keys.length) selected.keys.pop();
         omitted.push("$");
       }
       const results = require_results(), existing = typeof value?.view === "string" && results.referenceId(value.view);
-      const view = existing && results.load(existing) ? value.view : results.saveTool(tool, JSON.stringify(value ?? null));
-      return { tool, result: selected, output: { status: omitted.length ? "part" : "all", scope: "tool-response", ...omitted.length ? { omitted: [...new Set(omitted)].slice(0, 20) } : {} }, view, read: { tool: "result_read", arguments: { id: view.split("/").pop(), all: true } } };
+      const sourceView = existing && results.load(existing) ? value.view : void 0;
+      let view, readScope = "tool-response", retentionError;
+      try {
+        view = results.saveTool(tool, JSON.stringify(value ?? null));
+      } catch (error) {
+        retentionError = String(error.message).slice(0, 300);
+        if (sourceView) {
+          view = sourceView;
+          readScope = "source-evidence";
+        }
+      }
+      return { tool, result: selected, ...sourceView ? { sourceView } : {}, readScope, ...retentionError ? { retentionError } : {}, output: { status: omitted.length ? "part" : "all", scope: "tool-response", ...omitted.length ? { omitted: [...new Set(omitted)].slice(0, 20) } : {} }, ...view ? { view, read: { tool: "result_read", arguments: { id: view.split("/").pop(), all: true } } } : { read: null } };
     }
     module2.exports = { receipt };
     module2.exports.discovery = (name, value) => {
@@ -72085,7 +72095,15 @@ var require_code_result = __commonJS({
       if (name === "tool_search") return { ...value, ...value.next ? { next: action(value.next) } : {}, tools: value.tools?.map((t) => ({ ...t, next: action(t.next) })) };
       return value;
     };
-    module2.exports.diagnostic = (error) => {
+    module2.exports.diagnostic = (error, recentResults = [], receipts = []) => {
+      if (error && /Cannot read properties of undefined|cannot read property/i.test(error)) {
+        for (let i = recentResults.length - 1; i >= 0; i--) {
+          const call = recentResults[i], value = call.value?.summary ? call.value : call.tool === "result_read" && call.value?.value?.summary ? call.value.value : null, receipt2 = receipts[i];
+          if (!value?.summary?.proofLimits || !receipt2?.read || receipt2.readScope !== "tool-response") continue;
+          const path3 = call.value === value ? "/summary" : "/value/summary", args = { ...receipt2.read.arguments, path: path3 };
+          return { message: "A local field access failed after source evidence was retrieved. Reuse its selected summary; proofLimits keeps proof and sourceCoverage separate. Do not rerun the completed source query to fix formatting. Inspect unresolved/partial statuses before answering.", availableResult: { tool: call.tool, path: path3, read: { tool: "result_read", arguments: args } }, retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } };
+        }
+      }
       if (/Cannot read properties of undefined.*compacted/.test(error || "")) return { message: "modelContext is model-transport metadata and may be absent inside code. For result_read, use r.sourceCoverage.provenComplete and r.sourceView directly. A non-compacted result does not prove upstream completeness." };
       if (/Cannot use import statement|require is not defined/.test(error || "")) return { message: 'tools is already supplied. Remove import/require; call tools.NAME(args) directly inside code. For discovery: return await tools.tool_search({query:"action words"});' };
       const reserved = /Identifier '([^']+)' has already been declared/.exec(error || "")?.[1];
@@ -72115,6 +72133,8 @@ var require_code_result = __commonJS({
     module2.exports.resolveName = (name, definitions) => {
       if (typeof name !== "string") return name;
       if (definitions.some((t) => t.name === name)) return name;
+      const aliases = { list_analyses: "which_analyses_exist" };
+      if (aliases[name] && definitions.some((t) => t.name === aliases[name])) return aliases[name];
       const key = (s) => s.replace(/[_-]/g, "").toLowerCase();
       const matches = definitions.filter((t) => key(t.name) === key(name));
       return matches.length === 1 ? matches[0].name : name;
@@ -79372,11 +79392,12 @@ var require_tool_output = __commonJS({
     var ALL = { type: "boolean", description: "Full available output; source and model context limits apply." };
     var canonicalName = (name) => name === "search_tools" ? "tool_search" : name;
     function full(value, depth = 0) {
+      if (value?.completeScope === "retained-value" || value?.retainedComplete === true) return value;
       if (depth < 3 && value && typeof value === "object" && !Array.isArray(value)) {
         for (const key of ["result", "value"]) if (value[key] && typeof value[key] === "object") value = { ...value, [key]: full(value[key], depth + 1) };
       }
       if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.view !== "string") return value;
-      const id = value.view.match(/\/(?:show|view|logs|pr|files)\/([a-z0-9]+)(?:[?#]|$)/)?.[1];
+      const id = require_results().referenceId(value.view);
       const record = id && require_results().load(id);
       if (!record) return value;
       if (Array.isArray(record.rows)) {
@@ -79492,8 +79513,9 @@ var require_chat_context = __commonJS({
     }
     function short(value, depth = 0, budget = { left: 5e3 }, omissions = [], pointer = "") {
       const omit = (info) => omissions.push({ path: pointer, ...info }), child = (k) => pointer + "/" + String(k).replace(/~/g, "~0").replace(/\//g, "~1");
-      if (budget.left < 30 || depth > 4) {
-        omit({ reason: depth > 4 ? "depth-limit" : "preview-budget" });
+      const maxDepth = /(?:^|\/)summary(?:\/|$)/.test(pointer) ? 7 : 4;
+      if (budget.left < 30 || depth > maxDepth) {
+        omit({ reason: depth > maxDepth ? "depth-limit" : "preview-budget" });
         return "[details in result_read]";
       }
       if (typeof value === "string") {
@@ -83655,7 +83677,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede";
+      if (true) return "ee14d3cb35e90e22d52c73c40beadcee193b85bdbd55856b7e9404f5c4ba61e2";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -90141,7 +90163,7 @@ var require_semantic_navigation_combined = __commonJS({
           const map = present(await settle({ analysis: a.analysis, operation: "flowmap", from: { name: a.entry } }), { view: "semantic-flow-map", title: "Entry to exits" });
           const trace2 = present(await settle({ analysis: a.analysis, operation: "trace", from: { kind: "method", name: a.entry, parameter: a.parameter }, to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) }), { view: "semantic-path-trace", title: "Parameter to sink argument" });
           const m = summarize(map), t = summarize(trace2), sinks = [...new Map((t.selectedSinks || []).map((x) => [JSON.stringify(x), x])).values()];
-          const summary = { ...m.entries?.length === 1 ? { entry: m.entries[0].name } : { entryCandidates: m.entries || [] }, ...sinks.length === 1 ? { traceSinkCall: sinks[0].traceSinkCall, argumentExpression: sinks[0].argumentExpression } : { sinkCandidates: sinks }, controlAssumptionStatus: t.controlAssumptionStatus, dataAssumptionStatus: t.dataAssumptionStatus, ...t.unmatchedAssumptions?.length ? { unmatchedAssumptions: t.unmatchedAssumptions, observedPredicates: t.observedPredicates, assumptionGuidance: t.assumptionGuidance } : {}, behaviorVerified: m.proof?.behaviorVerified === true && t.proof?.behaviorVerified === true, mapComplete: m.mapComplete ?? null, mapView: map.view, traceView: trace2.view };
+          const summary = { ...m.entries?.length === 1 ? { entry: m.entries[0].name } : { entryCandidates: m.entries || [] }, ...sinks.length === 1 ? { traceSinkCall: sinks[0].traceSinkCall, argumentExpression: sinks[0].argumentExpression } : { sinkCandidates: sinks }, controlAssumptionStatus: t.controlAssumptionStatus, dataAssumptionStatus: t.dataAssumptionStatus, ...t.unmatchedAssumptions?.length ? { unmatchedAssumptions: t.unmatchedAssumptions, observedPredicates: t.observedPredicates, assumptionGuidance: t.assumptionGuidance } : {}, behaviorVerified: m.proof?.behaviorVerified === true && t.proof?.behaviorVerified === true, mapComplete: m.mapComplete ?? null, mapView: map.view, traceView: trace2.view, proofLimits: { entryMap: m.summary?.proofLimits, valueTrace: t.summary?.proofLimits } };
           return present({ protocol: "dt.semantic-navigation/v1", evidenceType: "entry-map-and-value-trace", summary, answerHint: "Use summary as the answer projection; keep both mapView and traceView URLs exactly as returned.", mapView: map.view, traceView: trace2.view, entryMap: { ...m, ...map }, valueTrace: { ...t, ...trace2 } }, { view: "json", title: "Entry map and independent value trace" });
         });
       }
@@ -90185,19 +90207,20 @@ var require_semantic_navigation = __commonJS({
         view: raw.view,
         read: { tool: "result_read", arguments: { id: raw.view?.split("/").pop(), all: true } }
       };
+      const proofLimits = { proof: common.proof, sourceCoverage: { complete: common.sourceCoverage.complete, truncated: common.sourceCoverage.truncated, gapCount: common.sourceCoverage.gapCount } };
       if (raw.flowMap) {
         const m = raw.flowMap;
         const selectedEntries = m.methods.filter((x) => m.entries.includes(x.entry)).map((x) => ({ name: x.name, file: x.file, line: x.line }));
         const methodExits = m.nodes.filter((n) => ["return", "throw", "exit"].includes(n.kind)).map(locate), externalCallBoundaries = m.nodes.filter((n) => n.exit).map((n) => ({ ...locate(n), boundary: n.exit }));
         const decisions = m.nodes.filter((n) => n.kind === "decision").map(locate), changes = m.nodes.flatMap((n) => (n.changes || []).map((c) => ({ ...c, file: c.file ?? n.file, line: c.line ?? n.line })));
-        const summary = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view };
+        const summary2 = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view, proofLimits };
         return {
           evidenceType: "entry-map",
           mapView: raw.view,
           traceView: null,
           mapComplete: m.complete,
           ...common,
-          summary,
+          summary: summary2,
           counts: { ...m.counts, methodExits: methodExits.length, externalCallBoundaries: externalCallBoundaries.length },
           entries: selectedEntries,
           methodExits,
@@ -90214,13 +90237,17 @@ var require_semantic_navigation = __commonJS({
         const statuses = [...new Set(xs.map((x) => x.status))];
         return statuses.length === 1 ? statuses[0] : statuses.length ? "mixed" : "no-paths";
       };
+      const selectedSinks = (raw.sides || []).flatMap((s) => (s.data?.selectedValues?.to || []).map((v) => ({ side: s.side, traceSinkCall: v.name, argument: v.argument, argumentExpression: v.value, callExpression: v.call, file: v.file, line: v.line })));
+      const distinctSinks = [...new Map(selectedSinks.map((s) => [JSON.stringify([s.traceSinkCall, s.argument, s.argumentExpression]), s])).values()];
+      const summary = { ...raw.request?.arguments?.from?.name ? { entry: raw.request.arguments.from.name } : {}, ...distinctSinks.length === 1 ? { traceSinkCall: distinctSinks[0].traceSinkCall, argumentExpression: distinctSinks[0].argumentExpression } : { sinkCandidates: distinctSinks }, controlAssumptionStatus: status(control), dataAssumptionStatus: status(data), behaviorVerified: raw.proof?.behaviorVerified === true, traceView: raw.view, proofLimits, ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates } : {} };
       return {
         evidenceType: "value-trace",
         traceView: raw.view,
         mapView: null,
         ...common,
+        summary,
         declaredAssumptions: raw.assumptions || [],
-        selectedSinks: (raw.sides || []).flatMap((s) => (s.data?.selectedValues?.to || []).map((v) => ({ side: s.side, traceSinkCall: v.name, argument: v.argument, argumentExpression: v.value, callExpression: v.call, file: v.file, line: v.line }))),
+        selectedSinks,
         dataAssumptionStatus: status(data),
         controlAssumptionStatus: status(control),
         ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates, assumptionGuidance: "These declarations did not match an exact observed control predicate. If your question refers to an observed predicate, copy its exact expression as a quoted string; do not invent a label. Retrying with a corrected declaration does not prove runtime feasibility." } : {},
@@ -90277,8 +90304,8 @@ var require_semantic_navigation = __commonJS({
           if (a.all) return common;
           return { ...common, analyses: (raw.analyses || []).map((x) => Object.fromEntries(["id", "repo", "sha", "ref", "workspace", "language", "state", "coverage"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))) };
         } },
-        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Copy summary as the answer projection, keeping its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
-        { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns selectedSinks.argumentExpression and separate scalar controlAssumptionStatus/dataAssumptionStatus; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
+        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Return summary directly as the answer projection: it includes proofLimits with proof and sourceCoverage kept separate. Keep its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
+        { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
       ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true }));
     };
     module2.exports.summarize = summarize;
@@ -96220,7 +96247,7 @@ var require_tools = __commonJS({
       {
         name: "code",
         group: "scripts",
-        description: 'Run JavaScript with await tools.NAME(args). Object/array tool results also support .value as a compatibility alias when they have no real value field; serialization and direct fields stay unchanged. tools/text are supplied; no import/require or direct file access. Return the result explicitly (return await tools.NAME(args)); top-level expressions are not auto-returned. Use the tool matching the question. Discover capabilities with tools.tool_search({query:"action words"}), contracts with tools.tool_describe({name:"tool_name"}), names with tools.list() (tool metadata, never analysis records). When a retrieved summary contains the requested facts and evidence links, answer the user directly; do not call code again just to format the answer. For retained rows: const r=await tools.result_read({id,all:true}); r.value.rows is an array, not JSON text. Filter and compute in JS before printing/returning; printed output may be a preview. Use r.sourceCoverage.provenComplete and r.sourceView for source completeness and evidence. Analysis ids are code snapshots, never result_read ids. For Joern, reuse a supplied analysis id; otherwise list which_analyses_exist once. Describe what_happens_from for combined entry maps and value traces, or where_value_flows for traces. Keep mapView/traceView and proof limits. Never invent values or URLs. Cells are fresh; local result/args/vars are allowed. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Silent cells return host-call receipts. Node supports tools; QuickJS is for pure transforms. all:true expands retained output within source limits.',
+        description: 'Execute JavaScript in Node with built-in tools.NAME(args), not Java/Scala or Joern classes. tools/text are supplied; no import/require or direct file access. Return data explicitly: return await tools.NAME(args); expressions are not auto-returned. For Joern, reuse a supplied analysis id directly; never pass it to result_read or list analyses merely to read it. Describe what_happens_from, execute its flat contract, and return result.summary (including proofLimits and mapView/traceView). List which_analyses_exist only when the analysis id is unknown. Discover other capabilities with tools.tool_search({query:"action words"}) and contracts with tools.tool_describe({name:"tool_name"}). tools.list() is an array of TOOL metadata, not analysis records. For retained rows: const r=await tools.result_read({id,all:true}); compute/filter r.value.rows in JS or use result_read aggregate/where. Return only needed facts, r.sourceCoverage.provenComplete and r.sourceView; printed data can be previewed. When the result answers the request, give a final answer, not another formatting cell. Cells are fresh; result/args/vars may be locals. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Object/array results support .value only as a compatibility alias when no real value field exists. all:true expands available data inside code; model transport limits remain explicit.',
         input: { code: str("JavaScript (top-level await works)"), global_context: str("Persistent project id from global_context_open: tools, scripts, workspaces and files use this principal-owned cross-chat scope; current permissions still apply. files defaults to this project memory."), context: str("Context id from context_open: binds nearby files.list/search/read/readFile/readJson/write/writeJson/edit/remove helpers. Paths are relative to that folder. Read before overwriting; writes use saved revisions."), title: str("What it computes (shown above the code)"), engine: { type: "string", enum: ["node", "quickjs"], default: "node", description: "QuickJS prototype supports pure transforms; Node also supports tools and direct fetch" } },
         required: ["code"],
         run: async (a) => {
@@ -96243,7 +96270,7 @@ var require_tools = __commonJS({
               timeoutMs: require_config().getScripts().codeTimeoutMs,
               onTool: async (name, args, options) => scoped(async () => {
                 if (name === "__list") {
-                  const value = (await ready()).active.filter((t) => t.name !== "code").map((t) => ({ name: t.name, description: t.description.split(". ")[0] }));
+                  const value = (await schemas({ metadata: true })).filter((t) => t.name !== "code").map((t) => ({ name: t.name, description: t.description.split(". ")[0] }));
                   recentResults.push({ tool: "tools.list", value });
                   if (recentResults.length > 3) recentResults.shift();
                   return value;
@@ -96267,7 +96294,7 @@ var require_tools = __commonJS({
                   return res;
                 } catch (e) {
                   const definition = e.code === "DT_ARGUMENT_INVALID" ? (await ready()).byName[name] : null;
-                  const correction = definition ? { contract: { description: definition.description, required: definition.required || definition.inputRules?.else?.required || [], acceptedArguments: Object.keys(definition.input) }, retry: { tool: "code", arguments: { code: `return await tools.tool_describe({name:${JSON.stringify(name)}});` } } } : e.code === "DT_TOOL_UNKNOWN" ? { retry: { tool: "code", arguments: { code: "return await tools.tool_search({query:" + JSON.stringify(name) + "});" } } } : {};
+                  const correction = definition ? { contract: { description: definition.description, required: definition.required || definition.inputRules?.else?.required || [], acceptedArguments: Object.keys(definition.input) }, retry: { tool: "code", arguments: { code: `return await tools.tool_describe({name:${JSON.stringify(name)}});` } } } : name === "result_read" && /semantic analysis id/.test(e.message) ? { contract: { kind: "wrong-id-kind", analysis: args.id, guidance: "This is an analysis identity, not response data. Reuse it in the analysis argument of what_happens_from; do not list analyses just to read a known id." }, retry: { tool: "code", arguments: { code: 'return await tools.tool_describe({name:"what_happens_from"});' } } } : e.code === "DT_TOOL_UNKNOWN" ? { retry: { tool: "code", arguments: { code: "return await tools.tool_search({query:" + JSON.stringify(name) + "});" } } } : {};
                   calls.push({ tool: name, args, ms: Date.now() - t0, ok: false, error: e.message, ...correction });
                   throw e;
                 }
@@ -96281,12 +96308,12 @@ var require_tools = __commonJS({
           const output = (r.output || []).join("\n");
           const ms = Date.now() - started;
           const toolErrors = calls.filter((c) => !c.ok || c.resultError).map((c) => ({ tool: c.tool, error: c.error || c.resultError, kind: c.resultError ? "tool-result" : "invocation", ...c.contract ? { contract: c.contract } : {}, ...c.retry ? { retry: c.retry } : {} }));
-          const diagnostic = require_code_result().diagnostic(r.error);
           const provenance = require_code_result().provenance(r.hasReturn ? r.returned : output || (r.logs || []).join("\n"), calls);
           const silent = !output && !r.hasReturn && !r.logs?.length;
           const discoveryOnly = !toolErrors.length && (calls.length > 0 && calls.every((c) => ["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"].includes(c.tool) || c.tool === "semantic_index" && !c.args?.repo && !c.args?.service && !c.args?.revisionKey && !c.args?.repos && !c.args?.job) || calls.length === 0 && recentResults.some((c) => c.tool === "tools.list"));
           const largePrintedOutput = Buffer.byteLength(output + (r.logs || []).join("\n")) > (require_config().getTools().modelResultBytes || 12288);
-          const toolResults = silent || largePrintedOutput ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
+          const toolResults = silent || largePrintedOutput || r.error ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
+          const diagnostic = require_code_result().diagnostic(r.error, recentResults, toolResults);
           const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + " Execute the described source tool before making source-behavior claims." : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : largePrintedOutput && toolResults.length ? "Printed output exceeds the model preview budget. toolResults are bounded host-call summaries with full-data reads, not the cell computation. Use their selected summaries and evidence links to answer if sufficient; otherwise read only missing details. Do not rerun completed tools or use code just to format a final answer." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. If their summaries answer the request, answer the user directly; otherwise read missing details or compute. Do not repeat discovery." : calls.length ? "If the returned/logged facts answer the request, give the final answer to the user now. Do not call code again merely to format it. Keep the source evidence links and completeness/proof limits." : void 0;
           const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms, toolResults, toolErrors, guidance };
           return {

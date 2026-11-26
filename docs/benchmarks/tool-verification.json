@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede",
+  "sourceDigest": "ee14d3cb35e90e22d52c73c40beadcee193b85bdbd55856b7e9404f5c4ba61e2",
   "tools": [
     {
       "name": "find",
@@ -742,6 +742,7 @@
         "test/reproduction.test.js",
         "test/run-sh.test.js",
         "test/scenario.test.js",
+        "test/semantic-navigation.test.js",
         "test/task-harness.test.js",
         "test/testdata.test.js",
         "test/tool-discovery.test.js",
@@ -2808,6 +2809,7 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
+        "test/code.test.js",
         "test/semantic-code-model-eval.test.js",
         "test/semantic-navigation.test.js"
       ],
