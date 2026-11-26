@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c",
+      sourceDigest: "2d489287b84d331554dd0375077baa25d580e778a62857c037206618d6133abf",
       machines: [
         {
           id: "IO.atomic-file",
@@ -84096,7 +84096,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c";
+      if (true) return "2d489287b84d331554dd0375077baa25d580e778a62857c037206618d6133abf";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -104476,7 +104476,7 @@ var require_server2 = __commonJS({
         })
       };
     }
-    async function mcpHandle(msg, session, requestSignal) {
+    async function mcpHandle(msg, session, requestSignal, profile = "all") {
       const reply = (result) => ({ jsonrpc: "2.0", id: msg.id, result });
       const scope = require_access().current().scopeKey, key = JSON.stringify([scope, session || "", msg.id]);
       switch (msg.method) {
@@ -104490,12 +104490,12 @@ var require_server2 = __commonJS({
             protocolVersion: "2025-03-26",
             capabilities: { tools: { listChanged: false } },
             serverInfo: { name: "dt", version: VERSION3 },
-            instructions: require_webui().prompt()
+            instructions: require_webui().prompt(profile)
           });
         case "ping":
           return reply({});
         case "tools/list":
-          return reply({ tools: await tools.schemas() });
+          return reply({ tools: await tools.schemas({ profile }) });
         case "tools/call": {
           if (mcpRequests.has(key)) return { jsonrpc: "2.0", id: msg.id, error: { code: -32600, message: "Request id is already active in this session" } };
           const lifecycle = require_state_machine2().create(require_lifecycles().mcp), controller = new AbortController(), abort = controller.abort.bind(controller);
@@ -104527,10 +104527,16 @@ var require_server2 = __commonJS({
           return { jsonrpc: "2.0", id: msg.id, error: { code: -32601, message: `Method not found: ${msg.method}` } };
       }
     }
-    async function mcp(req, res) {
+    async function mcp(req, res, url) {
+      const profile = url.searchParams.get("profile") || "all";
+      try {
+        require_tool_profiles().select([], profile);
+      } catch (error) {
+        return send(res, 400, { error: error.message });
+      }
       const body = await readJsonBody(req);
       const batch = Array.isArray(body);
-      const replies = (await Promise.all((batch ? body : [body]).map((msg) => mcpHandle(msg, req.headers["x-openwebui-chat-id"] || req.headers["x-chat-id"] || req.headers["mcp-session-id"], req.dtSignal)))).filter(Boolean);
+      const replies = (await Promise.all((batch ? body : [body]).map((msg) => mcpHandle(msg, req.headers["x-openwebui-chat-id"] || req.headers["x-chat-id"] || req.headers["mcp-session-id"], req.dtSignal, profile)))).filter(Boolean);
       if (!replies.length) return send(res, 202, "");
       send(res, 200, batch ? replies : replies[0], { "mcp-session-id": req.headers["mcp-session-id"] || crypto.randomUUID() });
     }

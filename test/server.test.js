@@ -49,6 +49,13 @@ test('mcp: initialize, tools/list, tools/call, notifications', async () => {
   assert.equal((await post('/mcp', { jsonrpc: '2.0', method: 'notifications/initialized' })).status, 202);
   const list = await (await post('/mcp', { jsonrpc: '2.0', id: 2, method: 'tools/list' })).json();
   assert.ok(list.result.tools.length >= 27);
+  const focused=await (await post('/mcp?profile=semantic-read',{jsonrpc:'2.0',id:20,method:'tools/list'})).json();
+  assert.deepEqual(focused.result.tools.map(t=>t.name).sort(),['result_read','what_happens_from','where_value_flows','which_analyses_exist']);
+  const focusedInit=await (await post('/mcp?profile=semantic-read',{jsonrpc:'2.0',id:21,method:'initialize'})).json();
+  assert.equal(focusedInit.result.instructions,require('../lib/webui').prompt('semantic-read'));
+  assert.notEqual(init.result.instructions,focusedInit.result.instructions,'default MCP keeps its all-tool guidance');
+  assert.equal((await post('/mcp?profile=missing',{jsonrpc:'2.0',id:22,method:'tools/list'})).status,400);
+
   const call = await (await post('/mcp', { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'nope', arguments: {} } })).json();
   assert.equal(call.result.isError, true);
 });

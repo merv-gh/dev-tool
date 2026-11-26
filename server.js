@@ -57,7 +57,7 @@ function status() {
 }
 
 // ── MCP (Streamable HTTP, JSON responses) ─────────────────────────────
-async function mcpHandle(msg, session, requestSignal) {
+async function mcpHandle(msg, session, requestSignal, profile = 'all') {
   const reply = (result) => ({ jsonrpc: '2.0', id: msg.id, result });
   const scope=require('./lib/access').current().scopeKey,key=JSON.stringify([scope,session||'',msg.id]);
   switch (msg.method) {
@@ -67,10 +67,10 @@ async function mcpHandle(msg, session, requestSignal) {
         protocolVersion: '2025-03-26',
         capabilities: { tools: { listChanged: false } },
         serverInfo: { name: 'dt', version: VERSION },
-        instructions: require('./lib/webui').prompt(),
+        instructions: require('./lib/webui').prompt(profile),
       });
     case 'ping': return reply({});
-    case 'tools/list': return reply({ tools: await tools.schemas() });
+    case 'tools/list': return reply({ tools: await tools.schemas({profile}) });
     case 'tools/call': {
       if(mcpRequests.has(key))return {jsonrpc:'2.0',id:msg.id,error:{code:-32600,message:'Request id is already active in this session'}};
       const lifecycle=require('./lib/state-machine').create(require('./lib/lifecycles').mcp),controller=new AbortController(),abort=controller.abort.bind(controller);controller.abort=why=>{if(lifecycle.terminal)return;lifecycle.to('cancelling');abort(why);};const onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
@@ -90,10 +90,12 @@ async function mcpHandle(msg, session, requestSignal) {
   }
 }
 
-async function mcp(req, res) {
+async function mcp(req, res, url) {
+  const profile=url.searchParams.get('profile') || 'all';
+  try{require('./lib/tool-profiles').select([],profile);}catch(error){return send(res,400,{error:error.message});}
   const body = await readJsonBody(req);
   const batch = Array.isArray(body);
-  const replies = (await Promise.all((batch ? body : [body]).map(msg => mcpHandle(msg, req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || req.headers['mcp-session-id'],req.dtSignal)))).filter(Boolean);
+  const replies = (await Promise.all((batch ? body : [body]).map(msg => mcpHandle(msg, req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || req.headers['mcp-session-id'],req.dtSignal,profile)))).filter(Boolean);
   if (!replies.length) return send(res, 202, '');
   send(res, 200, batch ? replies : replies[0], { 'mcp-session-id': req.headers['mcp-session-id'] || crypto.randomUUID() });
 }
