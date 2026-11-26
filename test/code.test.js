@@ -354,6 +354,27 @@ test('nested receipt previews preserve typed proof leaves and an executable raw 
  assert.equal(R.load(r.read.arguments.id).data.payload.length,20000);
 });
 
+test('filtered aggregate metadata cannot replace total retained input rows with the match count',async()=>{
+ const R=require('../lib/results'),view=R.save('pg',[{group:'a',n:1},{group:'b',n:2},{group:'a',n:3}],{truncated:true});
+ const args={id:R.referenceId(view),where:{group:'a'},aggregate:'summary',field:'n'};
+ const r=await T().call('code',{code:'const r=await tools.result_read('+JSON.stringify(args)+');return {count:r.value.count,sum:r.value.sum,retainedRows:r.value.count,sourceComplete:r.sourceComplete,view:r.sourceView};'});
+ assert.equal(r.returned.sum,4,'the valid arithmetic is not rewritten');
+ assert.equal(r.returned.retainedRows,2,'the incorrect cell projection remains visible');
+ assert.equal(r.evidenceCheck.status,'contradictory-retained-coverage');
+ assert.deepEqual(r.evidenceCheck.fields,[{field:'retainedRows',reported:2,observed:[3]}]);
+ assert.equal(r.diagnostic.availableResult.summary.retainedRows,3);
+ assert.equal(r.diagnostic.availableResult.summary.matchedRows,2);
+ const recovered=await T().call('code',r.evidenceCheck.retry.arguments);
+ assert.equal(recovered.returned.retainedRows,3);
+ assert.equal(recovered.returned.sourceComplete,false);
+ const correct=await T().call('code',{code:'const r=await tools.result_read('+JSON.stringify(args)+');return {retainedRows:r.retainedRows,sourceComplete:r.sourceComplete,view:r.sourceView};'});
+ assert.equal(correct.evidenceCheck,undefined);
+ const wrongComplete=await T().call('code',{code:'const r=await tools.result_read('+JSON.stringify(args)+');return {retainedRows:r.retainedRows,sourceComplete:true,view:r.sourceView};'});
+ assert.equal(wrongComplete.evidenceCheck.status,'contradictory-retained-coverage');
+ assert.deepEqual(wrongComplete.evidenceCheck.fields,[{field:'sourceComplete',reported:true,observed:[false]}]);
+ assert.equal(wrongComplete.diagnostic.availableResult.summary.sourceComplete,false);
+});
+
 test('the code schema advertises enabled call shapes without granting or leaking hidden capabilities',async()=>{
  const schema=(await T().schemas({profile:'code'}))[0];
  assert.match(schema.description,/tools.what_happens_from/);

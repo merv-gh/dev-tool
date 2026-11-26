@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "fbd11d384c352e3d95dd13b3461fa7cf29dc66516cbb637d7685cf72779566a3",
+      sourceDigest: "9dfcdf4f691c667cfd51aa3a73a18ab1256ca238a5ec952262cf4dba4145f3ec",
       machines: [
         {
           id: "IO.atomic-file",
@@ -73855,7 +73855,7 @@ var require_code_result = __commonJS({
       if (name === "tool_search") return { ...value, ...value.next ? { next: action(value.next) } : {}, tools: value.tools?.map((t) => ({ ...t, next: action(t.next) })) };
       return value;
     };
-    module2.exports.recovery = (recentResults = [], receipts = []) => {
+    module2.exports.recovery = (recentResults = [], receipts = [], allowRetainedMetadata = false) => {
       for (let i = recentResults.length - 1; i >= 0; i--) {
         const call = recentResults[i], value = call.value?.summary ? call.value : call.tool === "result_read" && call.value?.value?.summary ? call.value.value : null, receipt2 = receipts[i];
         if (!value?.summary?.proofLimits || !receipt2?.read || receipt2.readScope !== "tool-response") continue;
@@ -73878,6 +73878,13 @@ var require_code_result = __commonJS({
         const args = view ? { id: R.referenceId(view), path: "/summary", all: true } : null;
         return { message: "The selected graph is result.value itself: use result.value.nodes and result.value.edges, not result.value.graph. The summary below was computed from this same full retained graph. If it answers the request, answer now. Do not rerun discovery or source queries; static graph facts do not prove runtime behavior.", availableResult: { tool: call.tool, summary, sourceView, summaryScope: "derived-from-retained-graph", read: args ? { tool: "result_read", arguments: args } : null, graphRead: { tool: "result_read", arguments: { id, path: "/flowMap", all: true } } }, ...args ? { retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } } : {} };
       }
+      if (!allowRetainedMetadata) return;
+      for (let i = recentResults.length - 1; i >= 0; i--) {
+        const call = recentResults[i], r = call.value, receipt2 = receipts[i];
+        if (call.tool !== "result_read" || r?.retainedComplete !== true || !receipt2?.read || receipt2.readScope !== "tool-response") continue;
+        const summary = { ...r.aggregate ? { aggregate: r.aggregate, field: r.field, value: r.value } : {}, retainedRows: r.retainedRows, matchedRows: r.matchedRows, sourceComplete: r.sourceComplete, sourceCoverage: r.sourceCoverage, sourceView: r.sourceView }, args = receipt2.read.arguments;
+        return { message: "The stored input count and filtered match count are different metadata. Use retainedRows for all input rows before filtering; matchedRows/value.count count the selected rows. The original read metadata below is authoritative; processing every selected row does not prove upstream completeness. Read this snapshot without rerunning the source query.", availableResult: { tool: call.tool, summary, readScope: "tool-response", read: { tool: "result_read", arguments: args } }, retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } };
+      }
     };
     module2.exports.diagnostic = (error, recentResults = [], receipts = []) => {
       if (error && /Cannot read properties of undefined|cannot read property|is not defined/i.test(error)) {
@@ -73892,7 +73899,7 @@ var require_code_result = __commonJS({
         ...reserved === "tools" ? { retry: { tool: "code", arguments: { code: "return await tools.list();" } } } : {}
       };
     };
-    module2.exports.provenance = (returned, calls) => {
+    module2.exports.provenance = (returned, calls, recentResults = []) => {
       const metadata = /* @__PURE__ */ new Set(["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"]);
       const names = [...new Set(calls.filter((c) => c.ok && !c.resultError).map((c) => c.tool === "tool_execute" ? c.args?.name || c.tool : c.tool))];
       const provenance = { kind: names.length ? names.every((n) => metadata.has(n)) ? "discovery" : "tool-results" : "code-inputs", successfulTools: names };
@@ -73920,6 +73927,14 @@ var require_code_result = __commonJS({
         }
       }
       if (!missing.length && facts.length) return { provenance, evidenceCheck: { status: "contradictory-semantic-facts", fields: facts, meaning: "The cell projection contradicts the linked retained source summary. Read the original summary without rerunning the completed query." } };
+      const sourceId = require_results().referenceId(value?.sourceView || value?.view);
+      const reads = sourceId ? recentResults.filter((c) => c.tool === "result_read" && c.value?.retainedComplete === true && require_results().referenceId(c.value.sourceView) === sourceId).map((c) => c.value) : [];
+      const coverageIssues = [];
+      for (const field of ["retainedRows", "sourceComplete"]) if (value && Object.hasOwn(value, field)) {
+        const observed = [...new Set(reads.filter((r) => Object.hasOwn(r, field)).map((r) => r[field]))];
+        if (observed.length && !observed.some((x) => Object.is(value[field], x))) coverageIssues.push({ field, reported: value[field], observed });
+      }
+      if (!missing.length && coverageIssues.length) return { provenance, evidenceCheck: { status: "contradictory-retained-coverage", fields: coverageIssues, meaning: "Reported retained-row count or upstream completeness contradicts the metadata of the successful read of this same source. Retained input rows, filtered matches and upstream coverage are separate. Recover the original read metadata without repeating the source query." } };
       return { provenance, ...missing.length ? { evidenceCheck: { status: "unbacked-references", fields: [...new Set(missing)], meaning: "These returned map/trace references do not identify the corresponding retained evidence. A constructed value is not a source-query result.", retry: { tool: "code", arguments: { code: 'return await tools.tool_describe({name:"what_happens_from"});' } } } } : {} };
     };
     module2.exports.resolveName = (name, definitions) => {
@@ -84051,7 +84066,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "fbd11d384c352e3d95dd13b3461fa7cf29dc66516cbb637d7685cf72779566a3";
+      if (true) return "9dfcdf4f691c667cfd51aa3a73a18ab1256ca238a5ec952262cf4dba4145f3ec";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -96482,12 +96497,12 @@ var require_tools = __commonJS({
           const output = (r.output || []).join("\n");
           const ms = Date.now() - started;
           const toolErrors = calls.filter((c) => !c.ok || c.resultError).map((c) => ({ tool: c.tool, error: c.error || c.resultError, kind: c.resultError ? "tool-result" : "invocation", ...c.contract ? { contract: c.contract } : {}, ...c.retry ? { retry: c.retry } : {} }));
-          const provenance = require_code_result().provenance(r.hasReturn ? r.returned : output || (r.logs || []).join("\n"), calls);
+          const provenance = require_code_result().provenance(r.hasReturn ? r.returned : output || (r.logs || []).join("\n"), calls, recentResults);
           const silent = !output && !r.hasReturn && !r.logs?.length;
           const discoveryOnly = !toolErrors.length && (calls.length > 0 && calls.every((c) => ["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"].includes(c.tool) || c.tool === "semantic_index" && !c.args?.repo && !c.args?.service && !c.args?.revisionKey && !c.args?.repos && !c.args?.job) || calls.length === 0 && recentResults.some((c) => c.tool === "tools.list"));
           const largePrintedOutput = Buffer.byteLength(output + (r.logs || []).join("\n")) > (require_config().getTools().modelResultBytes || 12288);
           const toolResults = silent || largePrintedOutput || r.error || provenance.evidenceCheck ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
-          const diagnostic = require_code_result().diagnostic(r.error, recentResults, toolResults) || (provenance.evidenceCheck ? require_code_result().recovery(recentResults, toolResults) : void 0);
+          const diagnostic = require_code_result().diagnostic(r.error, recentResults, toolResults) || (provenance.evidenceCheck ? require_code_result().recovery(recentResults, toolResults, provenance.evidenceCheck.status === "contradictory-retained-coverage") : void 0);
           if (diagnostic && provenance.evidenceCheck) provenance.evidenceCheck = { ...provenance.evidenceCheck, retry: diagnostic.retry, meaning: diagnostic.message };
           const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + (provenance.evidenceCheck.status === "unbacked-references" && !diagnostic ? " Execute the described source tool before making source-behavior claims." : "") : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : largePrintedOutput && toolResults.length ? "Printed output exceeds the model preview budget. toolResults are bounded host-call summaries with full-data reads, not the cell computation. Use their selected summaries and evidence links to answer if sufficient; otherwise read only missing details. Do not rerun completed tools or use code just to format a final answer." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. If their summaries answer the request, answer the user directly; otherwise read missing details or compute. Do not repeat discovery." : calls.length ? "If the returned/logged facts answer the request, give the final answer to the user now. Do not call code again merely to format it. Keep the source evidence links and completeness/proof limits." : void 0;
           const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms, toolResults, toolErrors, guidance };
