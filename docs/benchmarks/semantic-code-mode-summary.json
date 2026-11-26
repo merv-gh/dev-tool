@@ -1,0 +1,363 @@
+{
+  "protocol": "dt.semantic-code-summary/v1",
+  "scope": "Exploratory real-model trials over synthetic CPG worker records; no fresh Joern engine run. One trial per arm; names-only comparison and combined clarity revision are separate experiments.",
+  "grader": "exact-executed-map-and-trace-with-predicate-polarity-and-final-answer/v2",
+  "samples": [
+    {
+      "file": "semantic-code-mode-2b.json",
+      "arm": "code",
+      "case": "combined",
+      "schemaBytes": 2233,
+      "calls": 8,
+      "finish": "turn-budget",
+      "usage": {
+        "input": 12980,
+        "output": 985
+      },
+      "deliveredBytes": 1353,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "bccc45d087c6767d6a3a58acffb27fe6c51cb01d4d5b800d1b91341861b1fda1",
+      "checks": {
+        "mapRead": false,
+        "traceRead": false,
+        "entry": false,
+        "exit": false,
+        "sink": false,
+        "control": false,
+        "data": false,
+        "proof": false,
+        "coverage": false,
+        "views": false
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-guided-code-mode-2b.json",
+      "arm": "guided-code",
+      "case": "combined",
+      "schemaBytes": 3215,
+      "calls": 2,
+      "finish": "endpoint-error",
+      "error": "Ollama HTTP 500",
+      "usage": {
+        "input": 2256,
+        "output": 31
+      },
+      "deliveredBytes": 56,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "a7dcbabf70c69b9278ee0ef71602f7ad777f9bd9bf035c678ba31fdfe87bfbe9",
+      "checks": {
+        "mapRead": false,
+        "traceRead": false,
+        "entry": false,
+        "exit": false,
+        "sink": false,
+        "control": false,
+        "data": false,
+        "proof": false,
+        "coverage": false,
+        "views": false
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-wrapped-code-mode-2b.json",
+      "arm": "wrapped-code",
+      "case": "combined",
+      "schemaBytes": 3585,
+      "calls": 2,
+      "finish": "endpoint-error",
+      "error": "Ollama HTTP 500",
+      "usage": {
+        "input": 2417,
+        "output": 45
+      },
+      "deliveredBytes": 56,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "5fa3929dc897299b54291aae2b17ea8119994f37cb7c8dda49ae5e2a75fb2a14",
+      "checks": {
+        "mapRead": false,
+        "traceRead": false,
+        "entry": false,
+        "exit": false,
+        "sink": false,
+        "control": false,
+        "data": false,
+        "proof": false,
+        "coverage": false,
+        "views": false
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-minimal-code-mode-2b.json",
+      "arm": "minimal-code",
+      "case": "combined",
+      "schemaBytes": 2152,
+      "calls": 3,
+      "finish": "assistant-finished",
+      "usage": {
+        "input": 4474,
+        "output": 414
+      },
+      "deliveredBytes": 576,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "bb536297e10498c9f22264e088db385a5448616c638374a5892102bd220f083b",
+      "parsed": {
+        "entry": "submit",
+        "exitCall": "save",
+        "sinkExpression": "rebate < 0",
+        "controlAssumption": {
+          "status": "false"
+        },
+        "dataAssumption": {
+          "status": "true"
+        },
+        "behaviorVerified": true,
+        "mapComplete": false,
+        "evidenceViews": [
+          "http://127.0.0.1:4000/show/mwxmdp9e2bb97a3e6390062c2",
+          "http://127.0.0.1:4000/show/mwxmdz0ed6ae3e312edaa124a8",
+          "http://127.0.0.1:4000/show/mwxme91ldea6051c171b3c03a0"
+        ]
+      },
+      "checks": {
+        "mapRead": false,
+        "traceRead": false,
+        "entry": true,
+        "exit": true,
+        "sink": false,
+        "control": false,
+        "data": false,
+        "proof": false,
+        "coverage": true,
+        "views": false
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-direct-2b.json",
+      "arm": "direct",
+      "case": "combined",
+      "schemaBytes": 25164,
+      "calls": 0,
+      "finish": "endpoint-error",
+      "error": "The operation was aborted due to timeout",
+      "usage": {
+        "input": 0,
+        "output": 0
+      },
+      "deliveredBytes": 0,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "a7dcbabf70c69b9278ee0ef71602f7ad777f9bd9bf035c678ba31fdfe87bfbe9",
+      "checks": {
+        "mapRead": false,
+        "traceRead": false,
+        "entry": false,
+        "exit": false,
+        "sink": false,
+        "control": false,
+        "data": false,
+        "proof": false,
+        "coverage": false,
+        "views": false
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-plain-focused-2b.json",
+      "arm": "plain-focused",
+      "case": "combined",
+      "schemaBytes": 2093,
+      "calls": 3,
+      "finish": "assistant-finished",
+      "usage": {
+        "input": 5309,
+        "output": 388
+      },
+      "deliveredBytes": 3577,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "e4ec97023414ff9dbbe1ebbc2b8cd75bd1b11dfbb7832f1cf06c6522d359c77d",
+      "parsed": {
+        "entry": "submit",
+        "exitCall": "save(payable)",
+        "sinkExpression": "payable",
+        "controlAssumption": "rebate < 0",
+        "dataAssumption": "rebate < 0",
+        "behaviorVerified": false,
+        "mapComplete": false,
+        "evidenceViews": [
+          "http://127.0.0.1:4000/show/mwxmgq50e13d11834148f77a0f",
+          "http://127.0.0.1:4000/show/mwxmh64z5805f41783ba12d740"
+        ]
+      },
+      "checks": {
+        "mapRead": true,
+        "traceRead": true,
+        "entry": true,
+        "exit": true,
+        "sink": true,
+        "control": false,
+        "data": false,
+        "proof": true,
+        "coverage": true,
+        "views": true
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-question-focused-2b.json",
+      "arm": "question-focused",
+      "case": "combined",
+      "schemaBytes": 2109,
+      "calls": 3,
+      "finish": "assistant-finished",
+      "usage": {
+        "input": 5270,
+        "output": 479
+      },
+      "deliveredBytes": 3451,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "e4ec97023414ff9dbbe1ebbc2b8cd75bd1b11dfbb7832f1cf06c6522d359c77d",
+      "parsed": {
+        "entry": "submit",
+        "exitCall": "save(payable)",
+        "sinkExpression": "payable",
+        "controlAssumption": {
+          "status": "unconditioned",
+          "expression": "rebate < 0",
+          "holds": false
+        },
+        "dataAssumption": {
+          "status": "static-candidates",
+          "paths": [
+            {
+              "sink": "payable",
+              "file": "src/Payment.java",
+              "line": 12,
+              "assumptionEvaluation": {
+                "status": "unconditioned",
+                "matches": [],
+                "conflicts": [],
+                "unresolved": []
+              }
+            }
+          ]
+        },
+        "behaviorVerified": false,
+        "mapComplete": false,
+        "evidenceViews": [
+          "http://127.0.0.1:4000/show/mwxmj1ynb52b573c19204b825e",
+          "http://127.0.0.1:4000/show/mwxmjewg5d5e5610cc8316a6ae"
+        ]
+      },
+      "checks": {
+        "mapRead": true,
+        "traceRead": false,
+        "entry": true,
+        "exit": true,
+        "sink": true,
+        "control": false,
+        "data": false,
+        "proof": true,
+        "coverage": true,
+        "views": true
+      },
+      "passed": false
+    },
+    {
+      "file": "semantic-question-brief-2b.json",
+      "arm": "question-brief",
+      "case": "combined",
+      "schemaBytes": 2466,
+      "calls": 3,
+      "finish": "assistant-finished",
+      "usage": {
+        "input": 5562,
+        "output": 377
+      },
+      "deliveredBytes": 3444,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "5299d4058b68cadfe3154f65b3ca75c97be4833d023549ef00f06e8125f8d91a",
+      "parsed": {
+        "entry": "submit",
+        "exitCall": "save(payable)",
+        "sinkExpression": "payable",
+        "controlAssumption": "matches-assumptions",
+        "dataAssumption": "unresolved",
+        "behaviorVerified": false,
+        "mapComplete": false,
+        "evidenceViews": [
+          "http://127.0.0.1:4000/show/mwxmm07y95f92ff9cbf95672b3",
+          "http://127.0.0.1:4000/show/mwxmmdh5fe9e8fe2bf9d666516"
+        ]
+      },
+      "checks": {
+        "mapRead": true,
+        "traceRead": true,
+        "entry": true,
+        "exit": true,
+        "sink": true,
+        "control": true,
+        "data": true,
+        "proof": true,
+        "coverage": true,
+        "views": true
+      },
+      "passed": true
+    },
+    {
+      "file": "semantic-question-brief-contradiction-2b.json",
+      "arm": "question-brief",
+      "case": "contradiction",
+      "schemaBytes": 2466,
+      "calls": 3,
+      "finish": "assistant-finished",
+      "usage": {
+        "input": 5565,
+        "output": 380
+      },
+      "deliveredBytes": 3486,
+      "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      "harnessDigest": "bdb4013d46d94420057da6f180b89d54671c968bdc9fca0ffdc31877b93573a4",
+      "parsed": {
+        "entry": "submit",
+        "exitCall": "save(payable)",
+        "sinkExpression": "payable",
+        "controlAssumption": "contradicts-assumptions",
+        "dataAssumption": "unresolved",
+        "behaviorVerified": false,
+        "mapComplete": false,
+        "evidenceViews": [
+          "http://127.0.0.1:4000/show/mwxmo10482c1d01272786eca07",
+          "http://127.0.0.1:4000/show/mwxmogd90139e76840bc292034"
+        ]
+      },
+      "checks": {
+        "mapRead": true,
+        "traceRead": true,
+        "entry": true,
+        "exit": true,
+        "sink": true,
+        "control": true,
+        "data": true,
+        "proof": true,
+        "coverage": true,
+        "views": true
+      },
+      "passed": true
+    }
+  ],
+  "validation": {
+    "focusedTests": {
+      "passed": 39,
+      "failed": 0
+    },
+    "liveTests": {
+      "skipped": 2
+    },
+    "buildCheck": "passed",
+    "docsCheck": "passed"
+  },
+  "productionToolsChanged": false
+}

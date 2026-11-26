@@ -6,8 +6,11 @@ test('semantic model evaluation requires executed evidence, exact endpoints and 
  for(const change of [r=>r.semanticCalls=[],r=>r.semanticCalls[1].arguments.from.parameter='gross',r=>r.semanticCalls[1].arguments.to.argument=2,r=>r.events=[]]){const r=fixture();change(r);assert.equal(grade(r).passed,false);}
 });
 test('semantic model evaluation keeps unknown value assumptions, incomplete coverage and runtime proof separate',()=>{
- for(const change of [a=>a.dataAssumption='matches-assumptions',a=>a.controlAssumption='unresolved',a=>a.behaviorVerified=true,a=>a.mapComplete=true,a=>a.evidenceViews=['/show/invented','/show/trace']]){const r=fixture(),a=JSON.parse(r.final);change(a);r.final=JSON.stringify(a);assert.equal(grade(r).passed,false);}
+ for(const change of [a=>a.dataAssumption='matches-assumptions',a=>a.controlAssumption='unresolved',a=>a.behaviorVerified=true,a=>a.mapComplete=true,a=>a.evidenceViews=['/show/invented','/show/trace'],a=>a.evidenceViews=['',''],a=>a.evidenceViews=['/show/map','/show/map']]){const r=fixture(),a=JSON.parse(r.final);change(a);r.final=JSON.stringify(a);assert.equal(grade(r).passed,false);}
  const invalid=fixture();invalid.final='The analysis probably passes.';assert.equal(grade(invalid).passed,false);
+ const contradiction=fixture();contradiction.expectedAssumptionHolds=true;contradiction.semanticCalls[1].arguments.assumptions[0].holds=true;
+ const answer=JSON.parse(contradiction.final);answer.controlAssumption='contradicts-assumptions';contradiction.final=JSON.stringify(answer);assert.equal(grade(contradiction).passed,true);
+ contradiction.semanticCalls[1].arguments.assumptions[0].holds=false;assert.equal(grade(contradiction).passed,false);
 });
 test('question-name experiment changes names only and keeps the same all contract',()=>{
  const C=require('../dev/semantic-question-candidates.cjs'),plain=C.schemas(),questions=C.schemas(true);
@@ -31,4 +34,10 @@ test('candidate adapters call the production semantic tools and preserve raw evi
  assert.equal(brief.sinks[0].code,'payable');assert.equal(brief.proof.behaviorVerified,false);
  assert.match(C.schemas(true,true)[2].inputSchema.properties.assumptions.description,/Omitted or \[\] means none/);
  await assert.rejects(C.call(T,'value_trace',{...args,unexpected:true}),/Invalid argument/);
+});
+test('entry summaries exclude reached callees that are not selected entries',async()=>{
+ const C=require('../dev/semantic-question-candidates.cjs');
+ const raw={flowMap:{complete:false,entries:['entry:submit'],methods:[{name:'submit',entry:'entry:submit'},{name:'save',entry:'entry:save'}],nodes:[],assumptions:[]},proof:{behaviorVerified:false},view:'/show/map'};
+ const r=await C.call({call:async()=>raw},'what_happens_from',{analysis:'id',entry:'submit'});
+ assert.deepEqual(r.entries.map(m=>m.name),['submit']);
 });

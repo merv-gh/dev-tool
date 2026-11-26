@@ -1,0 +1,40 @@
+{
+  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "queryScriptDigest": "13a33230cbdae6410f672f3d303ed1e8d69108bfa3add638849330cf3a80e71d",
+  "repo": "DEMO/payments",
+  "sha": "23999f81229633930d54d4a51d3e1a90e8a96e97",
+  "analysis": "3c1b110eaab38c604fe2ba75c310a5b1e0b345e1915c45275e458a11bb2da038-4fc9d2bb4736cbf64725d6258ab969b6",
+  "counts": {
+    "entries": 1,
+    "methods": 3,
+    "states": 28,
+    "transitions": 124,
+    "decisions": 5,
+    "changes": 9,
+    "exits": 9
+  },
+  "fullBytes": 139552,
+  "previewBytes": 3787,
+  "checks": {
+    "decisions": true,
+    "throws": true,
+    "exceptionContinuationHonest": true,
+    "fieldChanges": true,
+    "increments": true,
+    "branchPolarity": true,
+    "dataDependencies": true,
+    "controlDependencies": true,
+    "calleeBindings": true,
+    "wrongAmountExposed": true,
+    "fixedAmountExposed": true,
+    "oracleBeforeFailsAfterPasses": true,
+    "originalPreserved": true,
+    "stateBudget": true,
+    "compactFullEvidence": true,
+    "loopCycles": true,
+    "compoundWrites": true,
+    "javascript": true
+  },
+  "job": "mwxn59ngfffe4f",
+  "fixedJob": "mwxn6fxk564df3"
+}

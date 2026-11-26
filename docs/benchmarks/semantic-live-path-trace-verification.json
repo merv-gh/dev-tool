@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "realJoern": true,
+    "independentRevisions": true,
+    "changedSinkExpression": true,
+    "guardPolarity": true,
+    "lineExpressions": true,
+    "ambiguousLineNoGuess": true,
+    "modelBudget": true,
+    "oracleBeforeFailsAfterPasses": true
+  },
+  "analyses": [
+    "3c1b110eaab38c604fe2ba75c310a5b1e0b345e1915c45275e458a11bb2da038-2b8285282be5b42d9aaf4eb0532315ea",
+    "a77653e945a642a94fa04009fab09f9c3b2fa2ec6ea8e0ca616645ccac5285af-55a78e63ace50a8ae205bee9029c9b96"
+  ],
+  "job": "mwxn9qm0a2648a",
+  "lineJob": "mwxnbae2a8a2cf",
+  "view": "http://127.0.0.1:4000/show/mwxnb7p2db7283b395ab285795",
+  "previewBytes": 3951,
+  "fullBytes": 728482
+}

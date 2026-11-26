@@ -51,7 +51,9 @@ import io.shiftleft.semanticcpg.language.*
           case r: io.shiftleft.codepropertygraph.generated.nodes.Return => "return"
           case _ => ""
         }
-        if(kind.nonEmpty) {
+        // A JS module AST contains nested function bodies. Emit each fact only
+        // for its actual owning method, rather than duplicating its CPG id.
+        if(kind.nonEmpty && n.method.id == m.id) {
           val refs=n match {case c: io.shiftleft.codepropertygraph.generated.nodes.Call => c.argument.filter(_.argumentIndex>0).flatMap(_.ast).collect{case r: io.shiftleft.codepropertygraph.generated.nodes.MethodRef => r.methodFullName}.take(21).toSeq;case _ => Seq.empty[String]}
           val name=n.propertyOption[String]("NAME").getOrElse("")
           val signature=n.propertyOption[String]("METHOD_FULL_NAME").getOrElse("")

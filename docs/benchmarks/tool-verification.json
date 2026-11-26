@@ -2762,6 +2762,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/model-discovery-eval.test.js",
+        "test/semantic-code-model-eval.test.js",
         "test/semantic-path-trace-ui.test.js",
         "test/semantic-path-trace.live.test.js",
         "test/semantic-path-trace.test.js",
