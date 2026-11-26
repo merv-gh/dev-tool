@@ -224,3 +224,14 @@ test('unresolved selectors are explicit failures with retained candidates and op
  assert.equal(polled.selection.availableEntries[0].name,'invoice','job polling also retains candidate recovery');
  assert.equal(require('../lib/call-evidence').classify('where_value_flows',{selection:{resolved:false}}).failed,true);
 });
+
+test('mismatched identity discovery shows authorized alternatives without pretending exact matches',async()=>{
+ S.index=async()=>({analyses:[{id:'wanted',repo:'DEMO/service',sha:'abcdef',language:'java'},{id:'other',repo:'OTHER/repo',sha:'123456'}],total:2});
+ const r=await T.call('which_analyses_exist',{repo:'DEMO/service',sha:'abdef'});
+ assert.equal(r.total,0);assert.deepEqual(r.analyses,[]);
+ assert.equal(r.filterMismatch.field,'sha');assert.equal(r.filterMismatch.requested,'abdef');
+ assert.deepEqual(r.filterMismatch.candidates,[{id:'wanted',repo:'DEMO/service',sha:'abcdef',language:'java'}]);
+ assert.equal(r.next.arguments.sha,undefined);assert.equal(r.next.arguments.repo,'DEMO/service');
+ assert.match(r.guidance,/do not repeat the unchanged/);
+ assert.equal(r.mapView,null);assert.equal(r.traceView,null);
+});

@@ -341,6 +341,19 @@ test('selected graph recovery derives structural facts from the same owned sourc
  assert.equal(denied.diagnostic,undefined,'recovery cannot inspect another actor source');
 });
 
+test('nested receipt previews preserve typed proof leaves and an executable raw read',()=>{
+ const C=require('../lib/code-result'),R=require('../lib/results');
+ const summary={entry:'run',mapView:'/show/source',proofLimits:{entryMap:{proof:{runtime:'unknown',behaviorVerified:false},sourceCoverage:{complete:false,truncated:true,gapCount:7}}}};
+ const receipt=C.receipt('what_happens_from',{summary,payload:'x'.repeat(20000)});
+ const shown=require('../lib/chat-context').prepare('code',{ok:true,toolResults:[receipt],logs:['x'.repeat(20000)]});
+ const r=shown.toolResults[0];
+ assert.equal(r.read.arguments.id,receipt.read.arguments.id);
+ assert.equal(r.read.arguments.all,true);
+ assert.deepEqual(r.result.summary.proofLimits,summary.proofLimits);
+ assert.deepEqual(require('../lib/chat-context').read(r.read.arguments).value.summary,summary);
+ assert.equal(R.load(r.read.arguments.id).data.payload.length,20000);
+});
+
 test('the code schema advertises enabled call shapes without granting or leaking hidden capabilities',async()=>{
  const schema=(await T().schemas({profile:'code'}))[0];
  assert.match(schema.description,/tools.what_happens_from/);

@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "41b5ca987b2ff902645422c78cc14ca42a751461885775dd355bfdd845b2fb01",
+      sourceDigest: "172f25c98820f09d2b532ee7cac777c669d2ae42702e4c75396b0a25e41faefd",
       machines: [
         {
           id: "IO.atomic-file",
@@ -73706,6 +73706,15 @@ var require_semantic_navigation = __commonJS({
             common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions } };
             common.guidance = Object.keys(filters).length ? "No retained analysis matches these exact filters. Inspect the unfiltered retained list; do not invent an id or parse a new revision without an indexing request." : "No retained analyses are available. Report the missing evidence and inspect semantic configuration/indexing capabilities; do not invent a map or trace.";
           }
+          if (!records.length && Object.keys(filters).length) {
+            const mismatches = Object.keys(filters).map((field) => ({ field, peers: (listed.analyses || []).filter((x) => Object.entries(filters).every(([k, v]) => k === field || x[k] === v)) })).filter((x) => x.peers.length).sort((a2, b) => a2.peers.length - b.peers.length);
+            if (mismatches.length) {
+              const { field, peers } = mismatches[0];
+              common.filterMismatch = { field, requested: filters[field], candidates: peers.slice(0, 10).map((x) => Object.fromEntries(["id", "repo", "sha", "workspace", "language"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))), candidatesTruncated: peers.length > 10, meaning: "Other retained identities matching the remaining filters, NOT matches for the requested revision. Verify against the user request before selecting an id." };
+              common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions, ...Object.fromEntries(Object.entries(filters).filter(([k]) => k !== field)) } };
+              common.guidance = "No retained analysis matches these exact filters. Exact identity filter mismatch. Inspect filterMismatch candidates and copy the actual requested identity verbatim; do not repeat the unchanged failed filters. Candidates are metadata, not a map/trace and not proof of the requested revision.";
+            }
+          }
           if (a.all) return common;
           return { ...common, analyses: (raw.analyses || []).map((x) => Object.fromEntries(["id", "repo", "sha", "ref", "workspace", "language", "state", "coverage"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))) };
         } },
@@ -79870,14 +79879,15 @@ var require_chat_context = __commonJS({
       while (end < b.length && end > 0 && (b[end] & 192) === 128) end--;
       return b.subarray(0, end).toString("utf8");
     }
-    var PRIORITY = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "views", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "sourceComplete", "retainedComplete", "completeScope", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where"];
+    var PRIORITY = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "selection", "filterMismatch", "retry", "insideCodeRetry", "read", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "views", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "sourceComplete", "retainedComplete", "completeScope", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where"];
     var PRIORITY_SET = new Set(PRIORITY);
     var orderedEntries = (value) => [...PRIORITY.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !PRIORITY_SET.has(k))];
     function short(value, depth = 0, budget = { left: 5e3 }, omissions = [], pointer = "") {
       const omit = (info) => omissions.push({ path: pointer, ...info }), child = (k) => pointer + "/" + String(k).replace(/~/g, "~0").replace(/\//g, "~1");
-      const maxDepth = /(?:^|\/)summary(?:\/|$)/.test(pointer) ? 7 : 4;
-      if (budget.left < 30 || depth > maxDepth) {
-        omit({ reason: depth > maxDepth ? "depth-limit" : "preview-budget" });
+      const summaryDepth = pointer.split("/").indexOf("summary"), maxDepth = summaryDepth >= 0 ? Math.min(12, summaryDepth + 4) : 4;
+      const structure = value && typeof value === "object";
+      if (budget.left < 30 || structure && depth > maxDepth) {
+        omit({ reason: structure && depth > maxDepth ? "depth-limit" : "preview-budget" });
         return "[details in result_read]";
       }
       if (typeof value === "string") {
@@ -84039,7 +84049,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "41b5ca987b2ff902645422c78cc14ca42a751461885775dd355bfdd845b2fb01";
+      if (true) return "172f25c98820f09d2b532ee7cac777c669d2ae42702e4c75396b0a25e41faefd";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
