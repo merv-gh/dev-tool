@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "6d6f9f6edc8ef4d18a7bae063c13107b8a78f33263b5def6c7d3eecb16a038ce",
+      sourceDigest: "5cb66a10d883c04b6a0f62f7ae5c8a50086546130ffaf1e32211334cb6c5537b",
       machines: [
         {
           id: "IO.atomic-file",
@@ -83654,7 +83654,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "6d6f9f6edc8ef4d18a7bae063c13107b8a78f33263b5def6c7d3eecb16a038ce";
+      if (true) return "5cb66a10d883c04b6a0f62f7ae5c8a50086546130ffaf1e32211334cb6c5537b";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -90282,6 +90282,11 @@ var require_semantic_navigation = __commonJS({
     };
     module2.exports.summarize = summarize;
     module2.exports.normalize = (name, args) => {
+      if (name === "which_analyses_exist") {
+        const out3 = { ...args };
+        for (const key of ["workspace", "repo", "sha"]) if (out3[key] === null || typeof out3[key] === "string" && !out3[key].trim()) delete out3[key];
+        return out3;
+      }
       if (!["what_happens_from", "where_value_flows"].includes(name)) return args;
       const out2 = { ...args };
       for (const key of ["argument", "argumentIndex"]) if (typeof out2[key] === "string" && /^\d+$/.test(out2[key].trim())) out2[key] = Number(out2[key].trim());

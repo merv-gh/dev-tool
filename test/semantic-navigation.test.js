@@ -126,6 +126,11 @@ test('analysis discovery filters exact retained identities without initiating in
  assert.deepEqual(r.analyses.map(x=>x.id),['wanted']);assert.equal(r.total,1);assert.equal(r.sourceTotal,2);
  const full=require('../lib/results').load(r.analysisView.split('/').pop()).data;
  assert.deepEqual(full.analyses.map(x=>x.id),['wanted']);
+ const blank={workspace:'branch',repo:'  ',sha:null};
+ const normalized=await T.call('which_analyses_exist',blank);
+ assert.deepEqual(normalized.analyses.map(x=>x.id),['wanted','other']);
+ assert.deepEqual(blank,{workspace:'branch',repo:'  ',sha:null},'caller inputs remain unchanged');
+ const exact=await T.call('which_analyses_exist',{workspace:'branch',repo:'wrong',sha:'abc'});assert.equal(exact.total,0,'nonempty exact filters are never discarded');
  const empty=await T.call('which_analyses_exist',{workspace:'missing'});
  assert.equal(empty.total,0);assert.match(empty.guidance,/No retained analysis matches/);
  assert.equal(empty.next.insideCodeCall,'tools.which_analyses_exist');
