@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "5cb66a10d883c04b6a0f62f7ae5c8a50086546130ffaf1e32211334cb6c5537b",
+      sourceDigest: "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede",
       machines: [
         {
           id: "IO.atomic-file",
@@ -19722,7 +19722,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/tools.js",
-              line: 1051,
+              line: 1052,
               snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
             }
           ],
@@ -72086,6 +72086,7 @@ var require_code_result = __commonJS({
       return value;
     };
     module2.exports.diagnostic = (error) => {
+      if (/Cannot read properties of undefined.*compacted/.test(error || "")) return { message: "modelContext is model-transport metadata and may be absent inside code. For result_read, use r.sourceCoverage.provenComplete and r.sourceView directly. A non-compacted result does not prove upstream completeness." };
       if (/Cannot use import statement|require is not defined/.test(error || "")) return { message: 'tools is already supplied. Remove import/require; call tools.NAME(args) directly inside code. For discovery: return await tools.tool_search({query:"action words"});' };
       const reserved = /Identifier '([^']+)' has already been declared/.exec(error || "")?.[1];
       if (reserved) return {
@@ -79539,7 +79540,7 @@ var require_chat_context = __commonJS({
         saveError = require_redact().clean(error.message);
       }
       const id = stored?.split("/").pop();
-      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where", "retainedComplete", "completeScope"];
+      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where", "retainedComplete", "completeScope"];
       const ordered = value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries([...priority.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !priority.includes(k))]) : null;
       const omissions = [];
       const out2 = {
@@ -83654,7 +83655,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "5cb66a10d883c04b6a0f62f7ae5c8a50086546130ffaf1e32211334cb6c5537b";
+      if (true) return "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -96284,8 +96285,9 @@ var require_tools = __commonJS({
           const provenance = require_code_result().provenance(r.hasReturn ? r.returned : output || (r.logs || []).join("\n"), calls);
           const silent = !output && !r.hasReturn && !r.logs?.length;
           const discoveryOnly = !toolErrors.length && (calls.length > 0 && calls.every((c) => ["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"].includes(c.tool) || c.tool === "semantic_index" && !c.args?.repo && !c.args?.service && !c.args?.revisionKey && !c.args?.repos && !c.args?.job) || calls.length === 0 && recentResults.some((c) => c.tool === "tools.list"));
-          const toolResults = silent ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
-          const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + " Execute the described source tool before making source-behavior claims." : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. Use their ids/results; do not repeat discovery. Return or text your answer." : void 0;
+          const largePrintedOutput = Buffer.byteLength(output + (r.logs || []).join("\n")) > (require_config().getTools().modelResultBytes || 12288);
+          const toolResults = silent || largePrintedOutput ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
+          const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + " Execute the described source tool before making source-behavior claims." : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : largePrintedOutput && toolResults.length ? "Printed output exceeds the model preview budget. toolResults are bounded host-call summaries with full-data reads, not the cell computation. Use their selected summaries and evidence links to answer if sufficient; otherwise read only missing details. Do not rerun completed tools or use code just to format a final answer." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. If their summaries answer the request, answer the user directly; otherwise read missing details or compute. Do not repeat discovery." : calls.length ? "If the returned/logged facts answer the request, give the final answer to the user now. Do not call code again merely to format it. Keep the source evidence links and completeness/proof limits." : void 0;
           const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms, toolResults, toolErrors, guidance };
           return {
             ok: !r.error,

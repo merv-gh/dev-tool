@@ -172,7 +172,7 @@ test('host receipts retain full JSON when business data contains an external vie
 test('console aggregates are output, not silent cells needing raw host receipts',async()=>{
  const r=await T().call('code',{code:"const r=await tools.files_read({store:'data',path:'a.txt'}); console.log(JSON.stringify({n:r.text.trim().split('\\n').length}));"});
  assert.equal(r.ok,true);assert.deepEqual(r.logs,['{"n":3}']);
- assert.equal(r.toolResults,undefined);assert.equal(r.guidance,undefined);
+ assert.equal(r.toolResults,undefined);assert.match(r.guidance,/final answer/);
 });
 
 test('large host receipts keep selected summary facts and real evidence bridges',()=>{
@@ -218,4 +218,20 @@ test('calculation views link to the retained source independently of tool-result
 test('dispatching code from code does not bypass the self-call boundary',async()=>{
  const r=await T().call('code',{code:'return await tools.tool_execute({name:"code",arguments:{code:"return 1"}});'});
  assert.equal(r.ok,false);assert.match(r.error,/cannot call itself/);
+});
+
+test('large console output retains bounded host results while small calculations remain uncluttered',async()=>{
+ const r=await T().call('code',{code:"const r=await tools.files_read({store:'data',path:'a.txt'}); console.log(JSON.stringify(r).repeat(1000));"});
+ assert.ok(r.toolResults?.length);
+ assert.match(r.guidance,/Printed output exceeds/);
+ assert.ok(r.logs[0].length>12288);
+ const delivered=require('../lib/chat-pressure').response('code',r).value;
+ assert.ok(delivered.toolResults?.length,'host summaries survive clipping of the console string');
+ assert.ok(delivered.modelContext.compacted);
+ assert.equal(r.toolResults[0].tool,'files_read');
+});
+test('missing transport metadata has a source completeness diagnostic',async()=>{
+ const r=await T().call('code',{code:"const r={}; return r.modelContext.compacted;"});
+ assert.equal(r.ok,false);assert.match(r.diagnostic.message,/sourceCoverage.provenComplete/);
+ assert.match(r.diagnostic.message,/does not prove upstream completeness/);
 });
