@@ -1,0 +1,581 @@
+{
+  "method": "All exploratory iterations retained. Latest arithmetic pair has identical harness/instructions/model/settings. Receipt grading and final answers are reported separately; incomplete disk-interrupted run excluded.",
+  "finalSourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "latestModelSourceDigest": "92059198d7114106620b45705e2717550209ee026731844d20b254dbaf55bf36",
+  "presentationCorrectionAfterModel": "After the arithmetic pair: partial-page output classification corrected, discovery descriptions shortened to retain the lean wire budget, and the scripts-read profile added. These leave the arithmetic cases’ input schema and nonpaged payloads unchanged. The native profile experiment uses the current source digest.",
+  "records": [
+    {
+      "file": "result-operations-after-2b.json",
+      "arm": "after",
+      "sourceDigest": "942b6ebbe060acbc48b3b8035b4864dace9b91b104f152fc8f4b75126f1e12df",
+      "harnessDigest": "e1936eeaf057996ae403c70bd43a058eac05b794ef25a28bbb57e3dcc58b040d",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 0,
+        "calls": 1,
+        "errors": 0,
+        "deliveredBytes": 6854,
+        "inputTokens": 4601,
+        "outputTokens": 136
+      },
+      "samples": [
+        {
+          "id": "all-retained",
+          "finish": "assistant-finished",
+          "calls": 1,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": 445,
+            "rows": 12,
+            "sourceComplete": true
+          },
+          "sumCorrect": true,
+          "rowsCorrect": true,
+          "coverageCorrect": false,
+          "aggregateEvidence": true,
+          "previewSummaryEvidence": false
+        },
+        {
+          "id": "partial-source",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": -4,
+            "rows": 3,
+            "sourceComplete": false
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        }
+      ]
+    },
+    {
+      "file": "result-operations-baseline-final-2b.json",
+      "arm": "baseline-final",
+      "sourceDigest": "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6",
+      "harnessDigest": "64f89a6b351ae635bf1949fc211cd793a57c6b96b3bcc63e6ab7b2ab2717c55f",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 0,
+        "calls": 0,
+        "errors": 0,
+        "deliveredBytes": 6200,
+        "inputTokens": 2457,
+        "outputTokens": 48
+      },
+      "samples": [
+        {
+          "id": "all-retained",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": 121,
+            "rows": 3,
+            "sourceComplete": true
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": false,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        },
+        {
+          "id": "partial-source",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": -4,
+            "rows": 3,
+            "sourceComplete": false
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        }
+      ]
+    },
+    {
+      "file": "result-operations-baseline-summary-2b.json",
+      "arm": "baseline-summary",
+      "sourceDigest": "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6",
+      "harnessDigest": "ea1077db7ece0c46699ad53a66e6adf1ca29e7973c64db5ee48b9303210d9833",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 0,
+        "calls": 0,
+        "errors": 0,
+        "deliveredBytes": 6200,
+        "inputTokens": 2461,
+        "outputTokens": 46
+      },
+      "samples": [
+        {
+          "id": "all-retained",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": 149,
+            "rows": 3,
+            "sourceComplete": true
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": false,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        },
+        {
+          "id": "partial-source",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": -4,
+            "rows": 3,
+            "sourceComplete": false
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        }
+      ]
+    },
+    {
+      "file": "result-operations-before-2b.json",
+      "arm": "before",
+      "sourceDigest": "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6",
+      "harnessDigest": "e1936eeaf057996ae403c70bd43a058eac05b794ef25a28bbb57e3dcc58b040d",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 0,
+        "calls": 0,
+        "errors": 0,
+        "deliveredBytes": 6200,
+        "inputTokens": 2473,
+        "outputTokens": 43
+      },
+      "samples": [
+        {
+          "id": "all-retained",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": 149,
+            "rows": 3,
+            "sourceComplete": true
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": false,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        },
+        {
+          "id": "partial-source",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": 37,
+            "rows": 3,
+            "sourceComplete": false
+          },
+          "sumCorrect": false,
+          "rowsCorrect": false,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        }
+      ]
+    },
+    {
+      "file": "result-operations-final-2b.json",
+      "arm": "final",
+      "sourceDigest": "94150d7d6112295ca00464c6f2de00df9e4bb26966e59451b20cc53c0cd55fc6",
+      "harnessDigest": "64f89a6b351ae635bf1949fc211cd793a57c6b96b3bcc63e6ab7b2ab2717c55f",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 1,
+        "calls": 1,
+        "errors": 0,
+        "deliveredBytes": 7227,
+        "inputTokens": 4845,
+        "outputTokens": 143
+      },
+      "samples": [
+        {
+          "id": "all-retained",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": false,
+          "answer": {
+            "sum": 204,
+            "rows": 12,
+            "sourceComplete": false
+          },
+          "sumCorrect": false,
+          "rowsCorrect": true,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": false
+        },
+        {
+          "id": "partial-source",
+          "finish": "assistant-finished",
+          "calls": 1,
+          "errors": 0,
+          "passed": true,
+          "answer": {
+            "sum": 234,
+            "rows": 12,
+            "sourceComplete": false
+          },
+          "sumCorrect": true,
+          "rowsCorrect": true,
+          "coverageCorrect": true,
+          "aggregateEvidence": true,
+          "previewSummaryEvidence": false
+        }
+      ]
+    },
+    {
+      "file": "result-operations-summary-2b.json",
+      "arm": "summary",
+      "sourceDigest": "92059198d7114106620b45705e2717550209ee026731844d20b254dbaf55bf36",
+      "harnessDigest": "ea1077db7ece0c46699ad53a66e6adf1ca29e7973c64db5ee48b9303210d9833",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 2,
+        "calls": 0,
+        "errors": 0,
+        "deliveredBytes": 6922,
+        "inputTokens": 3079,
+        "outputTokens": 46
+      },
+      "samples": [
+        {
+          "id": "all-retained",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": true,
+          "answer": {
+            "sum": 445,
+            "rows": 12,
+            "sourceComplete": false
+          },
+          "sumCorrect": true,
+          "rowsCorrect": true,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": true
+        },
+        {
+          "id": "partial-source",
+          "finish": "assistant-finished",
+          "calls": 0,
+          "errors": 0,
+          "passed": true,
+          "answer": {
+            "sum": 234,
+            "rows": 12,
+            "sourceComplete": false
+          },
+          "sumCorrect": true,
+          "rowsCorrect": true,
+          "coverageCorrect": true,
+          "aggregateEvidence": false,
+          "previewSummaryEvidence": true
+        }
+      ]
+    },
+    {
+      "file": "tool-io-model-discovery-aggregation-2b.json",
+      "arm": "discovery-aggregation",
+      "sourceDigest": "5aa3228191fbe68e2ecb642569cacfa96002aa4e3664b2dda22d4d6667098dfa",
+      "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 0,
+        "failed": 2,
+        "argumentErrors": 7,
+        "toolCalls": 16,
+        "deliveredBytes": 34162,
+        "inputTokens": 47015,
+        "outputTokens": 1127,
+        "ms": 263776
+      },
+      "samples": [
+        {
+          "id": "saved-script",
+          "finish": "turn-budget",
+          "calls": 8,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": false
+          },
+          "answer": null,
+          "scriptReads": 0,
+          "searchCalls": 8
+        },
+        {
+          "id": "full-result",
+          "finish": "turn-budget",
+          "calls": 8,
+          "errors": 7,
+          "prespecifiedReceiptGrade": {
+            "passed": false,
+            "fullDataRecovered": false,
+            "correctSum": false
+          },
+          "answer": null,
+          "scriptReads": 0,
+          "searchCalls": 0
+        }
+      ]
+    },
+    {
+      "file": "tool-io-model-discovery-final-2b.json",
+      "arm": "discovery-final",
+      "sourceDigest": "942b6ebbe060acbc48b3b8035b4864dace9b91b104f152fc8f4b75126f1e12df",
+      "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 1,
+        "failed": 1,
+        "argumentErrors": 0,
+        "toolCalls": 10,
+        "deliveredBytes": 16090,
+        "inputTokens": 28076,
+        "outputTokens": 542,
+        "ms": 143742
+      },
+      "samples": [
+        {
+          "id": "saved-script",
+          "finish": "turn-budget",
+          "calls": 8,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": true
+          },
+          "answer": null,
+          "scriptReads": 4,
+          "searchCalls": 3
+        },
+        {
+          "id": "full-result",
+          "finish": "assistant-finished",
+          "calls": 2,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": false,
+            "fullDataRecovered": false,
+            "correctSum": true
+          },
+          "answer": {
+            "sum": 445
+          },
+          "scriptReads": 0,
+          "searchCalls": 0
+        }
+      ]
+    },
+    {
+      "file": "tool-io-model-discovery-interrupted-2b.json",
+      "arm": "discovery-aggregation",
+      "sourceDigest": "1371223c0c3438ab8cded1a6d4c07e100cc7177b891726168509371fa8938782",
+      "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+      "complete": false,
+      "excluded": true,
+      "samples": [
+        {
+          "id": "saved-script",
+          "finish": "turn-budget",
+          "calls": 6,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": false
+          },
+          "answer": null,
+          "scriptReads": 0,
+          "searchCalls": 6
+        }
+      ]
+    },
+    {
+      "file": "tool-io-model-resolved-2b.json",
+      "arm": "resolved",
+      "sourceDigest": "94150d7d6112295ca00464c6f2de00df9e4bb26966e59451b20cc53c0cd55fc6",
+      "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 2,
+        "passed": 0,
+        "failed": 2,
+        "argumentErrors": 0,
+        "toolCalls": 4,
+        "deliveredBytes": 41517,
+        "inputTokens": 8062,
+        "outputTokens": 198,
+        "ms": 156482
+      },
+      "samples": [
+        {
+          "id": "saved-script",
+          "finish": "endpoint-error",
+          "calls": 3,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": false
+          },
+          "answer": null,
+          "scriptReads": 0,
+          "searchCalls": 3
+        },
+        {
+          "id": "full-result",
+          "finish": "assistant-finished",
+          "calls": 1,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": false,
+            "fullDataRecovered": false,
+            "correctSum": true
+          },
+          "answer": {
+            "sum": 445
+          },
+          "scriptReads": 0,
+          "searchCalls": 0
+        }
+      ]
+    },
+    {
+      "file": "tool-io-model-script-confirm-2b.json",
+      "arm": "script-confirm",
+      "sourceDigest": "92059198d7114106620b45705e2717550209ee026731844d20b254dbaf55bf36",
+      "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+      "complete": true,
+      "sourceChanged": false,
+      "excluded": false,
+      "summary": {
+        "cases": 1,
+        "passed": 1,
+        "failed": 0,
+        "argumentErrors": 0,
+        "toolCalls": 8,
+        "deliveredBytes": 11852,
+        "inputTokens": 22520,
+        "outputTokens": 315,
+        "ms": 93591
+      },
+      "samples": [
+        {
+          "id": "saved-script",
+          "finish": "turn-budget",
+          "calls": 8,
+          "errors": 0,
+          "prespecifiedReceiptGrade": {
+            "passed": true
+          },
+          "answer": null,
+          "scriptReads": 4,
+          "searchCalls": 3
+        }
+      ]
+    }
+  ],
+  "nativeProfile": {
+    "file": "script-native-profile-2b.json",
+    "profile": "scripts-read",
+    "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+    "harnessDigest": "04c8319bb38480c9e365ddfa98866993eefedc033719a8494d8613ed12f632f6",
+    "wireDigest": "730143d10e33db267c9d9ccd9420cacc03628ac4c089dcdc06d0279107b6e5cd",
+    "definitionRead": true,
+    "answerCorrect": true,
+    "passed": true,
+    "calls": 2,
+    "finish": "assistant-finished",
+    "schemaBytes": 1150,
+    "deliveredBytes": 774,
+    "usage": {
+      "input": 2373,
+      "output": 90
+    },
+    "final": "The saved script for checking unpaid orders is:\n- **Script ID**: `orders/unpaid-check`\n- **Required Parameter Names**: `customerId`"
+  },
+  "implementationCommit": "03ff2e2da8c5b5892dba380db8ae318b8a530253",
+  "validation": {
+    "ci": {
+      "url": "https://github.com/merv-gh/dev-tool/actions/runs/45825261432",
+      "conclusion": "success",
+      "nodeVersions": [
+        22,
+        24
+      ],
+      "coverageGate": true,
+      "integration": true,
+      "node22": {
+        "tests": 1449,
+        "passed": 1383,
+        "skipped": 66,
+        "failed": 0
+      }
+    },
+    "localSerial": {
+      "tests": 1449,
+      "passed": 1379,
+      "skipped": 66,
+      "failed": 4,
+      "reason": "ENOSPC during oversized data-lineage fixture; same suite passed remotely"
+    }
+  }
+}

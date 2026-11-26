@@ -1,0 +1,2688 @@
+{
+  "protocol": "dt.tool-io-model/v1",
+  "kind": "real-model-fixture-evaluation",
+  "arm": "resolved",
+  "model": "qwen3.5:2b",
+  "sourceDigest": "94150d7d6112295ca00464c6f2de00df9e4bb26966e59451b20cc53c0cd55fc6",
+  "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+  "startedAt": "2026-11-26T12:38:33.111Z",
+  "settings": {
+    "temperature": 0,
+    "think": false,
+    "contextWindow": 32768,
+    "seedBase": 42,
+    "repeats": 1,
+    "maxTurns": 8,
+    "maxCalls": 16,
+    "maxTokens": 768
+  },
+  "limits": [
+    "Local synthetic fixtures only; actual Node tests and saved-script tools execute, without production access.",
+    "Same tasks, harness, budgets and sampling settings on both revisions; schemas and chat presentation come from each revision.",
+    "Small exploratory sample, not a statistical reliability claim. No test checks model weights; digest/size are server-advertised.",
+    "Task success is independently graded from executed tool receipts or exact JSON answers, not prose claims."
+  ],
+  "samples": [
+    {
+      "id": "saved-script",
+      "repeat": 0,
+      "query": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it.",
+      "wireBytes": 2291,
+      "wireNames": [
+        "tool_profiles",
+        "tool_search",
+        "tool_describe",
+        "tool_execute"
+      ],
+      "events": [
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "check unpaid orders"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjgtl4c82703c756405ce98c",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjgtl4c82703c756405ce98c",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "script_search"
+          },
+          "ok": true,
+          "result": {
+            "total": 1,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Words or script id; all words must match"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "description": "Optional collection prefix"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "Preview matches",
+                      "default": 10
+                    },
+                    "all": {
+                      "type": "boolean",
+                      "description": "Full output; source limits apply."
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "next": {
+                  "tool": "tool_execute",
+                  "name": "script_search",
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "name": "script_search",
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "script",
+                "search"
+              ],
+              "unmatchedTerms": [],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis"
+          },
+          "delivered": {
+            "total": 1,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Words or script id; all words must match"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "description": "Optional collection prefix"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "Preview matches",
+                      "default": 10
+                    },
+                    "all": {
+                      "type": "boolean",
+                      "description": "Full output; source limits apply."
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "next": {
+                  "tool": "tool_execute",
+                  "name": "script_search",
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "name": "script_search",
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "script",
+                "search"
+              ],
+              "unmatchedTerms": [],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "check unpaid orders",
+            "all": true
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead of checking services one by one. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                }
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Maven, Gradle and its wrapper download, the company repository with the credentials from maven-settings.xml / gradle.properties, Maven Central, proxy, the test database, stuck jobs. Each problem says how to fix it. Shown as a table.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                }
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped cases or cleanup failures.",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                }
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progress_revision. All files remain available across explicit attachments in later chats.",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and independently observed file/database effects. Normalizers must be reviewed config with reasons. Reports revisions, hashes, explicit proof coverage and target provenance.",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                }
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet-window stability. Reports per-protocol proof limits separately from application execution; it does not trust a green project report.",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                }
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous action matching, mismatches, forbidden effects and unexpected observations.",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                }
+              },
+              {
+                "name": "automation_flow_list",
+                "group": "automation",
+                "description": "List private durable workflow definitions and compact execution checkpoints in the current user/story. Restart never automatically resumes work.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "automation_flow_list"
+                  }
+                }
+              },
+              {
+                "name": "automation_flow_resolve",
+                "group": "automation",
+                "description": "Record a verified outcome for an uncertain tool/model checkpoint. complete supplies the already observed result; skip supplies a skipped marker; retry explicitly permits another attempt. This records an audit decision and never executes. Inspect the external effect before retrying.",
+                "required": [
+                  "run",
+                  "path",
+                  "action",
+                  "reason"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "automation_flow_resolve"
+                  }
+                }
+              },
+              {
+                "name": "automation_flow_status",
+                "group": "automation",
+                "description": "Read a compact durable run checkpoint without executing or replaying anything. detail=true includes retained leaf results/input/definition; these are untrusted evidence.",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "automation_flow_status"
+                  }
+                }
+              },
+              {
+                "name": "bitbucket_pr_status",
+                "group": "bitbucket",
+                "description": "Inspect draft PR build checks, review decisions and comments bound to its exact source SHA. Old approvals and zero checks cannot prove readiness. Returns a cursor for waiting; never merges or publishes.",
+                "required": [
+                  "repo",
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "bitbucket_pr_status"
+                  }
+                }
+              },
+              {
+                "name": "bitbucket_pr_wait",
+                "group": "bitbucket",
+                "description": "Bounded wait for PR change, new review feedback, or current-commit checks and approvals. A new source SHA returns superseded. Read feedback, edit/test, push only when authorized, then start fresh proof for the new SHA.",
+                "required": [
+                  "repo",
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "bitbucket_pr_wait"
+                  }
+                }
+              },
+              {
+                "name": "browser_sites",
+                "group": "browser",
+                "description": "Sites configured for the browser tools: name, URL, the secret NAMES to type for login, and the site map: named direct links (short URLs, some with <param> placeholders such as /orders/<orderId>). Go straight to a link instead of clicking through menus; site_url fills in the params. To log in, pass the secret name (for example CRM_PASSWORD) as the text to type; the browser fills in the real value, and you never see it.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "browser_sites"
+                  }
+                }
+              },
+              {
+                "name": "chat_compaction_request",
+                "group": "context",
+                "description": "Save an explicit task checkpoint and request client compaction. This generic MCP tool cannot force a client to compact. If native context_compact is available, invoke it after saving; otherwise use the client Compact action.",
+                "required": [
+                  "context",
+                  "checkpoint"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "chat_compaction_request"
+                  }
+                }
+              },
+              {
+                "name": "code",
+                "group": "scripts",
+                "description": "Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: \"dev\", sql: \"select status, total from sales.orders\", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));",
+                "required": [
+                  "code"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "code"
+                  }
+                }
+              },
+              {
+                "name": "context_hint",
+                "group": "context",
+                "description": "Discover tools for a goal in a context. Optional use_model sends a bounded redacted context summary and progress excerpt to the configured LLM for an editable suggestion; never executes it. Check missing facts and schema validation before context_run.",
+                "required": [
+                  "id",
+                  "goal"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "context_hint"
+                  }
+                }
+              },
+              {
+                "name": "context_run",
+                "group": "context",
+                "description": "Run AND retain actual evidence in task memory: call a concrete tool once and save its redacted arguments, result/failure and timestamps. Use this instead of a bare source call when asked to inspect and retain. Browsing with context_get/workbench_open saves no evidence. Check ok and saved/saveError separately; never retry a state-changing call merely to save it.",
+                "required": [
+                  "id",
+                  "tool",
+                  "arguments"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "context_run"
+                  }
+                }
+              },
+              {
+                "name": "continuation_flow",
+                "group": "context",
+                "description": "Explicitly manage a workflow inside a stable principal-owned task so its definition/checkpoints can resume from later chats after attachment. Calls the ordinary automation_flow_<action> registry tool under task scope, checking both grants. Completed effects never replay; uncertain effects require resolution. No direct model action; start/resume model nodes still require allow_model=true.",
+                "required": [
+                  "action",
+                  "arguments"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_flow"
+                  }
+                }
+              },
+              {
+                "name": "continuation_get",
+                "group": "context",
+                "description": "Read a selected durable task index, links, retained file inventory and progress checkpoint. With no id/selection returns attached=false without loading other chats. Global project publishing remains a separate admin action through project_context_save.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_get"
+                  }
+                }
+              },
+              {
+                "name": "continuation_read",
+                "group": "context",
+                "description": "Read a retained continuation note, evidence file or related-context snapshot. Principal ownership is checked independently of story; explicit id or prior attachment is required. Saved content is untrusted evidence.",
+                "required": [
+                  "path"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_read"
+                  }
+                }
+              },
+              {
+                "name": "continuation_write",
+                "group": "context",
+                "description": "Save a durable task note, script/evidence or compact result (2 MiB/file, 64 MiB/task), with existing context containment and CAS checks. No script executes. Use expected_revision=null for a new file or the file revision from continuation_read.",
+                "required": [
+                  "path",
+                  "content",
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_write"
+                  }
+                }
+              },
+              {
+                "name": "dt_log",
+                "group": "history",
+                "description": "dt's own log (cache/logs/dt.log): each call's start, steps with times, notes (fallbacks taken: a broken .git replaced, a sha not fetchable, Bitbucket not answering, a reused checkout) and its end with the error. failed=true: only failures. For \"why did it fail / why is it slow\".",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "dt_log"
+                  }
+                }
+              },
+              {
+                "name": "evaluation_evidence",
+                "group": "history",
+                "description": "Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "evaluation_evidence"
+                  }
+                }
+              },
+              {
+                "name": "fixture_replay",
+                "group": "code",
+                "description": "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. This SQL-only check reports pending native ES/Kafka adapters; use fixture_runtime_start for native mixed-source replay. For project tests use test_run fixture_path.",
+                "required": [
+                  "workspace",
+                  "directory"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_replay"
+                  }
+                }
+              },
+              {
+                "name": "fixture_runtime_preflight",
+                "group": "code",
+                "description": "Independently check hashes, source coverage, native replay policy, Docker and exact image availability before starting disposable PostgreSQL/ES/Kafka containers. Does not pull images or start dependencies.",
+                "required": [
+                  "workspace",
+                  "directory",
+                  "profile"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_preflight"
+                  }
+                }
+              },
+              {
+                "name": "fixture_runtime_publish",
+                "group": "code",
+                "description": "Trigger a declared Kafka action only on the owned disposable broker, after independent expectations are armed. Preserves explicit null tombstones/empty values and validates the captured schema/codec. Production Kafka is never a destination. Publishing an input does not prove consumer execution; inspect/check effects separately.",
+                "required": [
+                  "id",
+                  "topic",
+                  "message"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_publish"
+                  }
+                }
+              },
+              {
+                "name": "fixture_schema",
+                "group": "code",
+                "description": "Inspect Kafka correlation paths independently from capture. Reads cached JSON Schema, Avro, flattened fields and samples, with evidence and types. An optional path is checked against the known shape; unknown schemas do not establish a missing path. Headers may have undeclared keys.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_schema"
+                  }
+                }
+              },
+              {
+                "name": "fixture_validate",
+                "group": "code",
+                "description": "Inspect one saved fixture capture separately: recheck captured parent relationships and return all capture gaps, completeness and counts. Does not query the environment or write scratch databases; fixture_replay separately validates real SQL and constraints.",
+                "required": [
+                  "capture"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_validate"
+                  }
+                }
+              },
+              {
+                "name": "gradle_bump",
+                "group": "code",
+                "description": "Plan a dependency upgrade using exact parsed source owners, preserving comments and unrelated versions. Shared variables/catalog versions show every affected consumer. Plan never edits source. Explicit apply reads a saved task-private plan and checks workspace repository, HEAD SHA and every file revision before guarded saves; unresolved/dynamic versions block apply. No commit, push, or remote write.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "gradle_bump"
+                  }
+                }
+              },
+              {
+                "name": "impact",
+                "group": "code",
+                "description": "Impact radius: what is affected when something changes, walking \"who uses it\" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method (\"PaymentService#create\", FQN, file.java:42), a table (\"pay.payments\"), a column (\"pay.payments.fee\": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic (\"topic:payments.created\"), an ES index (\"es:orders\"), an endpoint (\"POST /payments/{id}/settle\": handlers and Feign callers in other services). Returns layers by distance with file:line and why, the endpoints/topics/tables/services reached, candidate tests (inspect coverage before choosing regression scope), and text mentions in config/SQL files. Shown as a view.",
+                "required": [
+                  "target"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "impact"
+                  }
+                }
+              },
+              {
+                "name": "jenkins_build",
+                "group": "jenkins",
+                "description": "Read one Jenkins build or queue item: progress, result and observed SCM SHA. A green build without matching checkout evidence does not prove the requested commit.",
+                "required": [
+                  "job"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "jenkins_build"
+                  }
+                }
+              },
+              {
+                "name": "kafka_produce",
+                "group": "kafka",
+                "description": "EXPLICITLY PRODUCE one message through configured Kafka UI. Sends once with no retry. Select a real partition; objects become JSON strings, null value is a tombstone. Take kafka_checkpoint first when waiting for resulting events. A failed acknowledgement may have an unknown delivery outcome.",
+                "required": [
+                  "topic",
+                  "partition",
+                  "value"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_produce"
+                  }
+                }
+              },
+              {
+                "name": "kafka_wait",
+                "group": "kafka",
+                "description": "Wait for a NEW matching Kafka event across all partitions. Pass checkpoint from before the triggering UI/API/produce step; otherwise starts at the current end. match maps message paths (value.orderId, key, headers.name) to exact typed values. Bounded scan, cancellation and timeout; no group/commits. Timeout, expired offsets and scan limit fail the step.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_wait"
+                  }
+                }
+              },
+              {
+                "name": "knowledge_verify",
+                "group": "knowledge",
+                "description": "Verify exact quoted text against a cached source revision independently of graph/search. Ellipsis-separated pieces must occur in order. Historical normalized/Markdown/contract revisions remain checkable by source and revision; retrieved text never establishes runtime proof.",
+                "required": [
+                  "quotes"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "knowledge_verify"
+                  }
+                }
+              },
+              {
+                "name": "logic_model",
+                "group": "runtime",
+                "description": "Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include diff decisions and revision publication. For actual repository lifecycles (including workspace push), Joern and telemetry use repo_model; these templates are separate abstractions. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.",
+                "required": [
+                  "action"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "logic_model"
+                  }
+                }
+              },
+              {
+                "name": "map_node",
+                "group": "map",
+                "description": "Inspect a node and get enabled, schema-checked passport, PG, Kafka, ES, logs or browser tool arguments. Suggestions do not execute. needs_user_input means ask the returned questions; never guess missing UI bindings. Resolve database ambiguity before querying.",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "map_node"
+                  }
+                }
+              },
+              {
+                "name": "mapping_debug",
+                "group": "api",
+                "description": "Debug raw-to-response mappings. discover+workspace bundles entry call chains and copyable source files; discover+service reads cached SQL/ports. Named notebook: HTTP request, PG/ES/Kafka probes, pointer comparisons and optional selections (filters, ordering, whole-row fields, fallback). Candidates explain exclusions/winner; incomplete evidence stays inconclusive. Save/open never execute; run sends selected steps. Private recordings, inline/live views; contract checks are not runtime lineage.",
+                "required": [
+                  "action"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "mapping_debug"
+                  }
+                }
+              },
+              {
+                "name": "repo_model",
+                "group": "semantic",
+                "description": "Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "repo_model"
+                  }
+                }
+              },
+              {
+                "name": "scenario_assert",
+                "group": "code",
+                "description": "Recheck independently collected scenario observations against the package expectations. Does not accept model-supplied observations or alter expected values. Keeps process proof distinct from build/test proof.",
+                "required": [
+                  "session"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_assert"
+                  }
+                }
+              },
+              {
+                "name": "scenario_emulate",
+                "group": "code",
+                "description": "Emulate the complete bound passport contract using only captured local state. Sandboxed JS sees vars.actions and ONLY await tools.action_input({id}), tools.state_read({id,action?,where?,key?,request?}), tools.observe({id,value}). Every selected action, required dependency read and expected effect is checked; no live dt tools are exposed. This verifies an explicit local model; run real service tests with test_run for application proof.",
+                "required": [
+                  "inventory",
+                  "actions",
+                  "expectations",
+                  "code"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_emulate"
+                  }
+                }
+              },
+              {
+                "name": "scenario_observe",
+                "group": "code",
+                "description": "Independently collect real response, HTTP calls and file effects from a scenario session, polling until the deadline and then checking an explicit quiet window. Unexpected HTTP calls/files fail. Captured evidence and assertion results are retained for separate inspection.",
+                "required": [
+                  "session"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_observe"
+                  }
+                }
+              },
+              {
+                "name": "scenario_preflight",
+                "group": "code",
+                "description": "Check a scenario against its reviewed runtime profile before starting anything. Node containers support HTTP/config/files with network disabled; other dependencies require explicit project test adapters. Unsupported brokers, codecs or observers are blocking gaps.",
+                "required": [
+                  "workspace",
+                  "package"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_preflight"
+                  }
+                }
+              },
+              {
+                "name": "scenario_run",
+                "group": "code",
+                "description": "Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_run"
+                  }
+                }
+              },
+              {
+                "name": "script_save",
+                "group": "scripts",
+                "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}}, {\"script\": \"<other script id>\", \"params\": {...}}, {\"open\": \"site.link\"} (a site map link; its <params> come from the script params), {\"browser\": \"<browser tool, e.g. click, type, snapshot>\", \"args\": {...}}, {\"wait\": seconds or \"text\"}. Add \"as\": \"name\" to keep a result, \"optional\": true to continue on failure. \"{{name}}\" in args inserts a param or an earlier result ({{order.rows.0.id}}); \"{{link:site.link}}\" a site link URL. More step kinds: {\"set\": {\"folder\": \"out/{{date:YYYYMMDD}}/{{uuid}}\"}} computes values; {\"transform\": \"{{doc.text}}\", \"replace\": [{\"find\": \"ORD-\\\\d+\", \"regex\": true, \"with\": \"ORD-{{rand:6}}\"}], \"json\": {\"order.id\": \"{{uuid}}\"}, \"as\": \"copy\"} rewrites a document (each distinct match gets one new value); {\"http\": \"POST https://…\", \"body\": {...}} calls any HTTP(S) API in the trusted environment. Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. JavaScript (sandboxed, like Postman/Bruno): {\"js\": \"return vars.doc.items.length\"} is a step; on any step \"before\": \"args.body.ts = now()\" changes its args, \"capture\": {\"jobId\": \"json.id\"} copies from the result into vars, \"after\": \"test('201', () => expect(result.status).toBe(201)); vars.n = result.json.items.length\" checks and post-processes (return a value to replace the result). The script itself can have \"vars\", \"before\" and \"after\"; failing tests fail the run. Try code with js_run first. \"tool\": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.",
+                "required": [
+                  "id",
+                  "description",
+                  "steps"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_save"
+                  }
+                }
+              },
+              {
+                "name": "service_env_plan",
+                "group": "runtime",
+                "description": "Plan or discover disposable service environments. Lists this user’s persistent definitions/runs across chats; selecting an id is explicit resume. definition accepts version 1 JSON; worker=true checks Docker/images without starting. For a branch, workspace_open first. Returned bindings are for application configuration, not production deployment.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "service_env_plan"
+                  }
+                }
+              },
+              {
+                "name": "task_run_control",
+                "group": "automation",
+                "description": "Steer, pause, resume, stop or explicitly checkpoint a persistent worker. Commands are saved before acknowledgement. resolve records a verified uncertain outcome; it never repeats an effect. A checkpoint retains the previous transcript.",
+                "required": [
+                  "run",
+                  "action"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "task_run_control"
+                  }
+                }
+              },
+              {
+                "name": "test_data",
+                "group": "code",
+                "description": "Generate TestData, one helper class in the module's test sources with a valid object for every type at the service's edges: request bodies and path variables of its controllers, payloads of its Kafka listeners and of what it sends, the entities its repositories read (a row as the database holds it: id and defaults set; dictionary entities from their real rows, all rows as a list), what its Feign clients answer. Built through each type's constructor; values from Bean Validation, the database columns the names map to (length, scale, CHECKs, FKs to d_ dictionary tables: a real row), how the code parses strings (Long.parseLong(id): the id as text), names, types. Ids of one concept are one constant (ORDER_ID) so a body, an event and a row agree. Bodies validated with @Valid get <body>Cases(): each constraint broken (false) and the edges that pass (true) for @ParameterizedTest. Also with(obj, \"field\", value) for variants and json(obj). With env, values come from that environment's synced database. Compile-checked; test_context uses it once it exists.",
+                "required": [
+                  "workspace"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "test_data"
+                  }
+                }
+              },
+              {
+                "name": "testdb_capabilities",
+                "group": "code",
+                "description": "Describe the versioned JSON PostgreSQL lifecycle contract, backend capabilities, portable SQL input format, ownership checks and unsupported schema fidelity. Lets alternative language/storage adapters implement the same operations without importing JavaScript internals.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "testdb_capabilities"
+                  }
+                }
+              },
+              {
+                "name": "testdb_initialize",
+                "group": "code",
+                "description": "Label and initialize the configured dedicated scratch PostgreSQL cluster for owned test resources. Refuses any configured environment database as the control database. Checks CREATEDB; PostgreSQL templates additionally require CREATEROLE for private application users. Does not write to environment databases.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "testdb_initialize"
+                  }
+                }
+              },
+              {
+                "name": "testdb_lease_inspect",
+                "group": "code",
+                "description": "Inspect one durable lease independently: owning run, logical database bindings, expiry, lifecycle status and cleanup failures. Passwords are omitted. Resource ownership is rechecked by release and template verification.",
+                "required": [
+                  "lease"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "testdb_lease_inspect"
+                  }
+                }
+              },
+              {
+                "name": "ui_trace_edit",
+                "group": "browser",
+                "description": "Manually correct a saved UI diagram with optimistic revision checking. patch replaces only supplied definition fields; omitted fields stay intact, [] removes a binding array. Allows title/description/recipe/services/fields/transports/databases/database_links. Corrections remain declared evidence; observed traffic cannot be rewritten. Rebuild with ui_trace previous=<result id>, capture=false to update the inline graph without replay.",
+                "required": [
+                  "id",
+                  "expected_revision",
+                  "patch"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "ui_trace_edit"
+                  }
+                }
+              },
+              {
+                "name": "ui_trace_save",
+                "group": "browser",
+                "description": "Save a versioned task-private UI-to-database diagram recipe without executing it. recipe={url,steps:[{action:\"fill\",selector:\"[name=email]\",value:\"{{email}}\"},{action:\"click\",role:\"button\",name:\"Search\"}]}. Actions: navigate/fill/click/select/check/press/wait. Credentials are runtime parameters. Reviewed service, transport, database and field bindings retain reasons. Use ui_trace_edit for partial edits.",
+                "required": [
+                  "id",
+                  "expected_revision",
+                  "definition"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "ui_trace_save"
+                  }
+                }
+              },
+              {
+                "name": "workbench_open",
+                "group": "views",
+                "description": "Open a clickable explorer to browse ticket notes, files and related checkouts, or a service with scripts/queries, tests, Consul and API actions. Chat shows a retained navigator linking to the authenticated live workbench. Normal tool permissions apply; opening executes no actions.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workbench_open"
+                  }
+                }
+              },
+              {
+                "name": "workbench_save",
+                "group": "context",
+                "description": "Save the prepared tool invocation as a revision-checked action recipe in a task context, optionally linked to a service/repository. Redacts credentials; saved artifacts never execute automatically. Reopen through the interactive workbench.",
+                "required": [
+                  "context",
+                  "title",
+                  "tool",
+                  "arguments"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workbench_save"
+                  }
+                }
+              },
+              {
+                "name": "workspace_branch",
+                "group": "code",
+                "description": "Open/reuse a separate owned workspace at a branch/ref of this repository. Leaves all uncommitted files in the original workspace untouched. Does not push, reset or clean either checkout.",
+                "required": [
+                  "workspace",
+                  "ref"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_branch"
+                  }
+                }
+              },
+              {
+                "name": "workspace_branches",
+                "group": "code",
+                "description": "List retained branch choices for an owned workspace. refresh=true explicitly reads remote refs (30s timeout). No checkout or source edits.",
+                "required": [
+                  "workspace"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_branches"
+                  }
+                }
+              },
+              {
+                "name": "workspace_open",
+                "group": "code",
+                "description": "Open/reuse a writable repo/ref checkout in the current authenticated task. Reconnects and restarts preserve its files and build state; reuse never pulls or resets. fresh=true creates a separate checkout. Different principals/tasks remain isolated. Indexed for code_search, impact and test_context. Edit with workspace_write, run test_run, export workspace_patch; workspace_push publishes only when requested and enabled.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_open"
+                  }
+                }
+              },
+              {
+                "name": "workspace_write",
+                "group": "code",
+                "description": "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Ambiguous imports are suggestions only, ranked with project and configured internal packages first, with reasons. Read compile before the next step; a file with errors does not need a test run to find them. check=false skips the check; fix=false checks but leaves the file as written (the fixes come as suggestions).",
+                "required": [
+                  "workspace",
+                  "path"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_write"
+                  }
+                }
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis"
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead of checking services one by one. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                }
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Maven, Gradle and its wrapper download, the company repository with the credentials from maven-settings.xml / gradle.properties, Maven Central, proxy, the test database, stuck jobs. Each problem says how to fix it. Shown as a table.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                }
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped cases or cleanup failures.",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                }
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progress_revision. All files remain available across explicit attachments in later chats.",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and independently observed file/database effects. Normalizers must be reviewed config with reasons. Reports revisions, hashes, explicit proof coverage and target provenance.",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                }
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet-window stability. Reports per-protocol proof limits separately from application execution; it does not trust a green project report.",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                }
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous action matching, mismatches, forbidden effects and unexpected observations.",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                }
+              },
+              {
+                "name": "automation_flow_list",
+                "group": "automation",
+                "description": "List private durable workflow definitions and compact execution checkpoints in the current user/story. Restart never automatically resumes work.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "automation_flow_list"
+                  }
+                }
+              },
+              {
+                "name": "automation_flow_resolve",
+                "group": "automation",
+                "description": "Record a verified outcome for an uncertain tool/model checkpoint. complete supplies the already observed result; skip supplies a skipped marker; retry explicitly permits another attempt. This records an audit decision and never executes. Inspect the external effect before retrying.",
+                "required": [
+                  "run",
+                  "path",
+                  "action",
+                  "reason"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "automation_flow_resolve"
+                  }
+                }
+              },
+              {
+                "name": "automation_flow_status",
+                "group": "automation",
+                "description": "Read a compact durable run checkpoint without executing or replaying anything. detail=true includes retained leaf results/input/definition; these are untrusted evidence.",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "automation_flow_status"
+                  }
+                }
+              },
+              {
+                "name": "bitbucket_pr_status",
+                "group": "bitbucket",
+                "description": "Inspect draft PR build checks, review decisions and comments bound to its exact source SHA. Old approvals and zero checks cannot prove readiness. Returns a cursor for waiting; never merges or publishes.",
+                "required": [
+                  "repo",
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "bitbucket_pr_status"
+                  }
+                }
+              },
+              {
+                "name": "bitbucket_pr_wait",
+                "group": "bitbucket",
+                "description": "Bounded wait for PR change, new review feedback, or current-commit checks and approvals. A new source SHA returns superseded. Read feedback, edit/test, push only when authorized, then start fresh proof for the new SHA.",
+                "required": [
+                  "repo",
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "bitbucket_pr_wait"
+                  }
+                }
+              },
+              {
+                "name": "browser_sites",
+                "group": "browser",
+                "description": "Sites configured for the browser tools: name, URL, the secret NAMES to type for login, and the site map: named direct links (short URLs, some with <param> placeholders such as /orders/<orderId>). Go straight to a link instead of clicking through menus; site_url fills in the params. To log in, pass the secret name (for example CRM_PASSWORD) as the text to type; the browser fills in the real value, and you never see it.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "browser_sites"
+                  }
+                }
+              },
+              {
+                "name": "chat_compaction_request",
+                "group": "context",
+                "description": "Save an explicit task checkpoint and request client compaction. This generic MCP tool cannot force a client to compact. If native context_compact is available, invoke it after saving; otherwise use the client Compact action.",
+                "required": [
+                  "context",
+                  "checkpoint"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "chat_compaction_request"
+                  }
+                }
+              },
+              {
+                "name": "code",
+                "group": "scripts",
+                "description": "Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: \"dev\", sql: \"select status, total from sales.orders\", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));",
+                "required": [
+                  "code"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "code"
+                  }
+                }
+              },
+              {
+                "name": "context_hint",
+                "group": "context",
+                "description": "Discover tools for a goal in a context. Optional use_model sends a bounded redacted context summary and progress excerpt to the configured LLM for an editable suggestion; never executes it. Check missing facts and schema validation before context_run.",
+                "required": [
+                  "id",
+                  "goal"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "context_hint"
+                  }
+                }
+              },
+              {
+                "name": "context_run",
+                "group": "context",
+                "description": "Run AND retain actual evidence in task memory: call a concrete tool once and save its redacted arguments, result/failure and timestamps. Use this instead of a bare source call when asked to inspect and retain. Browsing with context_get/workbench_open saves no evidence. Check ok and saved/saveError separately; never retry a state-changing call merely to save it.",
+                "required": [
+                  "id",
+                  "tool",
+                  "arguments"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "context_run"
+                  }
+                }
+              },
+              {
+                "name": "continuation_flow",
+                "group": "context",
+                "description": "Explicitly manage a workflow inside a stable principal-owned task so its definition/checkpoints can resume from later chats after attachment. Calls the ordinary automation_flow_<action> registry tool under task scope, checking both grants. Completed effects never replay; uncertain effects require resolution. No direct model action; start/resume model nodes still require allow_model=true.",
+                "required": [
+                  "action",
+                  "arguments"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_flow"
+                  }
+                }
+              },
+              {
+                "name": "continuation_get",
+                "group": "context",
+                "description": "Read a selected durable task index, links, retained file inventory and progress checkpoint. With no id/selection returns attached=false without loading other chats. Global project publishing remains a separate admin action through project_context_save.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_get"
+                  }
+                }
+              },
+              {
+                "name": "continuation_read",
+                "group": "context",
+                "description": "Read a retained continuation note, evidence file or related-context snapshot. Principal ownership is checked independently of story; explicit id or prior attachment is required. Saved content is untrusted evidence.",
+                "required": [
+                  "path"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_read"
+                  }
+                }
+              },
+              {
+                "name": "continuation_write",
+                "group": "context",
+                "description": "Save a durable task note, script/evidence or compact result (2 MiB/file, 64 MiB/task), with existing context containment and CAS checks. No script executes. Use expected_revision=null for a new file or the file revision from continuation_read.",
+                "required": [
+                  "path",
+                  "content",
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_write"
+                  }
+                }
+              },
+              {
+                "name": "dt_log",
+                "group": "history",
+                "description": "dt's own log (cache/logs/dt.log): each call's start, steps with times, notes (fallbacks taken: a broken .git replaced, a sha not fetchable, Bitbucket not answering, a reused checkout) and its end with the error. failed=true: only failures. For \"why did it fail / why is it slow\".",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "dt_log"
+                  }
+                }
+              },
+              {
+                "name": "evaluation_evidence",
+                "group": "history",
+                "description": "Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "evaluation_evidence"
+                  }
+                }
+              },
+              {
+                "name": "fixture_replay",
+                "group": "code",
+                "description": "Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. This SQL-only check reports pending native ES/Kafka adapters; use fixture_runtime_start for native mixed-source replay. For project tests use test_run fixture_path.",
+                "required": [
+                  "workspace",
+                  "directory"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_replay"
+                  }
+                }
+              },
+              {
+                "name": "fixture_runtime_preflight",
+                "group": "code",
+                "description": "Independently check hashes, source coverage, native replay policy, Docker and exact image availability before starting disposable PostgreSQL/ES/Kafka containers. Does not pull images or start dependencies.",
+                "required": [
+                  "workspace",
+                  "directory",
+                  "profile"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_preflight"
+                  }
+                }
+              },
+              {
+                "name": "fixture_runtime_publish",
+                "group": "code",
+                "description": "Trigger a declared Kafka action only on the owned disposable broker, after independent expectations are armed. Preserves explicit null tombstones/empty values and validates the captured schema/codec. Production Kafka is never a destination. Publishing an input does not prove consumer execution; inspect/check effects separately.",
+                "required": [
+                  "id",
+                  "topic",
+                  "message"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_publish"
+                  }
+                }
+              },
+              {
+                "name": "fixture_schema",
+                "group": "code",
+                "description": "Inspect Kafka correlation paths independently from capture. Reads cached JSON Schema, Avro, flattened fields and samples, with evidence and types. An optional path is checked against the known shape; unknown schemas do not establish a missing path. Headers may have undeclared keys.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_schema"
+                  }
+                }
+              },
+              {
+                "name": "fixture_validate",
+                "group": "code",
+                "description": "Inspect one saved fixture capture separately: recheck captured parent relationships and return all capture gaps, completeness and counts. Does not query the environment or write scratch databases; fixture_replay separately validates real SQL and constraints.",
+                "required": [
+                  "capture"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_validate"
+                  }
+                }
+              },
+              {
+                "name": "gradle_bump",
+                "group": "code",
+                "description": "Plan a dependency upgrade using exact parsed source owners, preserving comments and unrelated versions. Shared variables/catalog versions show every affected consumer. Plan never edits source. Explicit apply reads a saved task-private plan and checks workspace repository, HEAD SHA and every file revision before guarded saves; unresolved/dynamic versions block apply. No commit, push, or remote write.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "gradle_bump"
+                  }
+                }
+              },
+              {
+                "name": "impact",
+                "group": "code",
+                "description": "Impact radius: what is affected when something changes, walking \"who uses it\" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method (\"PaymentService#create\", FQN, file.java:42), a table (\"pay.payments\"), a column (\"pay.payments.fee\": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic (\"topic:payments.created\"), an ES index (\"es:orders\"), an endpoint (\"POST /payments/{id}/settle\": handlers and Feign callers in other services). Returns layers by distance with file:line and why, the endpoints/topics/tables/services reached, candidate tests (inspect coverage before choosing regression scope), and text mentions in config/SQL files. Shown as a view.",
+                "required": [
+                  "target"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "impact"
+                  }
+                }
+              },
+              {
+                "name": "jenkins_build",
+                "group": "jenkins",
+                "description": "Read one Jenkins build or queue item: progress, result and observed SCM SHA. A green build without matching checkout evidence does not prove the requested commit.",
+                "required": [
+                  "job"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "jenkins_build"
+                  }
+                }
+              },
+              {
+                "name": "kafka_produce",
+                "group": "kafka",
+                "description": "EXPLICITLY PRODUCE one message through configured Kafka UI. Sends once with no retry. Select a real partition; objects become JSON strings, null value is a tombstone. Take kafka_checkpoint first when waiting for resulting events. A failed acknowledgement may have an unknown delivery outcome.",
+                "required": [
+                  "topic",
+                  "partition",
+                  "value"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_produce"
+                  }
+                }
+              },
+              {
+                "name": "kafka_wait",
+                "group": "kafka",
+                "description": "Wait for a NEW matching Kafka event across all partitions. Pass checkpoint from before the triggering UI/API/produce step; otherwise starts at the current end. match maps message paths (value.orderId, key, headers.name) to exact typed values. Bounded scan, cancellation and timeout; no group/commits. Timeout, expired offsets and scan limit fail the step.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_wait"
+                  }
+                }
+              },
+              {
+                "name": "knowledge_verify",
+                "group": "knowledge",
+                "description": "Verify exact quoted text against a cached source revision independently of graph/search. Ellipsis-separated pieces must occur in order. Historical normalized/Markdown/contract revisions remain checkable by source and revision; retrieved text never establishes runtime proof.",
+                "required": [
+                  "quotes"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "knowledge_verify"
+                  }
+                }
+              },
+              {
+                "name": "logic_model",
+                "group": "runtime",
+                "description": "Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include diff decisions and revision publication. For actual repository lifecycles (including workspace push), Joern and telemetry use repo_model; these templates are separate abstractions. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.",
+                "required": [
+                  "action"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "logic_model"
+                  }
+                }
+              },
+              {
+                "name": "map_node",
+                "group": "map",
+                "description": "Inspect a node and get enabled, schema-checked passport, PG, Kafka, ES, logs or browser tool arguments. Suggestions do not execute. needs_user_input means ask the returned questions; never guess missing UI bindings. Resolve database ambiguity before querying.",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "map_node"
+                  }
+                }
+              },
+              {
+                "name": "mapping_debug",
+                "group": "api",
+                "description": "Debug raw-to-response mappings. discover+workspace bundles entry call chains and copyable source files; discover+service reads cached SQL/ports. Named notebook: HTTP request, PG/ES/Kafka probes, pointer comparisons and optional selections (filters, ordering, whole-row fields, fallback). Candidates explain exclusions/winner; incomplete evidence stays inconclusive. Save/open never execute; run sends selected steps. Private recordings, inline/live views; contract checks are not runtime lineage.",
+                "required": [
+                  "action"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "mapping_debug"
+                  }
+                }
+              },
+              {
+                "name": "repo_model",
+                "group": "semantic",
+                "description": "Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "repo_model"
+                  }
+                }
+              },
+              {
+                "name": "scenario_assert",
+                "group": "code",
+                "description": "Recheck independently collected scenario observations against the package expectations. Does not accept model-supplied observations or alter expected values. Keeps process proof distinct from build/test proof.",
+                "required": [
+                  "session"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_assert"
+                  }
+                }
+              },
+              {
+                "name": "scenario_emulate",
+                "group": "code",
+                "description": "Emulate the complete bound passport contract using only captured local state. Sandboxed JS sees vars.actions and ONLY await tools.action_input({id}), tools.state_read({id,action?,where?,key?,request?}), tools.observe({id,value}). Every selected action, required dependency read and expected effect is checked; no live dt tools are exposed. This verifies an explicit local model; run real service tests with test_run for application proof.",
+                "required": [
+                  "inventory",
+                  "actions",
+                  "expectations",
+                  "code"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_emulate"
+                  }
+                }
+              },
+              {
+                "name": "scenario_observe",
+                "group": "code",
+                "description": "Independently collect real response, HTTP calls and file effects from a scenario session, polling until the deadline and then checking an explicit quiet window. Unexpected HTTP calls/files fail. Captured evidence and assertion results are retained for separate inspection.",
+                "required": [
+                  "session"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_observe"
+                  }
+                }
+              },
+              {
+                "name": "scenario_preflight",
+                "group": "code",
+                "description": "Check a scenario against its reviewed runtime profile before starting anything. Node containers support HTTP/config/files with network disabled; other dependencies require explicit project test adapters. Unsupported brokers, codecs or observers are blocking gaps.",
+                "required": [
+                  "workspace",
+                  "package"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_preflight"
+                  }
+                }
+              },
+              {
+                "name": "scenario_run",
+                "group": "code",
+                "description": "Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_run"
+                  }
+                }
+              },
+              {
+                "name": "script_save",
+                "group": "scripts",
+                "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}}, {\"script\": \"<other script id>\", \"params\": {...}}, {\"open\": \"site.link\"} (a site map link; its <params> come from the script params), {\"browser\": \"<browser tool, e.g. click, type, snapshot>\", \"args\": {...}}, {\"wait\": seconds or \"text\"}. Add \"as\": \"name\" to keep a result, \"optional\": true to continue on failure. \"{{name}}\" in args inserts a param or an earlier result ({{order.rows.0.id}}); \"{{link:site.link}}\" a site link URL. More step kinds: {\"set\": {\"folder\": \"out/{{date:YYYYMMDD}}/{{uuid}}\"}} computes values; {\"transform\": \"{{doc.text}}\", \"replace\": [{\"find\": \"ORD-\\\\d+\", \"regex\": true, \"with\": \"ORD-{{rand:6}}\"}], \"json\": {\"order.id\": \"{{uuid}}\"}, \"as\": \"copy\"} rewrites a document (each distinct match gets one new value); {\"http\": \"POST https://…\", \"body\": {...}} calls any HTTP(S) API in the trusted environment. Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. JavaScript (sandboxed, like Postman/Bruno): {\"js\": \"return vars.doc.items.length\"} is a step; on any step \"before\": \"args.body.ts = now()\" changes its args, \"capture\": {\"jobId\": \"json.id\"} copies from the result into vars, \"after\": \"test('201', () => expect(result.status).toBe(201)); vars.n = result.json.items.length\" checks and post-processes (return a value to replace the result). The script itself can have \"vars\", \"before\" and \"after\"; failing tests fail the run. Try code with js_run first. \"tool\": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.",
+                "required": [
+                  "id",
+                  "description",
+                  "steps"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_save"
+                  }
+                }
+              },
+              {
+                "name": "service_env_plan",
+                "group": "runtime",
+                "description": "Plan or discover disposable service environments. Lists this user’s persistent definitions/runs across chats; selecting an id is explicit resume. definition accepts version 1 JSON; worker=true checks Docker/images without starting. For a branch, workspace_open first. Returned bindings are for application configuration, not production deployment.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "service_env_plan"
+                  }
+                }
+              },
+              {
+                "name": "task_run_control",
+                "group": "automation",
+                "description": "Steer, pause, resume, stop or explicitly checkpoint a persistent worker. Commands are saved before acknowledgement. resolve records a verified uncertain outcome; it never repeats an effect. A checkpoint retains the previous transcript.",
+                "required": [
+                  "run",
+                  "action"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "task_run_control"
+                  }
+                }
+              },
+              {
+                "name": "test_data",
+                "group": "code",
+                "description": "Generate TestData, one helper class in the module's test sources with a valid object for every type at the service's edges: request bodies and path variables of its controllers, payloads of its Kafka listeners and of what it sends, the entities its repositories read (a row as the database holds it: id and defaults set; dictionary entities from their real rows, all rows as a list), what its Feign clients answer. Built through each type's constructor; values from Bean Validation, the database columns the names map to (length, scale, CHECKs, FKs to d_ dictionary tables: a real row), how the code parses strings (Long.parseLong(id): the id as text), names, types. Ids of one concept are one constant (ORDER_ID) so a body, an event and a row agree. Bodies validated with @Valid get <body>Cases(): each constraint broken (false) and the edges that pass (true) for @ParameterizedTest. Also with(obj, \"field\", value) for variants and json(obj). With env, values come from that environment's synced database. Compile-checked; test_context uses it once it exists.",
+                "required": [
+                  "workspace"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "test_data"
+                  }
+                }
+              },
+              {
+                "name": "testdb_capabilities",
+                "group": "code",
+                "description": "Describe the versioned JSON PostgreSQL lifecycle contract, backend capabilities, portable SQL input format, ownership checks and unsupported schema fidelity. Lets alternative language/storage adapters implement the same operations without importing JavaScript internals.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "testdb_capabilities"
+                  }
+                }
+              },
+              {
+                "name": "testdb_initialize",
+                "group": "code",
+                "description": "Label and initialize the configured dedicated scratch PostgreSQL cluster for owned test resources. Refuses any configured environment database as the control database. Checks CREATEDB; PostgreSQL templates additionally require CREATEROLE for private application users. Does not write to environment databases.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "testdb_initialize"
+                  }
+                }
+              },
+              {
+                "name": "testdb_lease_inspect",
+                "group": "code",
+                "description": "Inspect one durable lease independently: owning run, logical database bindings, expiry, lifecycle status and cleanup failures. Passwords are omitted. Resource ownership is rechecked by release and template verification.",
+                "required": [
+                  "lease"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "testdb_lease_inspect"
+                  }
+                }
+              },
+              {
+                "name": "ui_trace_edit",
+                "group": "browser",
+                "description": "Manually correct a saved UI diagram with optimistic revision checking. patch replaces only supplied definition fields; omitted fields stay intact, [] removes a binding array. Allows title/description/recipe/services/fields/transports/databases/database_links. Corrections remain declared evidence; observed traffic cannot be rewritten. Rebuild with ui_trace previous=<result id>, capture=false to update the inline graph without replay.",
+                "required": [
+                  "id",
+                  "expected_revision",
+                  "patch"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "ui_trace_edit"
+                  }
+                }
+              },
+              {
+                "name": "ui_trace_save",
+                "group": "browser",
+                "description": "Save a versioned task-private UI-to-database diagram recipe without executing it. recipe={url,steps:[{action:\"fill\",selector:\"[name=email]\",value:\"{{email}}\"},{action:\"click\",role:\"button\",name:\"Search\"}]}. Actions: navigate/fill/click/select/check/press/wait. Credentials are runtime parameters. Reviewed service, transport, database and field bindings retain reasons. Use ui_trace_edit for partial edits.",
+                "required": [
+                  "id",
+                  "expected_revision",
+                  "definition"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "ui_trace_save"
+                  }
+                }
+              },
+              {
+                "name": "workbench_open",
+                "group": "views",
+                "description": "Open a clickable explorer to browse ticket notes, files and related checkouts, or a service with scripts/queries, tests, Consul and API actions. Chat shows a retained navigator linking to the authenticated live workbench. Normal tool permissions apply; opening executes no actions.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workbench_open"
+                  }
+                }
+              },
+              {
+                "name": "workbench_save",
+                "group": "context",
+                "description": "Save the prepared tool invocation as a revision-checked action recipe in a task context, optionally linked to a service/repository. Redacts credentials; saved artifacts never execute automatically. Reopen through the interactive workbench.",
+                "required": [
+                  "context",
+                  "title",
+                  "tool",
+                  "arguments"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workbench_save"
+                  }
+                }
+              },
+              {
+                "name": "workspace_branch",
+                "group": "code",
+                "description": "Open/reuse a separate owned workspace at a branch/ref of this repository. Leaves all uncommitted files in the original workspace untouched. Does not push, reset or clean either checkout.",
+                "required": [
+                  "workspace",
+                  "ref"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_branch"
+                  }
+                }
+              },
+              {
+                "name": "workspace_branches",
+                "group": "code",
+                "description": "List retained branch choices for an owned workspace. refresh=true explicitly reads remote refs (30s timeout). No checkout or source edits.",
+                "required": [
+                  "workspace"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_branches"
+                  }
+                }
+              },
+              {
+                "name": "workspace_open",
+                "group": "code",
+                "description": "Open/reuse a writable repo/ref checkout in the current authenticated task. Reconnects and restarts preserve its files and build state; reuse never pulls or resets. fresh=true creates a separate checkout. Different principals/tasks remain isolated. Indexed for code_search, impact and test_context. Edit with workspace_write, run test_run, export workspace_patch; workspace_push publishes only when requested and enabled.",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_open"
+                  }
+                }
+              },
+              {
+                "name": "workspace_write",
+                "group": "code",
+                "description": "Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Ambiguous imports are suggestions only, ranked with project and configured internal packages first, with reasons. Read compile before the next step; a file with errors does not need a test run to find them. check=false skips the check; fix=false checks but leaves the file as written (the fixes come as suggestions).",
+                "required": [
+                  "workspace",
+                  "path"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "workspace_write"
+                  }
+                }
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown",
+                "requestedAll": true
+              }
+            }
+          }
+        }
+      ],
+      "usage": {
+        "input": 4782,
+        "output": 94
+      },
+      "deliveredBytes": 37815,
+      "finish": "endpoint-error",
+      "turns": 4,
+      "returnedModel": "qwen3.5:2b",
+      "error": "The operation was aborted due to timeout",
+      "passed": false,
+      "argumentErrors": 0,
+      "toolCalls": 3,
+      "ms": 125816,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered dev-tool tools to complete the user task. Inspect schemas or discover capabilities when useful. Do not invent identifiers, execution results or missing data. Do not edit files, publish, or repeat an action just to recover its output. All data belongs to a disposable local demo. Keep the final answer brief; when JSON is requested, return only JSON."
+        },
+        {
+          "role": "user",
+          "content": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it."
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_ntlh3cya",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "check unpaid orders"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":59,\"tools\":[{\"name\":\"health\",\"group\":\"consul\",\"description\":\"Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \\\"are services healthy?\\\" instead \",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"health\"}},\"descriptionTruncated\":true},{\"name\":\"doctor\",\"group\":\"history\",\"description\":\"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"doctor\"}},\"descriptionTruncated\":true},{\"name\":\"collection_check\",\"group\":\"scripts\",\"description\":\"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_check\"}},\"descriptionTruncated\":true},{\"name\":\"continuation_checkpoint\",\"group\":\"context\",\"description\":\"Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre\",\"required\":[\"expected_revision\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_checkpoint\"}},\"descriptionTruncated\":true},{\"name\":\"differential_check\",\"group\":\"code\",\"description\":\"Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde\",\"required\":[\"profile\",\"baseline\",\"candidate\",\"inputs\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"differential_check\"}},\"descriptionTruncated\":true},{\"name\":\"fixture_runtime_check\",\"group\":\"code\",\"description\":\"Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_runtime_check\"}},\"descriptionTruncated\":true},{\"name\":\"kafka_checkpoint\",\"group\":\"kafka\",\"description\":\"Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.\",\"required\":[\"topic\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"kafka_checkpoint\"}}},{\"name\":\"scenario_check\",\"group\":\"code\",\"description\":\"Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a\",\"required\":[\"expectations\",\"observed\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_check\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"check\",\"order\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjgtl4c82703c756405ce98c\",\"truncated\":true,\"omitted\":{\"tools\":0,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_s96vsnb0",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "script_search"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"total\":1,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Words or script id; all words must match\"},\"collection\":{\"type\":\"string\",\"description\":\"Optional collection prefix\"},\"limit\":{\"type\":\"integer\",\"description\":\"Preview matches\",\"default\":10},\"all\":{\"type\":\"boolean\",\"description\":\"Full output; source limits apply.\"}},\"required\":[\"query\"]},\"next\":{\"tool\":\"tool_execute\",\"name\":\"script_search\",\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"}}],\"discoveryOnly\":true,\"next\":{\"tool\":\"tool_execute\",\"name\":\"script_search\",\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"},\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"script\",\"search\"],\"unmatchedTerms\":[],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_ed8og2dn",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "check unpaid orders",
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":59,\"tools\":[{\"name\":\"health\",\"group\":\"consul\",\"description\":\"Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \\\"are services healthy?\\\" instead of checking services one by one. Returns a preview plus `view`, a link to the full result as an interactive table (shown to the user inline). Mention the link.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"health\"}}},{\"name\":\"doctor\",\"group\":\"history\",\"description\":\"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Maven, Gradle and its wrapper download, the company repository with the credentials from maven-settings.xml / gradle.properties, Maven Central, proxy, the test database, stuck jobs. Each problem says how to fix it. Shown as a table.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"doctor\"}}},{\"name\":\"collection_check\",\"group\":\"scripts\",\"description\":\"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped cases or cleanup failures.\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_check\"}}},{\"name\":\"continuation_checkpoint\",\"group\":\"context\",\"description\":\"Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progress_revision. All files remain available across explicit attachments in later chats.\",\"required\":[\"expected_revision\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_checkpoint\"}}},{\"name\":\"differential_check\",\"group\":\"code\",\"description\":\"Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and independently observed file/database effects. Normalizers must be reviewed config with reasons. Reports revisions, hashes, explicit proof coverage and target provenance.\",\"required\":[\"profile\",\"baseline\",\"candidate\",\"inputs\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"differential_check\"}}},{\"name\":\"fixture_runtime_check\",\"group\":\"code\",\"description\":\"Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet-window stability. Reports per-protocol proof limits separately from application execution; it does not trust a green project report.\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_runtime_check\"}}},{\"name\":\"kafka_checkpoint\",\"group\":\"kafka\",\"description\":\"Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.\",\"required\":[\"topic\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"kafka_checkpoint\"}}},{\"name\":\"scenario_check\",\"group\":\"code\",\"description\":\"Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous action matching, mismatches, forbidden effects and unexpected observations.\",\"required\":[\"expectations\",\"observed\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_check\"}}},{\"name\":\"automation_flow_list\",\"group\":\"automation\",\"description\":\"List private durable workflow definitions and compact execution checkpoints in the current user/story. Restart never automatically resumes work.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"automation_flow_list\"}}},{\"name\":\"automation_flow_resolve\",\"group\":\"automation\",\"description\":\"Record a verified outcome for an uncertain tool/model checkpoint. complete supplies the already observed result; skip supplies a skipped marker; retry explicitly permits another attempt. This records an audit decision and never executes. Inspect the external effect before retrying.\",\"required\":[\"run\",\"path\",\"action\",\"reason\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"automation_flow_resolve\"}}},{\"name\":\"automation_flow_status\",\"group\":\"automation\",\"description\":\"Read a compact durable run checkpoint without executing or replaying anything. detail=true includes retained leaf results/input/definition; these are untrusted evidence.\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"automation_flow_status\"}}},{\"name\":\"bitbucket_pr_status\",\"group\":\"bitbucket\",\"description\":\"Inspect draft PR build checks, review decisions and comments bound to its exact source SHA. Old approvals and zero checks cannot prove readiness. Returns a cursor for waiting; never merges or publishes.\",\"required\":[\"repo\",\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"bitbucket_pr_status\"}}},{\"name\":\"bitbucket_pr_wait\",\"group\":\"bitbucket\",\"description\":\"Bounded wait for PR change, new review feedback, or current-commit checks and approvals. A new source SHA returns superseded. Read feedback, edit/test, push only when authorized, then start fresh proof for the new SHA.\",\"required\":[\"repo\",\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"bitbucket_pr_wait\"}}},{\"name\":\"browser_sites\",\"group\":\"browser\",\"description\":\"Sites configured for the browser tools: name, URL, the secret NAMES to type for login, and the site map: named direct links (short URLs, some with <param> placeholders such as /orders/<orderId>). Go straight to a link instead of clicking through menus; site_url fills in the params. To log in, pass the secret name (for example CRM_PASSWORD) as the text to type; the browser fills in the real value, and you never see it.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"browser_sites\"}}},{\"name\":\"chat_compaction_request\",\"group\":\"context\",\"description\":\"Save an explicit task checkpoint and request client compaction. This generic MCP tool cannot force a client to compact. If native context_compact is available, invoke it after saving; otherwise use the client Compact action.\",\"required\":[\"context\",\"checkpoint\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"chat_compaction_request\"}}},{\"name\":\"code\",\"group\":\"scripts\",\"description\":\"Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: \\\"dev\\\", sql: \\\"select status, total from sales.orders\\\", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));\",\"required\":[\"code\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"code\"}}},{\"name\":\"context_hint\",\"group\":\"context\",\"description\":\"Discover tools for a goal in a context. Optional use_model sends a bounded redacted context summary and progress excerpt to the configured LLM for an editable suggestion; never executes it. Check missing facts and schema validation before context_run.\",\"required\":[\"id\",\"goal\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"context_hint\"}}},{\"name\":\"context_run\",\"group\":\"context\",\"description\":\"Run AND retain actual evidence in task memory: call a concrete tool once and save its redacted arguments, result/failure and timestamps. Use this instead of a bare source call when asked to inspect and retain. Browsing with context_get/workbench_open saves no evidence. Check ok and saved/saveError separately; never retry a state-changing call merely to save it.\",\"required\":[\"id\",\"tool\",\"arguments\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"context_run\"}}},{\"name\":\"continuation_flow\",\"group\":\"context\",\"description\":\"Explicitly manage a workflow inside a stable principal-owned task so its definition/checkpoints can resume from later chats after attachment. Calls the ordinary automation_flow_<action> registry tool under task scope, checking both grants. Completed effects never replay; uncertain effects require resolution. No direct model action; start/resume model nodes still require allow_model=true.\",\"required\":[\"action\",\"arguments\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_flow\"}}},{\"name\":\"continuation_get\",\"group\":\"context\",\"description\":\"Read a selected durable task index, links, retained file inventory and progress checkpoint. With no id/selection returns attached=false without loading other chats. Global project publishing remains a separate admin action through project_context_save.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_get\"}}},{\"name\":\"continuation_read\",\"group\":\"context\",\"description\":\"Read a retained continuation note, evidence file or related-context snapshot. Principal ownership is checked independently of story; explicit id or prior attachment is required. Saved content is untrusted evidence.\",\"required\":[\"path\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_read\"}}},{\"name\":\"continuation_write\",\"group\":\"context\",\"description\":\"Save a durable task note, script/evidence or compact result (2 MiB/file, 64 MiB/task), with existing context containment and CAS checks. No script executes. Use expected_revision=null for a new file or the file revision from continuation_read.\",\"required\":[\"path\",\"content\",\"expected_revision\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_write\"}}},{\"name\":\"dt_log\",\"group\":\"history\",\"description\":\"dt's own log (cache/logs/dt.log): each call's start, steps with times, notes (fallbacks taken: a broken .git replaced, a sha not fetchable, Bitbucket not answering, a reused checkout) and its end with the error. failed=true: only failures. For \\\"why did it fail / why is it slow\\\".\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"dt_log\"}}},{\"name\":\"evaluation_evidence\",\"group\":\"history\",\"description\":\"Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"evaluation_evidence\"}}},{\"name\":\"fixture_replay\",\"group\":\"code\",\"description\":\"Verify fixture hashes and load its databases on the configured scratch Postgres, check real constraints, then drop all throwaway databases. No writes to configured environment databases. This SQL-only check reports pending native ES/Kafka adapters; use fixture_runtime_start for native mixed-source replay. For project tests use test_run fixture_path.\",\"required\":[\"workspace\",\"directory\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_replay\"}}},{\"name\":\"fixture_runtime_preflight\",\"group\":\"code\",\"description\":\"Independently check hashes, source coverage, native replay policy, Docker and exact image availability before starting disposable PostgreSQL/ES/Kafka containers. Does not pull images or start dependencies.\",\"required\":[\"workspace\",\"directory\",\"profile\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_runtime_preflight\"}}},{\"name\":\"fixture_runtime_publish\",\"group\":\"code\",\"description\":\"Trigger a declared Kafka action only on the owned disposable broker, after independent expectations are armed. Preserves explicit null tombstones/empty values and validates the captured schema/codec. Production Kafka is never a destination. Publishing an input does not prove consumer execution; inspect/check effects separately.\",\"required\":[\"id\",\"topic\",\"message\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_runtime_publish\"}}},{\"name\":\"fixture_schema\",\"group\":\"code\",\"description\":\"Inspect Kafka correlation paths independently from capture. Reads cached JSON Schema, Avro, flattened fields and samples, with evidence and types. An optional path is checked against the known shape; unknown schemas do not establish a missing path. Headers may have undeclared keys.\",\"required\":[\"topic\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_schema\"}}},{\"name\":\"fixture_validate\",\"group\":\"code\",\"description\":\"Inspect one saved fixture capture separately: recheck captured parent relationships and return all capture gaps, completeness and counts. Does not query the environment or write scratch databases; fixture_replay separately validates real SQL and constraints.\",\"required\":[\"capture\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_validate\"}}},{\"name\":\"gradle_bump\",\"group\":\"code\",\"description\":\"Plan a dependency upgrade using exact parsed source owners, preserving comments and unrelated versions. Shared variables/catalog versions show every affected consumer. Plan never edits source. Explicit apply reads a saved task-private plan and checks workspace repository, HEAD SHA and every file revision before guarded saves; unresolved/dynamic versions block apply. No commit, push, or remote write.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"gradle_bump\"}}},{\"name\":\"impact\",\"group\":\"code\",\"description\":\"Impact radius: what is affected when something changes, walking \\\"who uses it\\\" back through the code graphs of all indexed repos and workspaces, the Postgres usage index of env, and service passports. Target: a class or method (\\\"PaymentService#create\\\", FQN, file.java:42), a table (\\\"pay.payments\\\"), a column (\\\"pay.payments.fee\\\": entity fields, SQL naming it, function bodies, views, indexes/constraints), a database function, a Kafka topic (\\\"topic:payments.created\\\"), an ES index (\\\"es:orders\\\"), an endpoint (\\\"POST /payments/{id}/settle\\\": handlers and Feign callers in other services). Returns layers by distance with file:line and why, the endpoints/topics/tables/services reached, candidate tests (inspect coverage before choosing regression scope), and text mentions in config/SQL files. Shown as a view.\",\"required\":[\"target\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"impact\"}}},{\"name\":\"jenkins_build\",\"group\":\"jenkins\",\"description\":\"Read one Jenkins build or queue item: progress, result and observed SCM SHA. A green build without matching checkout evidence does not prove the requested commit.\",\"required\":[\"job\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"jenkins_build\"}}},{\"name\":\"kafka_produce\",\"group\":\"kafka\",\"description\":\"EXPLICITLY PRODUCE one message through configured Kafka UI. Sends once with no retry. Select a real partition; objects become JSON strings, null value is a tombstone. Take kafka_checkpoint first when waiting for resulting events. A failed acknowledgement may have an unknown delivery outcome.\",\"required\":[\"topic\",\"partition\",\"value\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"kafka_produce\"}}},{\"name\":\"kafka_wait\",\"group\":\"kafka\",\"description\":\"Wait for a NEW matching Kafka event across all partitions. Pass checkpoint from before the triggering UI/API/produce step; otherwise starts at the current end. match maps message paths (value.orderId, key, headers.name) to exact typed values. Bounded scan, cancellation and timeout; no group/commits. Timeout, expired offsets and scan limit fail the step.\",\"required\":[\"topic\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"kafka_wait\"}}},{\"name\":\"knowledge_verify\",\"group\":\"knowledge\",\"description\":\"Verify exact quoted text against a cached source revision independently of graph/search. Ellipsis-separated pieces must occur in order. Historical normalized/Markdown/contract revisions remain checkable by source and revision; retrieved text never establishes runtime proof.\",\"required\":[\"quotes\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"knowledge_verify\"}}},{\"name\":\"logic_model\",\"group\":\"runtime\",\"description\":\"Create finite logic graphs, export real TLA+ and TLC config, check safety/deadlocks or simulate seeded paths, with optional transition coverage. Templates include diff decisions and revision publication. For actual repository lifecycles (including workspace push), Joern and telemetry use repo_model; these templates are separate abstractions. Built-in exploration needs no external dependency; engine=tlc runs an explicitly configured SHA256-pinned TLC jar. These finite abstractions do not prove source equivalence. save/get/list keep task-scoped models; run returns an interactive retained graph.\",\"required\":[\"action\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"logic_model\"}}},{\"name\":\"map_node\",\"group\":\"map\",\"description\":\"Inspect a node and get enabled, schema-checked passport, PG, Kafka, ES, logs or browser tool arguments. Suggestions do not execute. needs_user_input means ask the returned questions; never guess missing UI bindings. Resolve database ambiguity before querying.\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"map_node\"}}},{\"name\":\"mapping_debug\",\"group\":\"api\",\"description\":\"Debug raw-to-response mappings. discover+workspace bundles entry call chains and copyable source files; discover+service reads cached SQL/ports. Named notebook: HTTP request, PG/ES/Kafka probes, pointer comparisons and optional selections (filters, ordering, whole-row fields, fallback). Candidates explain exclusions/winner; incomplete evidence stays inconclusive. Save/open never execute; run sends selected steps. Private recordings, inline/live views; contract checks are not runtime lineage.\",\"required\":[\"action\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"mapping_debug\"}}},{\"name\":\"repo_model\",\"group\":\"semantic\",\"description\":\"Show repository lifecycle/Joern diagrams with TLA+ checks and sampled OpenTelemetry. To actually check dev-tool’s workspace push, call action=check,machine=SM37.push (no id needed); returns actual check and hierarchy links. For a diagram only, action=derive uses our sources. Another repo needs analysis=<retained Joern id> and optional from; observe its returned job. Then check/export with id + exact machine. Guards/data are annotations, not proved predicates. Compact output is default; full evidence lives in inline views.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"repo_model\"}}},{\"name\":\"scenario_assert\",\"group\":\"code\",\"description\":\"Recheck independently collected scenario observations against the package expectations. Does not accept model-supplied observations or alter expected values. Keeps process proof distinct from build/test proof.\",\"required\":[\"session\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_assert\"}}},{\"name\":\"scenario_emulate\",\"group\":\"code\",\"description\":\"Emulate the complete bound passport contract using only captured local state. Sandboxed JS sees vars.actions and ONLY await tools.action_input({id}), tools.state_read({id,action?,where?,key?,request?}), tools.observe({id,value}). Every selected action, required dependency read and expected effect is checked; no live dt tools are exposed. This verifies an explicit local model; run real service tests with test_run for application proof.\",\"required\":[\"inventory\",\"actions\",\"expectations\",\"code\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_emulate\"}}},{\"name\":\"scenario_observe\",\"group\":\"code\",\"description\":\"Independently collect real response, HTTP calls and file effects from a scenario session, polling until the deadline and then checking an explicit quiet window. Unexpected HTTP calls/files fail. Captured evidence and assertion results are retained for separate inspection.\",\"required\":[\"session\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_observe\"}}},{\"name\":\"scenario_preflight\",\"group\":\"code\",\"description\":\"Check a scenario against its reviewed runtime profile before starting anything. Node containers support HTTP/config/files with network disabled; other dependencies require explicit project test adapters. Unsupported brokers, codecs or observers are blocking gaps.\",\"required\":[\"workspace\",\"package\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_preflight\"}}},{\"name\":\"scenario_run\",\"group\":\"code\",\"description\":\"Run a verified scenario end to end. The node-container adapter arranges isolated reads, starts the actual service, invokes actions, independently observes effects and always stops. The test-run adapter runs reviewed real project tests with verified multi-DB fixtures and checks the independent observation report. Poll with job if still running; proof levels and unsupported boundaries remain explicit.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_run\"}}},{\"name\":\"script_save\",\"group\":\"scripts\",\"description\":\"Save (or replace) a script so a repeatable action runs in one call next time. id is \\\"collection/sub/name\\\". steps run in order; each is one of: {\\\"tool\\\": \\\"<dt tool>\\\", \\\"args\\\": {...}}, {\\\"script\\\": \\\"<other script id>\\\", \\\"params\\\": {...}}, {\\\"open\\\": \\\"site.link\\\"} (a site map link; its <params> come from the script params), {\\\"browser\\\": \\\"<browser tool, e.g. click, type, snapshot>\\\", \\\"args\\\": {...}}, {\\\"wait\\\": seconds or \\\"text\\\"}. Add \\\"as\\\": \\\"name\\\" to keep a result, \\\"optional\\\": true to continue on failure. \\\"{{name}}\\\" in args inserts a param or an earlier result ({{order.rows.0.id}}); \\\"{{link:site.link}}\\\" a site link URL. More step kinds: {\\\"set\\\": {\\\"folder\\\": \\\"out/{{date:YYYYMMDD}}/{{uuid}}\\\"}} computes values; {\\\"transform\\\": \\\"{{doc.text}}\\\", \\\"replace\\\": [{\\\"find\\\": \\\"ORD-\\\\\\\\d+\\\", \\\"regex\\\": true, \\\"with\\\": \\\"ORD-{{rand:6}}\\\"}], \\\"json\\\": {\\\"order.id\\\": \\\"{{uuid}}\\\"}, \\\"as\\\": \\\"copy\\\"} rewrites a document (each distinct match gets one new value); {\\\"http\\\": \\\"POST https://…\\\", \\\"body\\\": {...}} calls any HTTP(S) API in the trusted environment. Generators: {{uuid}}, {{now}}, {{date:YYYYMMDD}}, {{rand:6}}, {{hex:8}}. JavaScript (sandboxed, like Postman/Bruno): {\\\"js\\\": \\\"return vars.doc.items.length\\\"} is a step; on any step \\\"before\\\": \\\"args.body.ts = now()\\\" changes its args, \\\"capture\\\": {\\\"jobId\\\": \\\"json.id\\\"} copies from the result into vars, \\\"after\\\": \\\"test('201', () => expect(result.status).toBe(201)); vars.n = result.json.items.length\\\" checks and post-processes (return a value to replace the result). The script itself can have \\\"vars\\\", \\\"before\\\" and \\\"after\\\"; failing tests fail the run. Try code with js_run first. \\\"tool\\\": true (or a name) makes the script a tool of its own. Save only after the steps worked by hand.\",\"required\":[\"id\",\"description\",\"steps\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_save\"}}},{\"name\":\"service_env_plan\",\"group\":\"runtime\",\"description\":\"Plan or discover disposable service environments. Lists this user’s persistent definitions/runs across chats; selecting an id is explicit resume. definition accepts version 1 JSON; worker=true checks Docker/images without starting. For a branch, workspace_open first. Returned bindings are for application configuration, not production deployment.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"service_env_plan\"}}},{\"name\":\"task_run_control\",\"group\":\"automation\",\"description\":\"Steer, pause, resume, stop or explicitly checkpoint a persistent worker. Commands are saved before acknowledgement. resolve records a verified uncertain outcome; it never repeats an effect. A checkpoint retains the previous transcript.\",\"required\":[\"run\",\"action\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"task_run_control\"}}},{\"name\":\"test_data\",\"group\":\"code\",\"description\":\"Generate TestData, one helper class in the module's test sources with a valid object for every type at the service's edges: request bodies and path variables of its controllers, payloads of its Kafka listeners and of what it sends, the entities its repositories read (a row as the database holds it: id and defaults set; dictionary entities from their real rows, all rows as a list), what its Feign clients answer. Built through each type's constructor; values from Bean Validation, the database columns the names map to (length, scale, CHECKs, FKs to d_ dictionary tables: a real row), how the code parses strings (Long.parseLong(id): the id as text), names, types. Ids of one concept are one constant (ORDER_ID) so a body, an event and a row agree. Bodies validated with @Valid get <body>Cases(): each constraint broken (false) and the edges that pass (true) for @ParameterizedTest. Also with(obj, \\\"field\\\", value) for variants and json(obj). With env, values come from that environment's synced database. Compile-checked; test_context uses it once it exists.\",\"required\":[\"workspace\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"test_data\"}}},{\"name\":\"testdb_capabilities\",\"group\":\"code\",\"description\":\"Describe the versioned JSON PostgreSQL lifecycle contract, backend capabilities, portable SQL input format, ownership checks and unsupported schema fidelity. Lets alternative language/storage adapters implement the same operations without importing JavaScript internals.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"testdb_capabilities\"}}},{\"name\":\"testdb_initialize\",\"group\":\"code\",\"description\":\"Label and initialize the configured dedicated scratch PostgreSQL cluster for owned test resources. Refuses any configured environment database as the control database. Checks CREATEDB; PostgreSQL templates additionally require CREATEROLE for private application users. Does not write to environment databases.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"testdb_initialize\"}}},{\"name\":\"testdb_lease_inspect\",\"group\":\"code\",\"description\":\"Inspect one durable lease independently: owning run, logical database bindings, expiry, lifecycle status and cleanup failures. Passwords are omitted. Resource ownership is rechecked by release and template verification.\",\"required\":[\"lease\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"testdb_lease_inspect\"}}},{\"name\":\"ui_trace_edit\",\"group\":\"browser\",\"description\":\"Manually correct a saved UI diagram with optimistic revision checking. patch replaces only supplied definition fields; omitted fields stay intact, [] removes a binding array. Allows title/description/recipe/services/fields/transports/databases/database_links. Corrections remain declared evidence; observed traffic cannot be rewritten. Rebuild with ui_trace previous=<result id>, capture=false to update the inline graph without replay.\",\"required\":[\"id\",\"expected_revision\",\"patch\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"ui_trace_edit\"}}},{\"name\":\"ui_trace_save\",\"group\":\"browser\",\"description\":\"Save a versioned task-private UI-to-database diagram recipe without executing it. recipe={url,steps:[{action:\\\"fill\\\",selector:\\\"[name=email]\\\",value:\\\"{{email}}\\\"},{action:\\\"click\\\",role:\\\"button\\\",name:\\\"Search\\\"}]}. Actions: navigate/fill/click/select/check/press/wait. Credentials are runtime parameters. Reviewed service, transport, database and field bindings retain reasons. Use ui_trace_edit for partial edits.\",\"required\":[\"id\",\"expected_revision\",\"definition\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"ui_trace_save\"}}},{\"name\":\"workbench_open\",\"group\":\"views\",\"description\":\"Open a clickable explorer to browse ticket notes, files and related checkouts, or a service with scripts/queries, tests, Consul and API actions. Chat shows a retained navigator linking to the authenticated live workbench. Normal tool permissions apply; opening executes no actions.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"workbench_open\"}}},{\"name\":\"workbench_save\",\"group\":\"context\",\"description\":\"Save the prepared tool invocation as a revision-checked action recipe in a task context, optionally linked to a service/repository. Redacts credentials; saved artifacts never execute automatically. Reopen through the interactive workbench.\",\"required\":[\"context\",\"title\",\"tool\",\"arguments\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"workbench_save\"}}},{\"name\":\"workspace_branch\",\"group\":\"code\",\"description\":\"Open/reuse a separate owned workspace at a branch/ref of this repository. Leaves all uncommitted files in the original workspace untouched. Does not push, reset or clean either checkout.\",\"required\":[\"workspace\",\"ref\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"workspace_branch\"}}},{\"name\":\"workspace_branches\",\"group\":\"code\",\"description\":\"List retained branch choices for an owned workspace. refresh=true explicitly reads remote refs (30s timeout). No checkout or source edits.\",\"required\":[\"workspace\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"workspace_branches\"}}},{\"name\":\"workspace_open\",\"group\":\"code\",\"description\":\"Open/reuse a writable repo/ref checkout in the current authenticated task. Reconnects and restarts preserve its files and build state; reuse never pulls or resets. fresh=true creates a separate checkout. Different principals/tasks remain isolated. Indexed for code_search, impact and test_context. Edit with workspace_write, run test_run, export workspace_patch; workspace_push publishes only when requested and enabled.\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"workspace_open\"}}},{\"name\":\"workspace_write\",\"group\":\"code\",\"description\":\"Write a file in a workspace: the whole content (new test files), or edits [{find, replace}] where each find matches exactly once (fixes in existing code). The change shows up in workspace_patch. A Java file is compiled right away against its module's classpath: the answer has compile.errors with their lines, compile.fixed (what was fixed in the file already: missing imports and static imports, throws Exception on tests, @MockBean/@MockitoBean for this Spring Boot, javax -> jakarta) and compile.suggestions (ready edits to choose from, e.g. which of several classes to import). Ambiguous imports are suggestions only, ranked with project and configured internal packages first, with reasons. Read compile before the next step; a file with errors does not need a test run to find them. check=false skips the check; fix=false checks but leaves the file as written (the fixes come as suggestions).\",\"required\":[\"workspace\",\"path\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"workspace_write\"}}}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"check\",\"order\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\",\"requestedAll\":true}}}"
+        }
+      ]
+    },
+    {
+      "id": "full-result",
+      "repeat": 0,
+      "query": "The action producing this snapshot already ran. Retrieve its exact complete retained rows without rerunning it; calculate the sum of every value field. Return JSON {\"sum\":number}. Snapshot: {\"total\":12,\"rows\":[{\"id\":0,\"value\":31,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":1,\"value\":7,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":2,\"value\":83,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"}],\"modelContext\":{\"compacted\":true,\"originalBytes\":18416,\"budgetBytes\":11776,\"retainedRows\":12,\"resultId\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\",\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\"}},\"evidenceView\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\",\"guidance\":\"Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.\",\"output\":{\"status\":\"truncated\",\"source\":\"unknown\"}},\"view\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\"}",
+      "wireBytes": 1948,
+      "wireNames": [
+        "result_read"
+      ],
+      "events": [
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7",
+            "aggregate": "sum",
+            "field": "value"
+          },
+          "ok": true,
+          "result": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7",
+            "path": "/rows",
+            "aggregate": "sum",
+            "field": "value",
+            "value": 445,
+            "rows": 12,
+            "retainedComplete": true,
+            "sourceCoverage": {
+              "status": "unknown",
+              "provenComplete": false
+            },
+            "read": {
+              "tool": "result_read",
+              "arguments": {
+                "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7",
+                "path": "/rows",
+                "all": true
+              }
+            }
+          },
+          "delivered": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7",
+            "path": "/rows",
+            "aggregate": "sum",
+            "field": "value",
+            "value": 445,
+            "rows": 12,
+            "retainedComplete": true,
+            "sourceCoverage": {
+              "status": "unknown",
+              "provenComplete": false
+            },
+            "read": {
+              "tool": "result_read",
+              "arguments": {
+                "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7",
+                "path": "/rows",
+                "all": true
+              }
+            },
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        }
+      ],
+      "usage": {
+        "input": 3280,
+        "output": 104
+      },
+      "deliveredBytes": 3702,
+      "finish": "assistant-finished",
+      "turns": 2,
+      "returnedModel": "qwen3.5:2b",
+      "final": "{\"sum\":445}",
+      "passed": false,
+      "argumentErrors": 0,
+      "toolCalls": 1,
+      "ms": 30666,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered dev-tool tools to complete the user task. Inspect schemas or discover capabilities when useful. Do not invent identifiers, execution results or missing data. Do not edit files, publish, or repeat an action just to recover its output. All data belongs to a disposable local demo. Keep the final answer brief; when JSON is requested, return only JSON."
+        },
+        {
+          "role": "user",
+          "content": "The action producing this snapshot already ran. Retrieve its exact complete retained rows without rerunning it; calculate the sum of every value field. Return JSON {\"sum\":number}. Snapshot: {\"total\":12,\"rows\":[{\"id\":0,\"value\":31,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":1,\"value\":7,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":2,\"value\":83,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"}],\"modelContext\":{\"compacted\":true,\"originalBytes\":18416,\"budgetBytes\":11776,\"retainedRows\":12,\"resultId\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\",\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\"}},\"evidenceView\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\",\"guidance\":\"Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.\",\"output\":{\"status\":\"truncated\",\"source\":\"unknown\"}},\"view\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_2otr3qnk",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7",
+                  "aggregate": "sum",
+                  "field": "value"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\",\"path\":\"/rows\",\"aggregate\":\"sum\",\"field\":\"value\",\"value\":445,\"rows\":12,\"retainedComplete\":true,\"sourceCoverage\":{\"status\":\"unknown\",\"provenComplete\":false},\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxjj958af8fdbace8224b32e7\",\"path\":\"/rows\",\"all\":true}},\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "{\"sum\":445}"
+        }
+      ]
+    }
+  ],
+  "advertised": {
+    "name": "qwen3.5:2b",
+    "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "1.9B",
+      "quantization_level": "Q8_0",
+      "context_length": 262144,
+      "embedding_length": 2048
+    }
+  },
+  "instructionDigest": "a5e2799301b9d6b1c967acf5d272711c02963ce0b880ef3f7ef9a39214c2e1a8",
+  "finalSourceDigest": "94150d7d6112295ca00464c6f2de00df9e4bb26966e59451b20cc53c0cd55fc6",
+  "sourceChanged": false,
+  "completedAt": "2026-11-26T12:41:10.440Z",
+  "summary": {
+    "cases": 2,
+    "passed": 0,
+    "failed": 2,
+    "argumentErrors": 0,
+    "toolCalls": 4,
+    "deliveredBytes": 41517,
+    "inputTokens": 8062,
+    "outputTokens": 198,
+    "ms": 156482
+  },
+  "sanitization": {
+    "hostnames": true,
+    "metricsBeforeRedaction": true
+  }
+}

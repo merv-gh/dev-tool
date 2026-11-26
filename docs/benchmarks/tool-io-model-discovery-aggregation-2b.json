@@ -1,0 +1,4000 @@
+{
+  "protocol": "dt.tool-io-model/v1",
+  "kind": "real-model-fixture-evaluation",
+  "arm": "discovery-aggregation",
+  "model": "qwen3.5:2b",
+  "sourceDigest": "5aa3228191fbe68e2ecb642569cacfa96002aa4e3664b2dda22d4d6667098dfa",
+  "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+  "startedAt": "2026-11-26T12:25:56.676Z",
+  "settings": {
+    "temperature": 0,
+    "think": false,
+    "contextWindow": 32768,
+    "seedBase": 42,
+    "repeats": 1,
+    "maxTurns": 8,
+    "maxCalls": 16,
+    "maxTokens": 768
+  },
+  "limits": [
+    "Local synthetic fixtures only; actual Node tests and saved-script tools execute, without production access.",
+    "Same tasks, harness, budgets and sampling settings on both revisions; schemas and chat presentation come from each revision.",
+    "Small exploratory sample, not a statistical reliability claim. No test checks model weights; digest/size are server-advertised.",
+    "Task success is independently graded from executed tool receipts or exact JSON answers, not prose claims."
+  ],
+  "samples": [
+    {
+      "id": "saved-script",
+      "repeat": 0,
+      "query": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it.",
+      "wireBytes": 2291,
+      "wireNames": [
+        "tool_profiles",
+        "tool_search",
+        "tool_describe",
+        "tool_execute"
+      ],
+      "events": [
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "check unpaid orders"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj0ripd6d498a63d0921265f",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj0ripd6d498a63d0921265f",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "script_search"
+          },
+          "ok": true,
+          "result": {
+            "total": 1,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Words or script id; all words must match"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "description": "Optional collection prefix"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "Preview matches",
+                      "default": 10
+                    },
+                    "all": {
+                      "type": "boolean",
+                      "description": "Full output; source limits apply."
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "next": {
+                  "tool": "tool_execute",
+                  "name": "script_search",
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "name": "script_search",
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "script",
+                "search"
+              ],
+              "unmatchedTerms": [],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis"
+          },
+          "delivered": {
+            "total": 1,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Words or script id; all words must match"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "description": "Optional collection prefix"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "Preview matches",
+                      "default": 10
+                    },
+                    "all": {
+                      "type": "boolean",
+                      "description": "Full output; source limits apply."
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "next": {
+                  "tool": "tool_execute",
+                  "name": "script_search",
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "name": "script_search",
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "script",
+                "search"
+              ],
+              "unmatchedTerms": [],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "check unpaid orders script"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 99,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_save",
+                "group": "scripts",
+                "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}},",
+                "required": [
+                  "id",
+                  "description",
+                  "steps"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_save"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj1cmhed77bfa14ffe65036f",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 99,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_save",
+                "group": "scripts",
+                "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}},",
+                "required": [
+                  "id",
+                  "description",
+                  "steps"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_save"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj1cmhed77bfa14ffe65036f",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "unpaid orders script"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 51,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "code",
+                "group": "scripts",
+                "description": "Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via cont",
+                "required": [
+                  "code"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "code"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_collection",
+                "group": "scripts",
+                "description": "Describe a collection of scripts, and optionally make it a tool of its own: the tool lists its scripts and runs one by name. Give a description that says when to use it.",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_collection"
+                  }
+                }
+              },
+              {
+                "name": "script_delete",
+                "group": "scripts",
+                "description": "Delete one saved workflow by exact id, using the revision from script_get. A stale revision fails without deletion. Removes its definition and exposed tool; retained collection rep",
+                "required": [
+                  "id",
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_delete"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_save",
+                "group": "scripts",
+                "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}},",
+                "required": [
+                  "id",
+                  "description",
+                  "steps"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_save"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj1qlo05a608d8444b64d0f8",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 51,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "code",
+                "group": "scripts",
+                "description": "Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via cont",
+                "required": [
+                  "code"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "code"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_collection",
+                "group": "scripts",
+                "description": "Describe a collection of scripts, and optionally make it a tool of its own: the tool lists its scripts and runs one by name. Give a description that says when to use it.",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_collection"
+                  }
+                }
+              },
+              {
+                "name": "script_delete",
+                "group": "scripts",
+                "description": "Delete one saved workflow by exact id, using the revision from script_get. A stale revision fails without deletion. Removes its definition and exposed tool; retained collection rep",
+                "required": [
+                  "id",
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_delete"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_save",
+                "group": "scripts",
+                "description": "Save (or replace) a script so a repeatable action runs in one call next time. id is \"collection/sub/name\". steps run in order; each is one of: {\"tool\": \"<dt tool>\", \"args\": {...}},",
+                "required": [
+                  "id",
+                  "description",
+                  "steps"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_save"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj1qlo05a608d8444b64d0f8",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "unpaid orders script collection"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "order",
+                "script",
+                "collection"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "script",
+                  "collection"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj23yl4f81b3ac175c2e5b55",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "order",
+                "script",
+                "collection"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "script",
+                  "collection"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj23yl4f81b3ac175c2e5b55",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "retained-details",
+                  "tool-preview",
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "collection unpaid orders script"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "collection",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "collection",
+                  "script"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj2hi8dda7afc7b5d48a966e",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "collection",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "collection",
+                  "script"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj2hi8dda7afc7b5d48a966e",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "retained-details",
+                  "tool-preview",
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "collection unpaid orders script collection"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "collection",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "collection",
+                  "script"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj2vay2e70e8bb81e3b78cf4",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "collection",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "collection",
+                  "script"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj2vay2e70e8bb81e3b78cf4",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "retained-details",
+                  "tool-preview",
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "collection unpaid orders script collection"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "collection",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "collection",
+                  "script"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj39jjb43a3336601e65aef4",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 55,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_search"
+                  }
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_run",
+                "group": "scripts",
+                "description": "Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_plan",
+                "group": "scripts",
+                "description": "Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. ",
+                "required": [
+                  "collection"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_plan"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_report",
+                "group": "scripts",
+                "description": "Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_report"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "collection",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [
+              {
+                "id": "ui-api-collection",
+                "title": "Turn UI traffic into a reusable API check",
+                "matchedTerms": [
+                  "collection",
+                  "script"
+                ],
+                "first": [
+                  "api_browser_open",
+                  "api_browser_action",
+                  "api_browser_capture",
+                  "routes_discover"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "args": {
+                    "name": "workflow_plan"
+                  }
+                },
+                "planArguments": {
+                  "id": "ui-api-collection"
+                }
+              }
+            ],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj39jjb43a3336601e65aef4",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "retained-details",
+                  "tool-preview",
+                  "tools"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "usage": {
+        "input": 30070,
+        "output": 232
+      },
+      "deliveredBytes": 29928,
+      "finish": "turn-budget",
+      "turns": 8,
+      "returnedModel": "qwen3.5:2b",
+      "passed": false,
+      "argumentErrors": 0,
+      "toolCalls": 8,
+      "ms": 136672,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered dev-tool tools to complete the user task. Inspect schemas or discover capabilities when useful. Do not invent identifiers, execution results or missing data. Do not edit files, publish, or repeat an action just to recover its output. All data belongs to a disposable local demo. Keep the final answer brief; when JSON is requested, return only JSON."
+        },
+        {
+          "role": "user",
+          "content": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it."
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_zy55vs4s",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "check unpaid orders"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":59,\"tools\":[{\"name\":\"health\",\"group\":\"consul\",\"description\":\"Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \\\"are services healthy?\\\" instead \",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"health\"}},\"descriptionTruncated\":true},{\"name\":\"doctor\",\"group\":\"history\",\"description\":\"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"doctor\"}},\"descriptionTruncated\":true},{\"name\":\"collection_check\",\"group\":\"scripts\",\"description\":\"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_check\"}},\"descriptionTruncated\":true},{\"name\":\"continuation_checkpoint\",\"group\":\"context\",\"description\":\"Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre\",\"required\":[\"expected_revision\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_checkpoint\"}},\"descriptionTruncated\":true},{\"name\":\"differential_check\",\"group\":\"code\",\"description\":\"Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde\",\"required\":[\"profile\",\"baseline\",\"candidate\",\"inputs\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"differential_check\"}},\"descriptionTruncated\":true},{\"name\":\"fixture_runtime_check\",\"group\":\"code\",\"description\":\"Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_runtime_check\"}},\"descriptionTruncated\":true},{\"name\":\"kafka_checkpoint\",\"group\":\"kafka\",\"description\":\"Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.\",\"required\":[\"topic\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"kafka_checkpoint\"}}},{\"name\":\"scenario_check\",\"group\":\"code\",\"description\":\"Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a\",\"required\":[\"expectations\",\"observed\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_check\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"check\",\"order\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj0ripd6d498a63d0921265f\",\"truncated\":true,\"omitted\":{\"tools\":0,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_er0vhtue",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "script_search"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"total\":1,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Words or script id; all words must match\"},\"collection\":{\"type\":\"string\",\"description\":\"Optional collection prefix\"},\"limit\":{\"type\":\"integer\",\"description\":\"Preview matches\",\"default\":10},\"all\":{\"type\":\"boolean\",\"description\":\"Full output; source limits apply.\"}},\"required\":[\"query\"]},\"next\":{\"tool\":\"tool_execute\",\"name\":\"script_search\",\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"}}],\"discoveryOnly\":true,\"next\":{\"tool\":\"tool_execute\",\"name\":\"script_search\",\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"},\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"script\",\"search\"],\"unmatchedTerms\":[],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_7vze94vq",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "check unpaid orders script"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":99,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_search\"}}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"health\",\"group\":\"consul\",\"description\":\"Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \\\"are services healthy?\\\" instead \",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"health\"}},\"descriptionTruncated\":true},{\"name\":\"doctor\",\"group\":\"history\",\"description\":\"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"doctor\"}},\"descriptionTruncated\":true},{\"name\":\"collection_check\",\"group\":\"scripts\",\"description\":\"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_check\"}},\"descriptionTruncated\":true},{\"name\":\"script_save\",\"group\":\"scripts\",\"description\":\"Save (or replace) a script so a repeatable action runs in one call next time. id is \\\"collection/sub/name\\\". steps run in order; each is one of: {\\\"tool\\\": \\\"<dt tool>\\\", \\\"args\\\": {...}},\",\"required\":[\"id\",\"description\",\"steps\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_save\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"check\",\"order\",\"script\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj1cmhed77bfa14ffe65036f\",\"truncated\":true,\"omitted\":{\"tools\":0,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_p7cjkj7l",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "unpaid orders script"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":51,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_search\"}}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"code\",\"group\":\"scripts\",\"description\":\"Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via cont\",\"required\":[\"code\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"code\"}},\"descriptionTruncated\":true},{\"name\":\"script_collection\",\"group\":\"scripts\",\"description\":\"Describe a collection of scripts, and optionally make it a tool of its own: the tool lists its scripts and runs one by name. Give a description that says when to use it.\",\"required\":[\"collection\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_collection\"}}},{\"name\":\"script_delete\",\"group\":\"scripts\",\"description\":\"Delete one saved workflow by exact id, using the revision from script_get. A stale revision fails without deletion. Removes its definition and exposed tool; retained collection rep\",\"required\":[\"id\",\"expected_revision\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_delete\"}},\"descriptionTruncated\":true},{\"name\":\"script_save\",\"group\":\"scripts\",\"description\":\"Save (or replace) a script so a repeatable action runs in one call next time. id is \\\"collection/sub/name\\\". steps run in order; each is one of: {\\\"tool\\\": \\\"<dt tool>\\\", \\\"args\\\": {...}},\",\"required\":[\"id\",\"description\",\"steps\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_save\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"order\",\"script\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj1qlo05a608d8444b64d0f8\",\"truncated\":true,\"omitted\":{\"tools\":0,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_0mytdrbf",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "unpaid orders script collection"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":55,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_search\"}}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_run\",\"group\":\"scripts\",\"description\":\"Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_plan\",\"group\":\"scripts\",\"description\":\"Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. \",\"required\":[\"collection\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_plan\"}},\"descriptionTruncated\":true},{\"name\":\"collection_report\",\"group\":\"scripts\",\"description\":\"Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_report\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"order\",\"script\",\"collection\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[{\"id\":\"ui-api-collection\",\"title\":\"Turn UI traffic into a reusable API check\",\"matchedTerms\":[\"script\",\"collection\"],\"first\":[\"api_browser_open\",\"api_browser_action\",\"api_browser_capture\",\"routes_discover\"],\"next\":{\"tool\":\"tool_describe\",\"args\":{\"name\":\"workflow_plan\"}},\"planArguments\":{\"id\":\"ui-api-collection\"}}],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj23yl4f81b3ac175c2e5b55\",\"truncated\":true,\"omitted\":{\"tools\":1,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"retained-details\",\"tool-preview\",\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_rehd01pm",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "collection unpaid orders script"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":55,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_search\"}}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_run\",\"group\":\"scripts\",\"description\":\"Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_plan\",\"group\":\"scripts\",\"description\":\"Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. \",\"required\":[\"collection\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_plan\"}},\"descriptionTruncated\":true},{\"name\":\"collection_report\",\"group\":\"scripts\",\"description\":\"Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_report\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"collection\",\"order\",\"script\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[{\"id\":\"ui-api-collection\",\"title\":\"Turn UI traffic into a reusable API check\",\"matchedTerms\":[\"collection\",\"script\"],\"first\":[\"api_browser_open\",\"api_browser_action\",\"api_browser_capture\",\"routes_discover\"],\"next\":{\"tool\":\"tool_describe\",\"args\":{\"name\":\"workflow_plan\"}},\"planArguments\":{\"id\":\"ui-api-collection\"}}],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj2hi8dda7afc7b5d48a966e\",\"truncated\":true,\"omitted\":{\"tools\":1,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"retained-details\",\"tool-preview\",\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_u2ed4o8b",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "collection unpaid orders script collection"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":55,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_search\"}}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_run\",\"group\":\"scripts\",\"description\":\"Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_plan\",\"group\":\"scripts\",\"description\":\"Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. \",\"required\":[\"collection\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_plan\"}},\"descriptionTruncated\":true},{\"name\":\"collection_report\",\"group\":\"scripts\",\"description\":\"Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_report\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"collection\",\"order\",\"script\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[{\"id\":\"ui-api-collection\",\"title\":\"Turn UI traffic into a reusable API check\",\"matchedTerms\":[\"collection\",\"script\"],\"first\":[\"api_browser_open\",\"api_browser_action\",\"api_browser_capture\",\"routes_discover\"],\"next\":{\"tool\":\"tool_describe\",\"args\":{\"name\":\"workflow_plan\"}},\"planArguments\":{\"id\":\"ui-api-collection\"}}],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj2vay2e70e8bb81e3b78cf4\",\"truncated\":true,\"omitted\":{\"tools\":1,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"retained-details\",\"tool-preview\",\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_mklo9d62",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "collection unpaid orders script collection"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":55,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_search\"}}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_run\",\"group\":\"scripts\",\"description\":\"Run a validated collection suite with ordered nested scopes, independent dataset/matrix cases, assertions and finally cleanup. Durable reports preserve primary and cleanup failures\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_run\"}},\"descriptionTruncated\":true},{\"name\":\"collection_plan\",\"group\":\"scripts\",\"description\":\"Build an offline ordered plan of nested suite cases. Expands datasets and matrix values with isolated per-case vars, records tags, selection exclusions, source revisions and seed. \",\"required\":[\"collection\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_plan\"}},\"descriptionTruncated\":true},{\"name\":\"collection_report\",\"group\":\"scripts\",\"description\":\"Open an interactive collection report, or export its retained JSON or JUnit XML independently for CI. JUnit includes failed setup/cleanup scopes and skipped cases; an HTTP 200 neve\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_report\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"collection\",\"order\",\"script\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[{\"id\":\"ui-api-collection\",\"title\":\"Turn UI traffic into a reusable API check\",\"matchedTerms\":[\"collection\",\"script\"],\"first\":[\"api_browser_open\",\"api_browser_action\",\"api_browser_capture\",\"routes_discover\"],\"next\":{\"tool\":\"tool_describe\",\"args\":{\"name\":\"workflow_plan\"}},\"planArguments\":{\"id\":\"ui-api-collection\"}}],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxj39jjb43a3336601e65aef4\",\"truncated\":true,\"omitted\":{\"tools\":1,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"retained-details\",\"tool-preview\",\"tools\"]}}}"
+        }
+      ]
+    },
+    {
+      "id": "full-result",
+      "repeat": 0,
+      "query": "The action producing this snapshot already ran. Retrieve its exact complete retained rows without rerunning it; calculate the sum of every value field. Return JSON {\"sum\":number}. Snapshot: {\"total\":12,\"rows\":[{\"id\":0,\"value\":31,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":1,\"value\":7,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":2,\"value\":83,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"}],\"modelContext\":{\"compacted\":true,\"originalBytes\":18416,\"budgetBytes\":11776,\"resultId\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\",\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\"}},\"evidenceView\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\",\"guidance\":\"Preview only. Read a JSON pointer with result_read (tool_execute if not listed), or aggregate pages inside code. Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.\",\"output\":{\"status\":\"truncated\",\"source\":\"unknown\"}},\"view\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\"}",
+      "wireBytes": 1816,
+      "wireNames": [
+        "result_read"
+      ],
+      "events": [
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": true,
+          "result": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows",
+            "fields": [
+              "value"
+            ],
+            "value": [
+              {
+                "value": 31
+              },
+              {
+                "value": 7
+              },
+              {
+                "value": 83
+              },
+              {
+                "value": 29
+              },
+              {
+                "value": 2
+              },
+              {
+                "value": 41
+              },
+              {
+                "value": 67
+              },
+              {
+                "value": 5
+              },
+              {
+                "value": 19
+              },
+              {
+                "value": 53
+              },
+              {
+                "value": 11
+              },
+              {
+                "value": 97
+              }
+            ],
+            "rows": 12,
+            "complete": true,
+            "sourceCoverage": {
+              "status": "unknown"
+            },
+            "read": {
+              "tool": "result_read",
+              "arguments": {
+                "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                "path": "/rows",
+                "all": true
+              }
+            }
+          },
+          "delivered": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows",
+            "fields": [
+              "value"
+            ],
+            "value": [
+              {
+                "value": 31
+              },
+              {
+                "value": 7
+              },
+              {
+                "value": 83
+              },
+              {
+                "value": 29
+              },
+              {
+                "value": 2
+              },
+              {
+                "value": 41
+              },
+              {
+                "value": 67
+              },
+              {
+                "value": 5
+              },
+              {
+                "value": 19
+              },
+              {
+                "value": 53
+              },
+              {
+                "value": 11
+              },
+              {
+                "value": 97
+              }
+            ],
+            "rows": 12,
+            "complete": true,
+            "sourceCoverage": {
+              "status": "unknown"
+            },
+            "read": {
+              "tool": "result_read",
+              "arguments": {
+                "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                "path": "/rows",
+                "all": true
+              }
+            },
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown",
+                "requestedAll": true
+              }
+            }
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        },
+        {
+          "tool": "result_read",
+          "wireTool": "result_read",
+          "arguments": {
+            "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+            "path": "/rows/value",
+            "fields": [
+              "value"
+            ],
+            "all": true
+          },
+          "ok": false,
+          "error": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "result": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          },
+          "delivered": {
+            "error": "JSON pointer does not exist in the retained response",
+            "code": "DT_CONTEXT_ARGUMENT"
+          }
+        }
+      ],
+      "usage": {
+        "input": 16945,
+        "output": 895
+      },
+      "deliveredBytes": 4234,
+      "finish": "turn-budget",
+      "turns": 8,
+      "returnedModel": "qwen3.5:2b",
+      "passed": false,
+      "argumentErrors": 7,
+      "toolCalls": 8,
+      "ms": 127104,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered dev-tool tools to complete the user task. Inspect schemas or discover capabilities when useful. Do not invent identifiers, execution results or missing data. Do not edit files, publish, or repeat an action just to recover its output. All data belongs to a disposable local demo. Keep the final answer brief; when JSON is requested, return only JSON."
+        },
+        {
+          "role": "user",
+          "content": "The action producing this snapshot already ran. Retrieve its exact complete retained rows without rerunning it; calculate the sum of every value field. Return JSON {\"sum\":number}. Snapshot: {\"total\":12,\"rows\":[{\"id\":0,\"value\":31,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":1,\"value\":7,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":2,\"value\":83,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"}],\"modelContext\":{\"compacted\":true,\"originalBytes\":18416,\"budgetBytes\":11776,\"resultId\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\",\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\"}},\"evidenceView\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\",\"guidance\":\"Preview only. Read a JSON pointer with result_read (tool_execute if not listed), or aggregate pages inside code. Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.\",\"output\":{\"status\":\"truncated\",\"source\":\"unknown\"}},\"view\":\"http://127.0.0.1:4000/show/s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_88d8malt",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\",\"path\":\"/rows\",\"fields\":[\"value\"],\"value\":[{\"value\":31},{\"value\":7},{\"value\":83},{\"value\":29},{\"value\":2},{\"value\":41},{\"value\":67},{\"value\":5},{\"value\":19},{\"value\":53},{\"value\":11},{\"value\":97}],\"rows\":12,\"complete\":true,\"sourceCoverage\":{\"status\":\"unknown\"},\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d\",\"path\":\"/rows\",\"all\":true}},\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\",\"requestedAll\":true}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_zhfzijc4",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_8zgfovam",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_nf3mjlab",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_b8xilwfr",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_n61z6gga",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_goozlwn1",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_3kcw3tri",
+              "function": {
+                "index": 0,
+                "name": "result_read",
+                "arguments": {
+                  "id": "s365a87fefdf68f8d6e794d68cf4d015fzmwxj39r1cd448fa4b0d2ddee0d",
+                  "path": "/rows/value",
+                  "fields": [
+                    "value"
+                  ],
+                  "all": true
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "result_read",
+          "content": "{\"error\":\"JSON pointer does not exist in the retained response\",\"code\":\"DT_CONTEXT_ARGUMENT\"}"
+        }
+      ]
+    }
+  ],
+  "advertised": {
+    "name": "qwen3.5:2b",
+    "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "1.9B",
+      "quantization_level": "Q8_0",
+      "context_length": 262144,
+      "embedding_length": 2048
+    }
+  },
+  "instructionDigest": "a5e2799301b9d6b1c967acf5d272711c02963ce0b880ef3f7ef9a39214c2e1a8",
+  "finalSourceDigest": "5aa3228191fbe68e2ecb642569cacfa96002aa4e3664b2dda22d4d6667098dfa",
+  "sourceChanged": false,
+  "completedAt": "2026-11-26T12:30:21.188Z",
+  "summary": {
+    "cases": 2,
+    "passed": 0,
+    "failed": 2,
+    "argumentErrors": 7,
+    "toolCalls": 16,
+    "deliveredBytes": 34162,
+    "inputTokens": 47015,
+    "outputTokens": 1127,
+    "ms": 263776
+  },
+  "sanitization": {
+    "hostnames": true,
+    "metricsBeforeRedaction": true
+  }
+}

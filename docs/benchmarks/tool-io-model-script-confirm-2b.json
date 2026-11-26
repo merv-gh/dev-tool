@@ -1,0 +1,1568 @@
+{
+  "protocol": "dt.tool-io-model/v1",
+  "kind": "real-model-fixture-evaluation",
+  "arm": "script-confirm",
+  "model": "qwen3.5:2b",
+  "sourceDigest": "92059198d7114106620b45705e2717550209ee026731844d20b254dbaf55bf36",
+  "harnessDigest": "29816330fdd69d6a72622080371523816199f844a934ad5df4fe67b020c88f0a",
+  "startedAt": "2026-11-26T12:44:37.009Z",
+  "settings": {
+    "temperature": 0,
+    "think": false,
+    "contextWindow": 32768,
+    "seedBase": 42,
+    "repeats": 1,
+    "maxTurns": 8,
+    "maxCalls": 16,
+    "maxTokens": 768
+  },
+  "limits": [
+    "Local synthetic fixtures only; actual Node tests and saved-script tools execute, without production access.",
+    "Same tasks, harness, budgets and sampling settings on both revisions; schemas and chat presentation come from each revision.",
+    "Small exploratory sample, not a statistical reliability claim. No test checks model weights; digest/size are server-advertised.",
+    "Task success is independently graded from executed tool receipts or exact JSON answers, not prose claims."
+  ],
+  "samples": [
+    {
+      "id": "saved-script",
+      "repeat": 0,
+      "query": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it.",
+      "wireBytes": 2291,
+      "wireNames": [
+        "tool_profiles",
+        "tool_search",
+        "tool_describe",
+        "tool_execute"
+      ],
+      "events": [
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "check unpaid orders"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjoote25cb2bb2bc939b0a44",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 59,
+            "tools": [
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "continuation_checkpoint",
+                "group": "context",
+                "description": "Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre",
+                "required": [
+                  "expected_revision"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "continuation_checkpoint"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "differential_check",
+                "group": "code",
+                "description": "Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde",
+                "required": [
+                  "profile",
+                  "baseline",
+                  "candidate",
+                  "inputs"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "differential_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "fixture_runtime_check",
+                "group": "code",
+                "description": "Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "fixture_runtime_check"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "kafka_checkpoint",
+                "group": "kafka",
+                "description": "Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.",
+                "required": [
+                  "topic"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "kafka_checkpoint"
+                  }
+                }
+              },
+              {
+                "name": "scenario_check",
+                "group": "code",
+                "description": "Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a",
+                "required": [
+                  "expectations",
+                  "observed"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "scenario_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjoote25cb2bb2bc939b0a44",
+            "truncated": true,
+            "omitted": {
+              "tools": 0,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "script_search"
+          },
+          "ok": true,
+          "result": {
+            "total": 1,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Words or script id; all words must match"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "description": "Optional collection prefix"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "Preview matches",
+                      "default": 10
+                    },
+                    "all": {
+                      "type": "boolean",
+                      "description": "Full output; source limits apply."
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "next": {
+                  "tool": "tool_execute",
+                  "name": "script_search",
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "name": "script_search",
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "script",
+                "search"
+              ],
+              "unmatchedTerms": [],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis"
+          },
+          "delivered": {
+            "total": 1,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "inputSchema": {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string",
+                      "description": "Words or script id; all words must match"
+                    },
+                    "collection": {
+                      "type": "string",
+                      "description": "Optional collection prefix"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "description": "Preview matches",
+                      "default": 10
+                    },
+                    "all": {
+                      "type": "boolean",
+                      "description": "Full output; source limits apply."
+                    }
+                  },
+                  "required": [
+                    "query"
+                  ]
+                },
+                "next": {
+                  "tool": "tool_execute",
+                  "name": "script_search",
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "name": "script_search",
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "script",
+                "search"
+              ],
+              "unmatchedTerms": [],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "tool_search",
+          "wireTool": "tool_search",
+          "arguments": {
+            "query": "check unpaid orders script"
+          },
+          "ok": true,
+          "result": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 99,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_execute",
+                  "arguments": {
+                    "name": "script_search",
+                    "arguments": {
+                      "query": "check unpaid orders"
+                    }
+                  },
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "arguments": {
+                "name": "script_search",
+                "arguments": {
+                  "query": "check unpaid orders"
+                }
+              },
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjp773114ad9ffa396fb4238",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096
+          },
+          "delivered": {
+            "searchHint": "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.",
+            "searches": [
+              {
+                "name": "find",
+                "group": "catalog"
+              },
+              {
+                "name": "catalog_search",
+                "group": "catalog"
+              },
+              {
+                "name": "es_search",
+                "group": "es"
+              },
+              {
+                "name": "docs_search",
+                "group": "confluence"
+              },
+              {
+                "name": "confluence_search",
+                "group": "confluence"
+              },
+              {
+                "name": "logs_search",
+                "group": "logs"
+              },
+              {
+                "name": "script_search",
+                "group": "scripts"
+              },
+              {
+                "name": "files_search",
+                "group": "files"
+              },
+              {
+                "name": "code_search",
+                "group": "code"
+              },
+              {
+                "name": "context_search",
+                "group": "context"
+              },
+              {
+                "name": "workbench_search",
+                "group": "context"
+              },
+              {
+                "name": "map_search",
+                "group": "map"
+              },
+              {
+                "name": "semantic_search",
+                "group": "semantic"
+              },
+              {
+                "name": "knowledge_search",
+                "group": "knowledge"
+              }
+            ],
+            "total": 99,
+            "tools": [
+              {
+                "name": "script_search",
+                "group": "scripts",
+                "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+                "required": [
+                  "query"
+                ],
+                "next": {
+                  "tool": "tool_execute",
+                  "arguments": {
+                    "name": "script_search",
+                    "arguments": {
+                      "query": "check unpaid orders"
+                    }
+                  },
+                  "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+                }
+              },
+              {
+                "name": "script_list",
+                "group": "scripts",
+                "description": "List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_list"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_get",
+                "group": "scripts",
+                "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_get"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "script_run",
+                "group": "scripts",
+                "description": "Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio",
+                "required": [
+                  "id"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "script_run"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "health",
+                "group": "consul",
+                "description": "Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \"are services healthy?\" instead ",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "health"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "doctor",
+                "group": "history",
+                "description": "Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav",
+                "required": [],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "doctor"
+                  }
+                },
+                "descriptionTruncated": true
+              },
+              {
+                "name": "collection_check",
+                "group": "scripts",
+                "description": "Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case",
+                "required": [
+                  "run"
+                ],
+                "next": {
+                  "tool": "tool_describe",
+                  "arguments": {
+                    "name": "collection_check"
+                  }
+                },
+                "descriptionTruncated": true
+              }
+            ],
+            "discoveryOnly": true,
+            "next": {
+              "tool": "tool_execute",
+              "arguments": {
+                "name": "script_search",
+                "arguments": {
+                  "query": "check unpaid orders"
+                }
+              },
+              "guidance": "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool."
+            },
+            "lexical": {
+              "mode": "normalized-keywords",
+              "ranker": "legacy",
+              "matchedTerms": [
+                "check",
+                "order",
+                "script"
+              ],
+              "unmatchedTerms": [
+                "unpaid"
+              ],
+              "truncated": false
+            },
+            "workflows": [],
+            "workflowKind": "planning-guides-not-diagnosis",
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjp773114ad9ffa396fb4238",
+            "truncated": true,
+            "omitted": {
+              "tools": 1,
+              "workflows": 0
+            },
+            "outputBudgetBytes": 4096,
+            "modelContext": {
+              "output": {
+                "status": "truncated",
+                "source": "partial",
+                "limits": [
+                  "source-or-tool-limit"
+                ],
+                "omitted": [
+                  "retained-details",
+                  "tool-preview",
+                  "tools"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "tool": "script_search",
+          "wireTool": "tool_execute",
+          "arguments": {
+            "name": "script_search",
+            "arguments": {
+              "query": "check unpaid orders"
+            }
+          },
+          "ok": true,
+          "result": {
+            "total": 1,
+            "scripts": [
+              {
+                "id": "orders/unpaid-check",
+                "description": "Inspect unpaid orders without sending requests",
+                "params": [
+                  "customerId"
+                ],
+                "steps": 1,
+                "browser": false,
+                "js": false,
+                "tool": null
+              }
+            ],
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjpld8b6d4439d01d64f9e94"
+          },
+          "delivered": {
+            "total": 1,
+            "scripts": [
+              {
+                "id": "orders/unpaid-check",
+                "description": "Inspect unpaid orders without sending requests",
+                "params": [
+                  "customerId"
+                ],
+                "steps": 1,
+                "browser": false,
+                "js": false,
+                "tool": null
+              }
+            ],
+            "view": "http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjpld8b6d4439d01d64f9e94",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "script_get",
+          "wireTool": "tool_execute",
+          "arguments": {
+            "name": "script_get",
+            "arguments": {
+              "id": "orders/unpaid-check"
+            }
+          },
+          "ok": true,
+          "result": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69"
+          },
+          "delivered": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "script_get",
+          "wireTool": "tool_execute",
+          "arguments": {
+            "name": "script_get",
+            "arguments": {
+              "id": "orders/unpaid-check"
+            }
+          },
+          "ok": true,
+          "result": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69"
+          },
+          "delivered": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "script_get",
+          "wireTool": "tool_execute",
+          "arguments": {
+            "name": "script_get",
+            "arguments": {
+              "id": "orders/unpaid-check"
+            }
+          },
+          "ok": true,
+          "result": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69"
+          },
+          "delivered": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        },
+        {
+          "tool": "script_get",
+          "wireTool": "tool_execute",
+          "arguments": {
+            "name": "script_get",
+            "arguments": {
+              "id": "orders/unpaid-check"
+            }
+          },
+          "ok": true,
+          "result": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69"
+          },
+          "delivered": {
+            "id": "orders/unpaid-check",
+            "requiredParams": [
+              "customerId"
+            ],
+            "description": "Inspect unpaid orders without sending requests",
+            "params": {
+              "customerId": {
+                "type": "string",
+                "required": true,
+                "description": "Customer id"
+              }
+            },
+            "steps": [
+              {
+                "set": {
+                  "source": "synthetic"
+                }
+              }
+            ],
+            "savedAt": "2026-11-26T12:44:37.373Z",
+            "revision": "49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69",
+            "modelContext": {
+              "output": {
+                "status": "all",
+                "source": "unknown"
+              }
+            }
+          }
+        }
+      ],
+      "usage": {
+        "input": 22520,
+        "output": 315
+      },
+      "deliveredBytes": 11852,
+      "finish": "turn-budget",
+      "turns": 8,
+      "returnedModel": "qwen3.5:2b",
+      "passed": true,
+      "argumentErrors": 0,
+      "toolCalls": 8,
+      "ms": 93591,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered dev-tool tools to complete the user task. Inspect schemas or discover capabilities when useful. Do not invent identifiers, execution results or missing data. Do not edit files, publish, or repeat an action just to recover its output. All data belongs to a disposable local demo. Keep the final answer brief; when JSON is requested, return only JSON."
+        },
+        {
+          "role": "user",
+          "content": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it."
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_3kh0cp4u",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "check unpaid orders"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":59,\"tools\":[{\"name\":\"health\",\"group\":\"consul\",\"description\":\"Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \\\"are services healthy?\\\" instead \",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"health\"}},\"descriptionTruncated\":true},{\"name\":\"doctor\",\"group\":\"history\",\"description\":\"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"doctor\"}},\"descriptionTruncated\":true},{\"name\":\"collection_check\",\"group\":\"scripts\",\"description\":\"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_check\"}},\"descriptionTruncated\":true},{\"name\":\"continuation_checkpoint\",\"group\":\"context\",\"description\":\"Save task goal/findings/status/progress and repository/workspace/related discovery links. expected_revision protects task metadata; replacing progress also requires expected_progre\",\"required\":[\"expected_revision\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"continuation_checkpoint\"}},\"descriptionTruncated\":true},{\"name\":\"differential_check\",\"group\":\"code\",\"description\":\"Execute the same declared cases against separate baseline/candidate workspaces with a reviewed differential profile. Compare exact typed values, nulls, array order, errors and inde\",\"required\":[\"profile\",\"baseline\",\"candidate\",\"inputs\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"differential_check\"}},\"descriptionTruncated\":true},{\"name\":\"fixture_runtime_check\",\"group\":\"code\",\"description\":\"Compare direct native observations against the expectations frozen before execution, including exact writes/rejected-action no-observed-write assertions, unlisted effects and quiet\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"fixture_runtime_check\"}},\"descriptionTruncated\":true},{\"name\":\"kafka_checkpoint\",\"group\":\"kafka\",\"description\":\"Record exact end offsets of every topic partition before triggering a workflow. No consumer group or commits. Pass the result to kafka_wait to exclude old events.\",\"required\":[\"topic\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"kafka_checkpoint\"}}},{\"name\":\"scenario_check\",\"group\":\"code\",\"description\":\"Check expected effects independently of execution. Observed is an id->value map or [{id?,kind,target,action?,value}] records. Fails missing required assertions/effects, ambiguous a\",\"required\":[\"expectations\",\"observed\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"scenario_check\"}},\"descriptionTruncated\":true}],\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"check\",\"order\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjoote25cb2bb2bc939b0a44\",\"truncated\":true,\"omitted\":{\"tools\":0,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_3uhnfvbh",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "script_search"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"total\":1,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"inputSchema\":{\"type\":\"object\",\"properties\":{\"query\":{\"type\":\"string\",\"description\":\"Words or script id; all words must match\"},\"collection\":{\"type\":\"string\",\"description\":\"Optional collection prefix\"},\"limit\":{\"type\":\"integer\",\"description\":\"Preview matches\",\"default\":10},\"all\":{\"type\":\"boolean\",\"description\":\"Full output; source limits apply.\"}},\"required\":[\"query\"]},\"next\":{\"tool\":\"tool_execute\",\"name\":\"script_search\",\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"}}],\"discoveryOnly\":true,\"next\":{\"tool\":\"tool_execute\",\"name\":\"script_search\",\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"},\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"script\",\"search\"],\"unmatchedTerms\":[],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_d8bkj1jq",
+              "function": {
+                "index": 0,
+                "name": "tool_search",
+                "arguments": {
+                  "query": "check unpaid orders script"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_search",
+          "content": "{\"searchHint\":\"These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.\",\"searches\":[{\"name\":\"find\",\"group\":\"catalog\"},{\"name\":\"catalog_search\",\"group\":\"catalog\"},{\"name\":\"es_search\",\"group\":\"es\"},{\"name\":\"docs_search\",\"group\":\"confluence\"},{\"name\":\"confluence_search\",\"group\":\"confluence\"},{\"name\":\"logs_search\",\"group\":\"logs\"},{\"name\":\"script_search\",\"group\":\"scripts\"},{\"name\":\"files_search\",\"group\":\"files\"},{\"name\":\"code_search\",\"group\":\"code\"},{\"name\":\"context_search\",\"group\":\"context\"},{\"name\":\"workbench_search\",\"group\":\"context\"},{\"name\":\"map_search\",\"group\":\"map\"},{\"name\":\"semantic_search\",\"group\":\"semantic\"},{\"name\":\"knowledge_search\",\"group\":\"knowledge\"}],\"total\":99,\"tools\":[{\"name\":\"script_search\",\"group\":\"scripts\",\"description\":\"Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.\",\"required\":[\"query\"],\"next\":{\"tool\":\"tool_execute\",\"arguments\":{\"name\":\"script_search\",\"arguments\":{\"query\":\"check unpaid orders\"}},\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"}},{\"name\":\"script_list\",\"group\":\"scripts\",\"description\":\"List persistent workflows and nested collections in the current principal/task scope. Reuse before doing a multi-step task by hand. CRUD: script_get, script_save, script_delete; ex\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_list\"}},\"descriptionTruncated\":true},{\"name\":\"script_get\",\"group\":\"scripts\",\"description\":\"Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored unde\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_get\"}},\"descriptionTruncated\":true},{\"name\":\"script_run\",\"group\":\"scripts\",\"description\":\"Run a saved script with params, by id, name or a close name. Returns each step (ok, a short result or the error) and the named results. Browser steps run in dt's own browser sessio\",\"required\":[\"id\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"script_run\"}},\"descriptionTruncated\":true},{\"name\":\"health\",\"group\":\"consul\",\"description\":\"Live health of ALL services in an environment from Consul in one request: healthy / degraded / down per service, failing check output. Use this for \\\"are services healthy?\\\" instead \",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"health\"}},\"descriptionTruncated\":true},{\"name\":\"doctor\",\"group\":\"history\",\"description\":\"Why fetching repos or running tests fails here: folders writable (and chmod), disk, git, Bitbucket (token, API, a repo's refs; deep=true also fetches it), JDK (java and javac), Mav\",\"required\":[],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"doctor\"}},\"descriptionTruncated\":true},{\"name\":\"collection_check\",\"group\":\"scripts\",\"description\":\"Check a durable collection run independently. Success requires a finished passed run with every selected case executed and no failed assertions, infrastructure errors, skipped case\",\"required\":[\"run\"],\"next\":{\"tool\":\"tool_describe\",\"arguments\":{\"name\":\"collection_check\"}},\"descriptionTruncated\":true}],\"discoveryOnly\":true,\"next\":{\"tool\":\"tool_execute\",\"arguments\":{\"name\":\"script_search\",\"arguments\":{\"query\":\"check unpaid orders\"}},\"guidance\":\"Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool.\"},\"lexical\":{\"mode\":\"normalized-keywords\",\"ranker\":\"legacy\",\"matchedTerms\":[\"check\",\"order\",\"script\"],\"unmatchedTerms\":[\"unpaid\"],\"truncated\":false},\"workflows\":[],\"workflowKind\":\"planning-guides-not-diagnosis\",\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjp773114ad9ffa396fb4238\",\"truncated\":true,\"omitted\":{\"tools\":1,\"workflows\":0},\"outputBudgetBytes\":4096,\"modelContext\":{\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\"],\"omitted\":[\"retained-details\",\"tool-preview\",\"tools\"]}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_bxkeckzp",
+              "function": {
+                "index": 0,
+                "name": "tool_execute",
+                "arguments": {
+                  "name": "script_search",
+                  "arguments": {
+                    "query": "check unpaid orders"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_execute",
+          "content": "{\"total\":1,\"scripts\":[{\"id\":\"orders/unpaid-check\",\"description\":\"Inspect unpaid orders without sending requests\",\"params\":[\"customerId\"],\"steps\":1,\"browser\":false,\"js\":false,\"tool\":null}],\"view\":\"http://127.0.0.1:4000/show/sf1db549fab6f14223260219741b0ba6azmwxjpld8b6d4439d01d64f9e94\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_qlxi66wx",
+              "function": {
+                "index": 0,
+                "name": "tool_execute",
+                "arguments": {
+                  "name": "script_get",
+                  "arguments": {
+                    "id": "orders/unpaid-check"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_execute",
+          "content": "{\"id\":\"orders/unpaid-check\",\"requiredParams\":[\"customerId\"],\"description\":\"Inspect unpaid orders without sending requests\",\"params\":{\"customerId\":{\"type\":\"string\",\"required\":true,\"description\":\"Customer id\"}},\"steps\":[{\"set\":{\"source\":\"synthetic\"}}],\"savedAt\":\"2026-11-26T12:44:37.373Z\",\"revision\":\"49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_b8ywh88y",
+              "function": {
+                "index": 0,
+                "name": "tool_execute",
+                "arguments": {
+                  "name": "script_get",
+                  "arguments": {
+                    "id": "orders/unpaid-check"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_execute",
+          "content": "{\"id\":\"orders/unpaid-check\",\"requiredParams\":[\"customerId\"],\"description\":\"Inspect unpaid orders without sending requests\",\"params\":{\"customerId\":{\"type\":\"string\",\"required\":true,\"description\":\"Customer id\"}},\"steps\":[{\"set\":{\"source\":\"synthetic\"}}],\"savedAt\":\"2026-11-26T12:44:37.373Z\",\"revision\":\"49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_gan57aft",
+              "function": {
+                "index": 0,
+                "name": "tool_execute",
+                "arguments": {
+                  "name": "script_get",
+                  "arguments": {
+                    "id": "orders/unpaid-check"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_execute",
+          "content": "{\"id\":\"orders/unpaid-check\",\"requiredParams\":[\"customerId\"],\"description\":\"Inspect unpaid orders without sending requests\",\"params\":{\"customerId\":{\"type\":\"string\",\"required\":true,\"description\":\"Customer id\"}},\"steps\":[{\"set\":{\"source\":\"synthetic\"}}],\"savedAt\":\"2026-11-26T12:44:37.373Z\",\"revision\":\"49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        },
+        {
+          "role": "assistant",
+          "content": "",
+          "tool_calls": [
+            {
+              "id": "call_p817p6zo",
+              "function": {
+                "index": 0,
+                "name": "tool_execute",
+                "arguments": {
+                  "name": "script_get",
+                  "arguments": {
+                    "id": "orders/unpaid-check"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "role": "tool",
+          "tool_name": "tool_execute",
+          "content": "{\"id\":\"orders/unpaid-check\",\"requiredParams\":[\"customerId\"],\"description\":\"Inspect unpaid orders without sending requests\",\"params\":{\"customerId\":{\"type\":\"string\",\"required\":true,\"description\":\"Customer id\"}},\"steps\":[{\"set\":{\"source\":\"synthetic\"}}],\"savedAt\":\"2026-11-26T12:44:37.373Z\",\"revision\":\"49ab7038d33716008c2fa5293e9bac149b576975358ce1de1b59c7831d3dde69\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+        }
+      ]
+    }
+  ],
+  "advertised": {
+    "name": "qwen3.5:2b",
+    "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "1.9B",
+      "quantization_level": "Q8_0",
+      "context_length": 262144,
+      "embedding_length": 2048
+    }
+  },
+  "instructionDigest": "a5e2799301b9d6b1c967acf5d272711c02963ce0b880ef3f7ef9a39214c2e1a8",
+  "finalSourceDigest": "92059198d7114106620b45705e2717550209ee026731844d20b254dbaf55bf36",
+  "sourceChanged": false,
+  "completedAt": "2026-11-26T12:46:11.048Z",
+  "summary": {
+    "cases": 1,
+    "passed": 1,
+    "failed": 0,
+    "argumentErrors": 0,
+    "toolCalls": 8,
+    "deliveredBytes": 11852,
+    "inputTokens": 22520,
+    "outputTokens": 315,
+    "ms": 93591
+  },
+  "sanitization": {
+    "hostnames": true,
+    "metricsBeforeRedaction": true
+  }
+}

@@ -72,3 +72,5 @@ The harness default is two repeats; these reported runs explicitly use one. Repe
 ## Validation
 
 The follow-up changes passed all 23 targeted checks. The full suite completed with 1,443 tests: 1,377 passed, 66 skipped and zero failures. `npm run build`, `npm run build:check`, `node dev/build-handbook.js --check` and the staged whitespace check passed. The common postgrader produced identical scores before and after transcript hostname redaction.
+
+The [follow-up evaluation](tool-io-follow-up-evaluation.md) investigates the remaining failures, adds retained numeric totals and a focused native script profile, and records the successful small-model paths plus the lean dispatcher's remaining limitations.

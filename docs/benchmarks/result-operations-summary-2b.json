@@ -1,0 +1,314 @@
+{
+  "protocol": "dt.result-operations-model/v1",
+  "arm": "summary",
+  "model": "qwen3.5:2b",
+  "sourceDigest": "92059198d7114106620b45705e2717550209ee026731844d20b254dbaf55bf36",
+  "harnessDigest": "ea1077db7ece0c46699ad53a66e6adf1ca29e7973c64db5ee48b9303210d9833",
+  "instructionDigest": "17f38bfdca642bafc7965d414a95cdb2b2306e72156bef6249a0645757726d62",
+  "startedAt": "2026-11-26T12:43:57.430Z",
+  "settings": {
+    "temperature": 0,
+    "think": false,
+    "num_ctx": 32768,
+    "num_predict": 768,
+    "seed": 42,
+    "repeats": 1,
+    "maxTurns": 8,
+    "maxCalls": 16,
+    "timeoutMs": 90000
+  },
+  "samples": [
+    {
+      "id": "all-retained",
+      "repeat": 0,
+      "initial": {
+        "total": 12,
+        "rows": [
+          {
+            "id": 0,
+            "value": 31,
+            "payload": "synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]"
+          },
+          {
+            "id": 1,
+            "value": 7,
+            "payload": "synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]"
+          },
+          {
+            "id": 2,
+            "value": 83,
+            "payload": "synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]"
+          }
+        ],
+        "modelContext": {
+          "compacted": true,
+          "originalBytes": 18416,
+          "budgetBytes": 11776,
+          "retainedRows": 12,
+          "resultId": "saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4",
+          "read": {
+            "tool": "result_read",
+            "arguments": {
+              "id": "saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4"
+            }
+          },
+          "evidenceView": "http://127.0.0.1:4000/show/saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4",
+          "guidance": "Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.",
+          "numericSummary": {
+            "scope": "all-retained-rows",
+            "rows": 12,
+            "sourceCompleteProven": false,
+            "fields": {
+              "value": {
+                "sum": 445
+              }
+            }
+          },
+          "output": {
+            "status": "truncated",
+            "source": "unknown"
+          }
+        },
+        "view": "http://127.0.0.1:4000/show/saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4"
+      },
+      "wireBytes": 1948,
+      "expected": {
+        "sum": 445,
+        "rows": 12,
+        "sourceComplete": false
+      },
+      "events": [],
+      "usage": {
+        "input": 1517,
+        "output": 23
+      },
+      "deliveredBytes": 3394,
+      "finish": "assistant-finished",
+      "final": "```json\n{\"sum\":445,\"rows\":12,\"sourceComplete\":false}\n```",
+      "previewSummaryEvidence": true,
+      "fullRowsRecovered": false,
+      "aggregateEvidence": false,
+      "arithmeticCorrect": true,
+      "coverageCorrect": true,
+      "passed": true,
+      "ms": 19788,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered tools to complete the task. Do not invent missing data or results. The action already ran: do not repeat it. Return only the requested JSON."
+        },
+        {
+          "role": "user",
+          "content": "Calculate the sum of every value field across all retained rows. Report how many retained rows you included and whether the response proves complete source coverage. The action already ran; do not rerun it. Return only JSON {\"sum\":number,\"rows\":number,\"sourceComplete\":boolean}. Snapshot: {\"total\":12,\"rows\":[{\"id\":0,\"value\":31,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":1,\"value\":7,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":2,\"value\":83,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"}],\"modelContext\":{\"compacted\":true,\"originalBytes\":18416,\"budgetBytes\":11776,\"retainedRows\":12,\"resultId\":\"saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4\",\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4\"}},\"evidenceView\":\"http://127.0.0.1:4000/show/saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4\",\"guidance\":\"Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.\",\"numericSummary\":{\"scope\":\"all-retained-rows\",\"rows\":12,\"sourceCompleteProven\":false,\"fields\":{\"value\":{\"sum\":445}}},\"output\":{\"status\":\"truncated\",\"source\":\"unknown\"}},\"view\":\"http://127.0.0.1:4000/show/saa6dafacc8b69873f8ae5f6a82ea1207zmwxjnht3a2f9717f63119c93b4\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "```json\n{\"sum\":445,\"rows\":12,\"sourceComplete\":false}\n```"
+        }
+      ]
+    },
+    {
+      "id": "partial-source",
+      "repeat": 0,
+      "initial": {
+        "complete": false,
+        "truncated": true,
+        "gaps": [
+          "Another partition was unavailable"
+        ],
+        "total": 12,
+        "rows": [
+          {
+            "id": 0,
+            "value": 14,
+            "payload": "synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]"
+          },
+          {
+            "id": 1,
+            "value": -9,
+            "payload": "synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]"
+          },
+          {
+            "id": 2,
+            "value": 23,
+            "payload": "synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]"
+          }
+        ],
+        "modelContext": {
+          "compacted": true,
+          "originalBytes": 18495,
+          "budgetBytes": 11776,
+          "retainedRows": 12,
+          "resultId": "s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016",
+          "read": {
+            "tool": "result_read",
+            "arguments": {
+              "id": "s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016"
+            }
+          },
+          "evidenceView": "http://127.0.0.1:4000/show/s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016",
+          "guidance": "Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.",
+          "numericSummary": {
+            "scope": "all-retained-rows",
+            "rows": 12,
+            "sourceCompleteProven": false,
+            "fields": {
+              "value": {
+                "sum": 234
+              }
+            }
+          },
+          "output": {
+            "status": "truncated",
+            "source": "partial",
+            "limits": [
+              "source-or-tool-limit",
+              "incomplete-source"
+            ]
+          }
+        },
+        "view": "http://127.0.0.1:4000/show/s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016"
+      },
+      "wireBytes": 1948,
+      "expected": {
+        "sum": 234,
+        "rows": 12,
+        "sourceComplete": false
+      },
+      "events": [],
+      "usage": {
+        "input": 1562,
+        "output": 23
+      },
+      "deliveredBytes": 3528,
+      "finish": "assistant-finished",
+      "final": "```json\n{\"sum\":234,\"rows\":12,\"sourceComplete\":false}\n```",
+      "previewSummaryEvidence": true,
+      "fullRowsRecovered": false,
+      "aggregateEvidence": false,
+      "arithmeticCorrect": true,
+      "coverageCorrect": true,
+      "passed": true,
+      "ms": 19263,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Use the offered tools to complete the task. Do not invent missing data or results. The action already ran: do not repeat it. Return only the requested JSON."
+        },
+        {
+          "role": "user",
+          "content": "Calculate the sum of every value field across all retained rows. Report how many retained rows you included and whether the response proves complete source coverage. The action already ran; do not rerun it. Return only JSON {\"sum\":number,\"rows\":number,\"sourceComplete\":boolean}. Snapshot: {\"complete\":false,\"truncated\":true,\"gaps\":[\"Another partition was unavailable\"],\"total\":12,\"rows\":[{\"id\":0,\"value\":14,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":1,\"value\":-9,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"},{\"id\":2,\"value\":23,\"payload\":\"synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic data synthetic … [preview]\"}],\"modelContext\":{\"compacted\":true,\"originalBytes\":18495,\"budgetBytes\":11776,\"retainedRows\":12,\"resultId\":\"s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016\",\"read\":{\"tool\":\"result_read\",\"arguments\":{\"id\":\"s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016\"}},\"evidenceView\":\"http://127.0.0.1:4000/show/s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016\",\"guidance\":\"Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output.\",\"numericSummary\":{\"scope\":\"all-retained-rows\",\"rows\":12,\"sourceCompleteProven\":false,\"fields\":{\"value\":{\"sum\":234}}},\"output\":{\"status\":\"truncated\",\"source\":\"partial\",\"limits\":[\"source-or-tool-limit\",\"incomplete-source\"]}},\"view\":\"http://127.0.0.1:4000/show/s1fee5ed2977a880771c7e8e8587a0850zmwxjnx2z354fa11a7554186016\"}"
+        },
+        {
+          "role": "assistant",
+          "content": "```json\n{\"sum\":234,\"rows\":12,\"sourceComplete\":false}\n```"
+        }
+      ]
+    }
+  ],
+  "advertised": {
+    "name": "qwen3.5:2b",
+    "model": "qwen3.5:2b",
+    "modified_at": "2026-10-24T19:27:44.415471961+03:00",
+    "size": 2683396812,
+    "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "1.9B",
+      "quantization_level": "Q8_0",
+      "context_length": 262144,
+      "embedding_length": 2048
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  "schemas": [
+    {
+      "name": "result_read",
+      "description": "Read, project or aggregate retained data without rerunning its action. For arithmetic use aggregate (sum/count/avg/min/max) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation; sourceCoverage.provenComplete separately states whether source completeness is proven. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "modelContext.resultId or id from view"
+          },
+          "path": {
+            "type": "string",
+            "description": "RFC 6901 JSON pointer; empty reads the root, or /rows for projection/aggregation"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "minItems": 1,
+            "maxItems": 64,
+            "uniqueItems": true,
+            "description": "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate."
+          },
+          "aggregate": {
+            "type": "string",
+            "enum": [
+              "count",
+              "sum",
+              "avg",
+              "min",
+              "max"
+            ],
+            "description": "Compute over the full retained array, never its preview. Numeric operations require field; count counts rows."
+          },
+          "field": {
+            "type": "string",
+            "description": "Exact numeric row field for sum/avg/min/max; omit for count"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "nextCursor for the same id/path"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "description": "Maximum UTF-8 JSON text bytes per page",
+            "default": 1024,
+            "minimum": 128,
+            "maximum": 1536
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Full output; source limits apply."
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "sourceChanged": false,
+  "completedAt": "2026-11-26T12:44:36.668Z",
+  "summary": {
+    "cases": 2,
+    "passed": 2,
+    "calls": 0,
+    "errors": 0,
+    "deliveredBytes": 6922,
+    "inputTokens": 3079,
+    "outputTokens": 46
+  },
+  "sanitization": {
+    "hostnames": true,
+    "metricsBeforeRedaction": true
+  }
+}

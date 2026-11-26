@@ -1,0 +1,277 @@
+{
+  "protocol": "dt.script-profile-model/v1",
+  "kind": "real-model-native-profile-experiment",
+  "model": "qwen3.5:2b",
+  "profile": "scripts-read",
+  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "harnessDigest": "04c8319bb38480c9e365ddfa98866993eefedc033719a8494d8613ed12f632f6",
+  "instructionDigest": "a5e2799301b9d6b1c967acf5d272711c02963ce0b880ef3f7ef9a39214c2e1a8",
+  "startedAt": "2026-11-26T12:55:21.871Z",
+  "settings": {
+    "temperature": 0,
+    "seed": 42,
+    "think": false,
+    "num_ctx": 32768,
+    "num_predict": 768,
+    "maxTurns": 8,
+    "maxCalls": 16,
+    "timeoutMs": 90000
+  },
+  "events": [
+    {
+      "tool": "script_search",
+      "arguments": {
+        "query": "unpaid orders check"
+      },
+      "result": {
+        "total": 1,
+        "scripts": [
+          {
+            "id": "orders/unpaid-check",
+            "description": "Inspect unpaid orders without sending requests",
+            "params": [
+              "customerId"
+            ],
+            "steps": 1,
+            "browser": false,
+            "js": false,
+            "tool": null
+          }
+        ],
+        "view": "http://127.0.0.1:4000/show/s54871886ec3f7c2e41fbe735884ebb2azmwxk2hydaa0875479f816f684c"
+      },
+      "delivered": {
+        "total": 1,
+        "scripts": [
+          {
+            "id": "orders/unpaid-check",
+            "description": "Inspect unpaid orders without sending requests",
+            "params": [
+              "customerId"
+            ],
+            "steps": 1,
+            "browser": false,
+            "js": false,
+            "tool": null
+          }
+        ],
+        "view": "http://127.0.0.1:4000/show/s54871886ec3f7c2e41fbe735884ebb2azmwxk2hydaa0875479f816f684c",
+        "modelContext": {
+          "output": {
+            "status": "all",
+            "source": "unknown"
+          }
+        }
+      },
+      "ok": true
+    },
+    {
+      "tool": "script_get",
+      "arguments": {
+        "id": "orders/unpaid-check"
+      },
+      "result": {
+        "id": "orders/unpaid-check",
+        "requiredParams": [
+          "customerId"
+        ],
+        "description": "Inspect unpaid orders without sending requests",
+        "params": {
+          "customerId": {
+            "type": "string",
+            "required": true,
+            "description": "Customer id"
+          }
+        },
+        "steps": [
+          {
+            "set": {
+              "source": "synthetic"
+            }
+          }
+        ],
+        "savedAt": "2026-11-26T12:55:21.968Z",
+        "revision": "2942189b7f8b3ed8142a5d197f5272775abe56cc88053385a7ae22227c9ae29a"
+      },
+      "delivered": {
+        "id": "orders/unpaid-check",
+        "requiredParams": [
+          "customerId"
+        ],
+        "description": "Inspect unpaid orders without sending requests",
+        "params": {
+          "customerId": {
+            "type": "string",
+            "required": true,
+            "description": "Customer id"
+          }
+        },
+        "steps": [
+          {
+            "set": {
+              "source": "synthetic"
+            }
+          }
+        ],
+        "savedAt": "2026-11-26T12:55:21.968Z",
+        "revision": "2942189b7f8b3ed8142a5d197f5272775abe56cc88053385a7ae22227c9ae29a",
+        "modelContext": {
+          "output": {
+            "status": "all",
+            "source": "unknown"
+          }
+        }
+      },
+      "ok": true
+    }
+  ],
+  "usage": {
+    "input": 2373,
+    "output": 90
+  },
+  "deliveredBytes": 774,
+  "advertised": {
+    "name": "qwen3.5:2b",
+    "model": "qwen3.5:2b",
+    "modified_at": "2026-10-24T19:27:44.415471961+03:00",
+    "size": 2683396812,
+    "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "1.9B",
+      "quantization_level": "Q8_0",
+      "context_length": 262144,
+      "embedding_length": 2048
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  "schemas": [
+    {
+      "name": "script_search",
+      "description": "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Words or script id; all words must match"
+          },
+          "collection": {
+            "type": "string",
+            "description": "Optional collection prefix"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Preview matches",
+            "default": 10
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Full output; source limits apply."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    },
+    {
+      "name": "script_get",
+      "description": "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored under the configured scripts folder, scoped to the current principal/task.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Script id, name or a close name, e.g. \"orders/support/refund-check\" or \"refund check\""
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Full output; source limits apply."
+          }
+        },
+        "required": [
+          "id"
+        ]
+      }
+    }
+  ],
+  "wireDigest": "730143d10e33db267c9d9ccd9420cacc03628ac4c089dcdc06d0279107b6e5cd",
+  "finish": "assistant-finished",
+  "final": "The saved script for checking unpaid orders is:\n- **Script ID**: `orders/unpaid-check`\n- **Required Parameter Names**: `customerId`",
+  "definitionRead": true,
+  "answerCorrect": true,
+  "passed": true,
+  "transcript": [
+    {
+      "role": "system",
+      "content": "Use the offered dev-tool tools to complete the user task. Inspect schemas or discover capabilities when useful. Do not invent identifiers, execution results or missing data. Do not edit files, publish, or repeat an action just to recover its output. All data belongs to a disposable local demo. Keep the final answer brief; when JSON is requested, return only JSON."
+    },
+    {
+      "role": "user",
+      "content": "Find the saved script for checking unpaid orders. Inspect its definition and report its exact script id and required parameter names. Do not execute it."
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_nyptad7x",
+          "function": {
+            "index": 0,
+            "name": "script_search",
+            "arguments": {
+              "query": "unpaid orders check"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "script_search",
+      "content": "{\"total\":1,\"scripts\":[{\"id\":\"orders/unpaid-check\",\"description\":\"Inspect unpaid orders without sending requests\",\"params\":[\"customerId\"],\"steps\":1,\"browser\":false,\"js\":false,\"tool\":null}],\"view\":\"http://127.0.0.1:4000/show/s54871886ec3f7c2e41fbe735884ebb2azmwxk2hydaa0875479f816f684c\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_wc9rpiay",
+          "function": {
+            "index": 0,
+            "name": "script_get",
+            "arguments": {
+              "id": "orders/unpaid-check"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "script_get",
+      "content": "{\"id\":\"orders/unpaid-check\",\"requiredParams\":[\"customerId\"],\"description\":\"Inspect unpaid orders without sending requests\",\"params\":{\"customerId\":{\"type\":\"string\",\"required\":true,\"description\":\"Customer id\"}},\"steps\":[{\"set\":{\"source\":\"synthetic\"}}],\"savedAt\":\"2026-11-26T12:55:21.968Z\",\"revision\":\"2942189b7f8b3ed8142a5d197f5272775abe56cc88053385a7ae22227c9ae29a\",\"modelContext\":{\"output\":{\"status\":\"all\",\"source\":\"unknown\"}}}"
+    },
+    {
+      "role": "assistant",
+      "content": "The saved script for checking unpaid orders is:\n- **Script ID**: `orders/unpaid-check`\n- **Required Parameter Names**: `customerId`"
+    }
+  ],
+  "sourceChanged": false,
+  "completedAt": "2026-11-26T12:55:49.735Z",
+  "sanitization": {
+    "hostnames": true,
+    "metricsBeforeRedaction": true
+  }
+}
