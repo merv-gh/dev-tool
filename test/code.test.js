@@ -284,3 +284,13 @@ test('proof limits in selected summaries stay typed through a large code-result 
  assert.equal(delivered.modelContext.compacted,true);
  assert.ok(Buffer.byteLength(JSON.stringify(delivered))<=12288);
 });
+
+test('constructed static proof claims must agree with the linked retained map and trace',async()=>{
+ const R=require('../lib/results');
+ const map=R.saveView('semantic-flow-map',{flowMap:{complete:false},proof:{runtime:'unknown',feasibility:'unknown',behaviorVerified:false},truncated:false,gaps:[]});
+ const r=await T().call('code',{code:'return '+JSON.stringify({mapView:map,behaviorVerified:false,proofLimits:{entryMap:{runtime:'verified',feasibility:'feasible'}}})+';'});
+ assert.equal(r.evidenceCheck.status,'contradictory-static-claims');
+ assert.equal(r.evidenceCheck.fields.length,2);
+ assert.equal(r.evidenceCheck.observedProofLimits.entryMap.proof.runtime,'unknown');
+ assert.match(r.guidance,/without rerunning/);
+});
