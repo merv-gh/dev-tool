@@ -1,0 +1,42 @@
+{
+  "capturedAt": "2026-11-26T14:03:29.616Z",
+  "model": {
+    "name": "qwen3.5:2b",
+    "model": "qwen3.5:2b",
+    "modified_at": "2026-10-24T19:27:44.415471961+03:00",
+    "size": 2683396812,
+    "digest": "0689d44085e06d165161a8a9a1731344278cfb5aade63a3c3dbdb48ab54b130a",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "1.9B",
+      "quantization_level": "Q8_0",
+      "context_length": 262144,
+      "embedding_length": 2048
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  "runner": [
+    {
+      "name": "qwen3.5:2b",
+      "size_vram": 0,
+      "context_length": 32768
+    }
+  ],
+  "liveJoern": {
+    "configured": false,
+    "liveTests": "2 skipped; DT_SEMANTIC_LIVE_URL and DT_SEMANTIC_LIVE_TOKEN absent",
+    "docker": "docker ps did not respond; command stopped",
+    "nativeExecutable": "joern not on PATH"
+  },
+  "scope": "Local synthetic CPG fixtures; no production services"
+}
