@@ -294,3 +294,35 @@ test('constructed static proof claims must agree with the linked retained map an
  assert.equal(r.evidenceCheck.observedProofLimits.entryMap.proof.runtime,'unknown');
  assert.match(r.guidance,/without rerunning/);
 });
+
+test('the code schema advertises enabled call shapes without granting or leaking hidden capabilities',async()=>{
+ const schema=(await T().schemas({profile:'code'}))[0];
+ assert.match(schema.description,/tools.what_happens_from/);
+ assert.match(schema.description,/assumptions\?:Array<\{expression:string, holds:boolean\}>/);
+ assert.match(schema.description,/tools.result_read/);
+ const limited=await require('../lib/access').run({principalId:'interface-limited',storyId:'interface-limited',multiUser:true,role:'user',tools:['code']},()=>T().schemas({profile:'code'}));
+ assert.doesNotMatch(limited[0].description,/Enabled JavaScript API shapes/);
+ assert.equal(limited.length,1,'only the code outer tool is exposed');
+});
+test('complete retained reads and aggregates expose separate upstream completeness',async()=>{
+ const R=require('../lib/results'),view=R.save('pg',[{n:1},{n:2}],{truncated:true}),id=view.split('/').pop();
+ for(const args of [{id,all:true},{id,aggregate:'sum',field:'n'},{id,aggregate:'summary',field:'n'}]){
+  const r=await T().call('result_read',args);
+  assert.equal(r.retainedComplete,true);assert.equal(r.sourceComplete,false);
+  assert.equal(r.sourceComplete,r.sourceCoverage.provenComplete);
+ }
+ const page=await T().call('result_read',{id});assert.equal(page.sourceComplete,false);
+});
+
+test('business row flags are data and do not become upstream truncation metadata',async()=>{
+ const R=require('../lib/results'),P=require('../lib/chat-pressure'),rows=[{complete:false,truncated:true,status:'pending'}];
+ const view=R.save('pg',rows,{truncated:false}),id=view.split('/').pop();
+ const r=await T().call('result_read',{id,all:true});
+ assert.deepEqual(r.value.rows,rows);
+ assert.equal(r.sourceCoverage.status,'unknown');
+ assert.equal(r.sourceComplete,false);
+ const delivered=P.response('result_read',r,{all:true}).value;
+ assert.equal(delivered.modelContext.output.status,'all');
+ assert.equal(delivered.modelContext.output.source,'unknown');
+ assert.equal(delivered.retainedComplete,true);
+});
