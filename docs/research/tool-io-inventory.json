@@ -1,0 +1,6204 @@
+{
+  "method": "Clean dev environment; starters/plugins/custom tools disabled. Registry/schema inspection plus pre-execution validation only. Byte counts are minified UTF-8 JSON, not tokens.",
+  "toolCount": 326,
+  "groupCount": 25,
+  "definitionsBytes": 298850,
+  "adapterResultContractCount": 2,
+  "profiles": [
+    {
+      "name": "projects",
+      "tools": 19,
+      "definitionsBytes": 15161
+    },
+    {
+      "name": "workspace-tests",
+      "tools": 11,
+      "definitionsBytes": 11771
+    },
+    {
+      "name": "harness",
+      "tools": 17,
+      "definitionsBytes": 12134
+    },
+    {
+      "name": "studio",
+      "tools": 37,
+      "definitionsBytes": 30551
+    },
+    {
+      "name": "pages",
+      "tools": 10,
+      "definitionsBytes": 6753
+    },
+    {
+      "name": "workbench",
+      "tools": 16,
+      "definitionsBytes": 11756
+    },
+    {
+      "name": "ci",
+      "tools": 20,
+      "definitionsBytes": 16776
+    },
+    {
+      "name": "architecture",
+      "tools": 31,
+      "definitionsBytes": 53080
+    },
+    {
+      "name": "semantic",
+      "tools": 18,
+      "definitionsBytes": 40415
+    },
+    {
+      "name": "map",
+      "tools": 21,
+      "definitionsBytes": 16093
+    },
+    {
+      "name": "tester",
+      "tools": 115,
+      "definitionsBytes": 115033
+    },
+    {
+      "name": "direct",
+      "tools": 118,
+      "definitionsBytes": 106773
+    },
+    {
+      "name": "compact",
+      "tools": 11,
+      "definitionsBytes": 7359
+    },
+    {
+      "name": "lean",
+      "tools": 4,
+      "definitionsBytes": 1743
+    },
+    {
+      "name": "lean-find",
+      "tools": 5,
+      "definitionsBytes": 2854
+    },
+    {
+      "name": "investigate",
+      "tools": 31,
+      "definitionsBytes": 30846
+    },
+    {
+      "name": "testing",
+      "tools": 100,
+      "definitionsBytes": 80538
+    },
+    {
+      "name": "develop",
+      "tools": 71,
+      "definitionsBytes": 87397
+    },
+    {
+      "name": "knowledge",
+      "tools": 32,
+      "definitionsBytes": 32191
+    },
+    {
+      "name": "api",
+      "tools": 60,
+      "definitionsBytes": 45535
+    },
+    {
+      "name": "all",
+      "tools": 326,
+      "definitionsBytes": 298850
+    }
+  ],
+  "testRunValidation": [
+    {
+      "arguments": {},
+      "error": "Missing argument: workspace",
+      "code": "DT_ARGUMENT_INVALID"
+    },
+    {
+      "arguments": {
+        "workspace": "example"
+      },
+      "error": "tests: which test classes to run"
+    },
+    {
+      "arguments": {
+        "workspace": "example",
+        "tests": []
+      },
+      "error": "tests: which test classes to run"
+    },
+    {
+      "arguments": {
+        "workspace": "example",
+        "tests": "FooTest"
+      },
+      "error": "Invalid argument $.tests: must be array",
+      "code": "DT_ARGUMENT_INVALID"
+    },
+    {
+      "arguments": {
+        "job": "example"
+      },
+      "error": "Missing argument: workspace",
+      "code": "DT_ARGUMENT_INVALID"
+    },
+    {
+      "arguments": {
+        "workspace": "example",
+        "diff": true
+      },
+      "error": "tests: which test classes to run"
+    }
+  ],
+  "groups": {
+    "catalog": [
+      "find",
+      "catalog_search",
+      "catalog_usage",
+      "catalog_manage",
+      "catalog_sync",
+      "capability_map",
+      "handbook",
+      "adapter_capabilities",
+      "workflow_plan",
+      "tool_contracts",
+      "tool_profiles",
+      "tool_search",
+      "tool_describe",
+      "tool_execute"
+    ],
+    "pg": [
+      "pg_table",
+      "pg_function",
+      "field_trace",
+      "pg_usage",
+      "pg_query",
+      "data_index",
+      "data_readers",
+      "data_writers"
+    ],
+    "es": [
+      "es_search",
+      "es_health"
+    ],
+    "kafka": [
+      "kafka_topic",
+      "kafka_last",
+      "kafka_lag",
+      "kafka_checkpoint",
+      "kafka_wait",
+      "kafka_produce"
+    ],
+    "consul": [
+      "health",
+      "overview",
+      "consul_service"
+    ],
+    "bitbucket": [
+      "bitbucket_repos",
+      "bitbucket_files",
+      "bitbucket_file",
+      "bitbucket_prs",
+      "bitbucket_pr",
+      "bitbucket_my_prs",
+      "repo_fetch",
+      "bitbucket_pr_status",
+      "bitbucket_pr_wait",
+      "bitbucket_pr_create"
+    ],
+    "confluence": [
+      "docs_search",
+      "docs_page",
+      "docs_verify",
+      "feature",
+      "diagram",
+      "confluence_search",
+      "confluence_page"
+    ],
+    "logs": [
+      "logs_search",
+      "logs_trace"
+    ],
+    "passport": [
+      "passport",
+      "passports",
+      "who_uses",
+      "semantic_ports",
+      "passport_adjustments",
+      "passport_adjust"
+    ],
+    "browser": [
+      "browser_sites",
+      "site_url",
+      "api_browser_open",
+      "api_browser_action",
+      "api_browser_capture",
+      "api_browser_close",
+      "ui_trace_save",
+      "ui_trace_edit",
+      "ui_trace_list",
+      "ui_trace"
+    ],
+    "api": [
+      "api_routes",
+      "routes_learn",
+      "routes_discover",
+      "api_instances_refresh",
+      "api_database_inspect",
+      "api_client_catalog",
+      "api_auth_profiles",
+      "api_exchange_import",
+      "api_exchange_list",
+      "api_exchange_get",
+      "api_request_prepare",
+      "api_request_replay",
+      "api_request_save",
+      "mapping_debug"
+    ],
+    "scripts": [
+      "script_list",
+      "script_collection",
+      "script_get",
+      "script_save",
+      "script_delete",
+      "script_run",
+      "code",
+      "js_run",
+      "workflow_share",
+      "script_transfer",
+      "collection_get",
+      "collection_save",
+      "collection_delete",
+      "collection_plan",
+      "collection_validate",
+      "collection_run",
+      "collection_cancel",
+      "collection_check",
+      "collection_history",
+      "collection_report"
+    ],
+    "views": [
+      "show",
+      "diff",
+      "view_list",
+      "view_get",
+      "view_save",
+      "workbench_open",
+      "ui_page",
+      "ui_page_data",
+      "named_view",
+      "ui_event"
+    ],
+    "files": [
+      "files_browse",
+      "files_show",
+      "files_stores",
+      "files_list",
+      "files_search",
+      "files_read",
+      "files_write",
+      "files_copy",
+      "files_delete",
+      "files_archive"
+    ],
+    "history": [
+      "call_history",
+      "dt_log",
+      "doctor",
+      "job_cancel",
+      "call_patterns",
+      "evaluation_evidence"
+    ],
+    "showcase": [
+      "showcase"
+    ],
+    "code": [
+      "code_index",
+      "code_search",
+      "code_symbols",
+      "code_read",
+      "impact",
+      "ddl_snapshot",
+      "workspace_open",
+      "workspace_list",
+      "workspace_read",
+      "workspace_write",
+      "workspace_delete",
+      "workspace_patch",
+      "workspace_drop",
+      "test_context",
+      "workspace_push",
+      "test_data",
+      "test_targets",
+      "differential_check",
+      "workspace_coverage_plan",
+      "workspace_coverage",
+      "test_run",
+      "workspace_branches",
+      "workspace_branch",
+      "workspace_editor",
+      "workspace_terminal",
+      "gradle_inventory",
+      "gradle_bump",
+      "data_trace",
+      "fixture_schema",
+      "fixture_plan",
+      "fixture_capture",
+      "fixture_validate",
+      "fixture_export",
+      "fixture_replay",
+      "fixture_runtime_preflight",
+      "fixture_runtime_start",
+      "fixture_runtime_bindings",
+      "fixture_runtime_arm",
+      "fixture_runtime_observe",
+      "fixture_runtime_check",
+      "fixture_runtime_publish",
+      "fixture_runtime_stop",
+      "fixture_runtime_cleanup",
+      "experiment_save",
+      "experiment_run",
+      "experiment_list",
+      "experiment_compare",
+      "scenario_inventory",
+      "scenario_state_plan",
+      "scenario_state_capture",
+      "scenario_state_get",
+      "scenario_actions",
+      "scenario_expectations",
+      "scenario_check",
+      "scenario_emulate",
+      "scenario_export",
+      "testdb_capabilities",
+      "testdb_template_plan",
+      "testdb_initialize",
+      "testdb_resources",
+      "testdb_template_build",
+      "testdb_template_list",
+      "testdb_template_inspect",
+      "testdb_template_verify",
+      "testdb_template_invalidate",
+      "testdb_template_pin",
+      "testdb_clone",
+      "testdb_lease_inspect",
+      "testdb_lease_renew",
+      "testdb_reset",
+      "testdb_release",
+      "testdb_gc",
+      "scenario_package",
+      "scenario_import",
+      "scenario_verify",
+      "scenario_diff",
+      "scenario_explain",
+      "scenario_preflight",
+      "scenario_start",
+      "scenario_act",
+      "scenario_observe",
+      "scenario_assert",
+      "scenario_inspect",
+      "scenario_stop",
+      "scenario_cleanup",
+      "scenario_run"
+    ],
+    "context": [
+      "result_read",
+      "context_find",
+      "context_open",
+      "context_get",
+      "context_list",
+      "context_search",
+      "context_edit",
+      "context_update",
+      "context_read",
+      "context_write",
+      "context_delete_file",
+      "context_run",
+      "context_hint",
+      "chat_context_status",
+      "chat_compaction_request",
+      "workbench_search",
+      "workbench_inspect",
+      "workbench_save",
+      "continuation_create",
+      "continuation_find",
+      "continuation_attach",
+      "continuation_get",
+      "continuation_checkpoint",
+      "continuation_read",
+      "continuation_write",
+      "continuation_flow",
+      "continuation_briefing",
+      "project_context_find",
+      "project_context_get",
+      "project_context_save",
+      "job_get",
+      "workspace_create",
+      "workspace_program",
+      "global_context_open",
+      "global_context_find",
+      "global_context_get",
+      "global_context_call",
+      "self_context"
+    ],
+    "jenkins": [
+      "jenkins_jobs",
+      "jenkins_build",
+      "jenkins_log",
+      "jenkins_tests",
+      "jenkins_wait",
+      "jenkins_start"
+    ],
+    "automation": [
+      "automation_flow_save",
+      "automation_flow_get",
+      "automation_flow_list",
+      "automation_flow_start",
+      "automation_flow_status",
+      "automation_flow_resume",
+      "automation_flow_resolve",
+      "automation_flow_cancel",
+      "automation_flow_model",
+      "task_run_action",
+      "task_run_catalog",
+      "task_run_start",
+      "task_run_list",
+      "task_run_status",
+      "task_run_control",
+      "task_run_memory"
+    ],
+    "runtime": [
+      "logic_model",
+      "observability",
+      "test_coverage",
+      "code_start",
+      "code_wait",
+      "code_cancel",
+      "execution_list",
+      "execution_get",
+      "execution_cancel",
+      "metadata_list",
+      "metadata_get",
+      "metadata_edit",
+      "service_env_plan",
+      "service_env_save",
+      "service_env_start",
+      "service_env_status",
+      "service_env_bindings",
+      "service_env_logs",
+      "service_env_control",
+      "service_env_request",
+      "service_debug"
+    ],
+    "semantic": [
+      "repo_model",
+      "semantic_capabilities",
+      "semantic_index",
+      "semantic_search",
+      "semantic_trace",
+      "semantic_query"
+    ],
+    "map": [
+      "map",
+      "map_search",
+      "map_neighbors",
+      "map_path",
+      "map_node",
+      "map_ui_preview",
+      "map_adjustments",
+      "map_adjust",
+      "map_layers",
+      "map_save"
+    ],
+    "architecture": [
+      "architecture_service",
+      "architecture_list",
+      "architecture_get",
+      "architecture_save",
+      "architecture_view",
+      "architecture_flow",
+      "architecture_refresh",
+      "architecture_export"
+    ],
+    "knowledge": [
+      "knowledge_sources",
+      "knowledge_sync",
+      "knowledge_search",
+      "knowledge_verify",
+      "knowledge_graph",
+      "knowledge_entity"
+    ]
+  },
+  "inventory": [
+    {
+      "name": "find",
+      "group": "catalog",
+      "required": [
+        "q"
+      ],
+      "parameters": [
+        "q",
+        "env",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 726,
+      "definitionBytes": 1110,
+      "adapterResultContract": false
+    },
+    {
+      "name": "catalog_search",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "q",
+        "env",
+        "generation",
+        "cursor",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 165,
+      "definitionBytes": 639,
+      "adapterResultContract": false
+    },
+    {
+      "name": "catalog_usage",
+      "group": "catalog",
+      "required": [
+        "object"
+      ],
+      "parameters": [
+        "object",
+        "env",
+        "generation",
+        "cursor",
+        "direction",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 146,
+      "definitionBytes": 696,
+      "adapterResultContract": false
+    },
+    {
+      "name": "catalog_manage",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "env",
+        "action",
+        "generation",
+        "reference"
+      ],
+      "strict": false,
+      "descriptionBytes": 150,
+      "definitionBytes": 592,
+      "adapterResultContract": false
+    },
+    {
+      "name": "catalog_sync",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "env",
+        "what",
+        "only",
+        "spaces",
+        "full",
+        "job"
+      ],
+      "strict": false,
+      "descriptionBytes": 477,
+      "definitionBytes": 1300,
+      "adapterResultContract": false
+    },
+    {
+      "name": "pg_table",
+      "group": "pg",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "env"
+      ],
+      "strict": false,
+      "descriptionBytes": 356,
+      "definitionBytes": 596,
+      "adapterResultContract": false
+    },
+    {
+      "name": "pg_function",
+      "group": "pg",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "env",
+        "body"
+      ],
+      "strict": false,
+      "descriptionBytes": 278,
+      "definitionBytes": 598,
+      "adapterResultContract": false
+    },
+    {
+      "name": "field_trace",
+      "group": "pg",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "env",
+        "fields",
+        "repos"
+      ],
+      "strict": false,
+      "descriptionBytes": 703,
+      "definitionBytes": 1186,
+      "adapterResultContract": false
+    },
+    {
+      "name": "pg_usage",
+      "group": "pg",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "env",
+        "direction"
+      ],
+      "strict": false,
+      "descriptionBytes": 603,
+      "definitionBytes": 1042,
+      "adapterResultContract": false
+    },
+    {
+      "name": "pg_query",
+      "group": "pg",
+      "required": [
+        "sql"
+      ],
+      "parameters": [
+        "sql",
+        "env",
+        "db",
+        "params",
+        "max_rows",
+        "limit",
+        "all"
+      ],
+      "strict": false,
+      "descriptionBytes": 239,
+      "definitionBytes": 1124,
+      "adapterResultContract": false
+    },
+    {
+      "name": "es_search",
+      "group": "es",
+      "required": [
+        "index"
+      ],
+      "parameters": [
+        "index",
+        "query",
+        "env",
+        "size"
+      ],
+      "strict": false,
+      "descriptionBytes": 231,
+      "definitionBytes": 586,
+      "adapterResultContract": false
+    },
+    {
+      "name": "kafka_topic",
+      "group": "kafka",
+      "required": [
+        "topic"
+      ],
+      "parameters": [
+        "topic",
+        "env"
+      ],
+      "strict": false,
+      "descriptionBytes": 92,
+      "definitionBytes": 335,
+      "adapterResultContract": false
+    },
+    {
+      "name": "kafka_last",
+      "group": "kafka",
+      "required": [
+        "topic"
+      ],
+      "parameters": [
+        "topic",
+        "env",
+        "n"
+      ],
+      "strict": false,
+      "descriptionBytes": 185,
+      "definitionBytes": 487,
+      "adapterResultContract": false
+    },
+    {
+      "name": "health",
+      "group": "consul",
+      "required": [],
+      "parameters": [
+        "env",
+        "only_unhealthy"
+      ],
+      "strict": false,
+      "descriptionBytes": 339,
+      "definitionBytes": 630,
+      "adapterResultContract": false
+    },
+    {
+      "name": "es_health",
+      "group": "es",
+      "required": [],
+      "parameters": [
+        "env"
+      ],
+      "strict": false,
+      "descriptionBytes": 196,
+      "definitionBytes": 377,
+      "adapterResultContract": false
+    },
+    {
+      "name": "kafka_lag",
+      "group": "kafka",
+      "required": [],
+      "parameters": [
+        "env",
+        "top"
+      ],
+      "strict": false,
+      "descriptionBytes": 227,
+      "definitionBytes": 479,
+      "adapterResultContract": false
+    },
+    {
+      "name": "overview",
+      "group": "consul",
+      "required": [],
+      "parameters": [
+        "env"
+      ],
+      "strict": false,
+      "descriptionBytes": 226,
+      "definitionBytes": 410,
+      "adapterResultContract": false
+    },
+    {
+      "name": "consul_service",
+      "group": "consul",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "env",
+        "exact",
+        "version"
+      ],
+      "strict": false,
+      "descriptionBytes": 316,
+      "definitionBytes": 816,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_repos",
+      "group": "bitbucket",
+      "required": [],
+      "parameters": [
+        "filter"
+      ],
+      "strict": false,
+      "descriptionBytes": 57,
+      "definitionBytes": 222,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_files",
+      "group": "bitbucket",
+      "required": [
+        "repo"
+      ],
+      "parameters": [
+        "repo",
+        "project",
+        "filter",
+        "at"
+      ],
+      "strict": false,
+      "descriptionBytes": 116,
+      "definitionBytes": 507,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_file",
+      "group": "bitbucket",
+      "required": [
+        "repo",
+        "path"
+      ],
+      "parameters": [
+        "repo",
+        "path",
+        "project",
+        "at"
+      ],
+      "strict": false,
+      "descriptionBytes": 151,
+      "definitionBytes": 534,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_prs",
+      "group": "bitbucket",
+      "required": [
+        "repo"
+      ],
+      "parameters": [
+        "repo",
+        "project",
+        "state"
+      ],
+      "strict": false,
+      "descriptionBytes": 59,
+      "definitionBytes": 411,
+      "adapterResultContract": false
+    },
+    {
+      "name": "docs_search",
+      "group": "confluence",
+      "required": [
+        "query"
+      ],
+      "parameters": [
+        "query",
+        "spaces",
+        "limit",
+        "section",
+        "hybrid",
+        "rerank"
+      ],
+      "strict": false,
+      "descriptionBytes": 295,
+      "definitionBytes": 762,
+      "adapterResultContract": false
+    },
+    {
+      "name": "docs_page",
+      "group": "confluence",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "space",
+        "section",
+        "version"
+      ],
+      "strict": false,
+      "descriptionBytes": 166,
+      "definitionBytes": 529,
+      "adapterResultContract": false
+    },
+    {
+      "name": "docs_verify",
+      "group": "confluence",
+      "required": [
+        "quotes"
+      ],
+      "parameters": [
+        "quotes"
+      ],
+      "strict": false,
+      "descriptionBytes": 234,
+      "definitionBytes": 652,
+      "adapterResultContract": false
+    },
+    {
+      "name": "feature",
+      "group": "confluence",
+      "required": [
+        "text"
+      ],
+      "parameters": [
+        "text",
+        "spaces",
+        "env",
+        "limit",
+        "render"
+      ],
+      "strict": false,
+      "descriptionBytes": 458,
+      "definitionBytes": 1033,
+      "adapterResultContract": false
+    },
+    {
+      "name": "diagram",
+      "group": "confluence",
+      "required": [
+        "model"
+      ],
+      "parameters": [
+        "model",
+        "format",
+        "view",
+        "render"
+      ],
+      "strict": false,
+      "descriptionBytes": 197,
+      "definitionBytes": 604,
+      "adapterResultContract": false
+    },
+    {
+      "name": "confluence_search",
+      "group": "confluence",
+      "required": [
+        "text"
+      ],
+      "parameters": [
+        "text",
+        "space"
+      ],
+      "strict": false,
+      "descriptionBytes": 37,
+      "definitionBytes": 265,
+      "adapterResultContract": false
+    },
+    {
+      "name": "confluence_page",
+      "group": "confluence",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": false,
+      "descriptionBytes": 32,
+      "definitionBytes": 210,
+      "adapterResultContract": false
+    },
+    {
+      "name": "logs_search",
+      "group": "logs",
+      "required": [],
+      "parameters": [
+        "env",
+        "query",
+        "service",
+        "level",
+        "from",
+        "to",
+        "size"
+      ],
+      "strict": false,
+      "descriptionBytes": 453,
+      "definitionBytes": 1124,
+      "adapterResultContract": false
+    },
+    {
+      "name": "logs_trace",
+      "group": "logs",
+      "required": [
+        "trace"
+      ],
+      "parameters": [
+        "env",
+        "trace",
+        "from"
+      ],
+      "strict": false,
+      "descriptionBytes": 153,
+      "definitionBytes": 482,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_pr",
+      "group": "bitbucket",
+      "required": [
+        "repo",
+        "id"
+      ],
+      "parameters": [
+        "repo",
+        "id",
+        "project"
+      ],
+      "strict": false,
+      "descriptionBytes": 163,
+      "definitionBytes": 490,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_my_prs",
+      "group": "bitbucket",
+      "required": [],
+      "parameters": [
+        "role",
+        "state"
+      ],
+      "strict": false,
+      "descriptionBytes": 77,
+      "definitionBytes": 356,
+      "adapterResultContract": false
+    },
+    {
+      "name": "repo_fetch",
+      "group": "bitbucket",
+      "required": [
+        "project",
+        "repo"
+      ],
+      "parameters": [
+        "project",
+        "repo",
+        "ref",
+        "graph"
+      ],
+      "strict": false,
+      "descriptionBytes": 150,
+      "definitionBytes": 542,
+      "adapterResultContract": false
+    },
+    {
+      "name": "passport",
+      "group": "passport",
+      "required": [
+        "service"
+      ],
+      "parameters": [
+        "service",
+        "env",
+        "repo",
+        "ref",
+        "refresh",
+        "libraries",
+        "graph",
+        "job"
+      ],
+      "strict": false,
+      "descriptionBytes": 451,
+      "definitionBytes": 1290,
+      "adapterResultContract": false
+    },
+    {
+      "name": "passports",
+      "group": "passport",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 114,
+      "definitionBytes": 213,
+      "adapterResultContract": false
+    },
+    {
+      "name": "who_uses",
+      "group": "passport",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "env"
+      ],
+      "strict": false,
+      "descriptionBytes": 359,
+      "definitionBytes": 650,
+      "adapterResultContract": false
+    },
+    {
+      "name": "browser_sites",
+      "group": "browser",
+      "required": [],
+      "parameters": [
+        "site"
+      ],
+      "strict": false,
+      "descriptionBytes": 421,
+      "definitionBytes": 590,
+      "adapterResultContract": false
+    },
+    {
+      "name": "site_url",
+      "group": "browser",
+      "required": [
+        "site"
+      ],
+      "parameters": [
+        "site",
+        "link",
+        "params"
+      ],
+      "strict": false,
+      "descriptionBytes": 148,
+      "definitionBytes": 517,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_routes",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "q",
+        "service",
+        "host"
+      ],
+      "strict": false,
+      "descriptionBytes": 490,
+      "definitionBytes": 834,
+      "adapterResultContract": false
+    },
+    {
+      "name": "routes_learn",
+      "group": "api",
+      "required": [
+        "text"
+      ],
+      "parameters": [
+        "text",
+        "source"
+      ],
+      "strict": false,
+      "descriptionBytes": 227,
+      "definitionBytes": 564,
+      "adapterResultContract": false
+    },
+    {
+      "name": "routes_discover",
+      "group": "api",
+      "required": [
+        "site"
+      ],
+      "parameters": [
+        "site",
+        "link",
+        "params",
+        "login",
+        "wait"
+      ],
+      "strict": false,
+      "descriptionBytes": 200,
+      "definitionBytes": 764,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_list",
+      "group": "scripts",
+      "required": [],
+      "parameters": [
+        "collection"
+      ],
+      "strict": false,
+      "descriptionBytes": 291,
+      "definitionBytes": 488,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_collection",
+      "group": "scripts",
+      "required": [
+        "collection"
+      ],
+      "parameters": [
+        "collection",
+        "description",
+        "tool",
+        "tool_name",
+        "vars",
+        "before",
+        "after",
+        "finally"
+      ],
+      "strict": false,
+      "descriptionBytes": 169,
+      "definitionBytes": 1001,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_get",
+      "group": "scripts",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": false,
+      "descriptionBytes": 250,
+      "definitionBytes": 482,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_save",
+      "group": "scripts",
+      "required": [
+        "id",
+        "description",
+        "steps"
+      ],
+      "parameters": [
+        "expected_revision",
+        "id",
+        "description",
+        "params",
+        "steps",
+        "tool",
+        "definition",
+        "vars",
+        "before",
+        "after",
+        "finally",
+        "tags"
+      ],
+      "strict": false,
+      "descriptionBytes": 1682,
+      "definitionBytes": 3247,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_delete",
+      "group": "scripts",
+      "required": [
+        "id",
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision"
+      ],
+      "strict": false,
+      "descriptionBytes": 211,
+      "definitionBytes": 518,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_run",
+      "group": "scripts",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "params"
+      ],
+      "strict": false,
+      "descriptionBytes": 225,
+      "definitionBytes": 483,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code",
+      "group": "scripts",
+      "required": [
+        "code"
+      ],
+      "parameters": [
+        "code",
+        "global_context",
+        "context",
+        "title",
+        "engine"
+      ],
+      "strict": false,
+      "descriptionBytes": 1189,
+      "definitionBytes": 2126,
+      "adapterResultContract": false
+    },
+    {
+      "name": "js_run",
+      "group": "scripts",
+      "required": [
+        "code"
+      ],
+      "parameters": [
+        "code",
+        "vars",
+        "args",
+        "result"
+      ],
+      "strict": false,
+      "descriptionBytes": 429,
+      "definitionBytes": 820,
+      "adapterResultContract": false
+    },
+    {
+      "name": "show",
+      "group": "views",
+      "required": [
+        "view",
+        "data"
+      ],
+      "parameters": [
+        "view",
+        "data",
+        "title"
+      ],
+      "strict": false,
+      "descriptionBytes": 258,
+      "definitionBytes": 548,
+      "adapterResultContract": false
+    },
+    {
+      "name": "diff",
+      "group": "views",
+      "required": [
+        "first",
+        "last"
+      ],
+      "parameters": [
+        "first",
+        "last",
+        "labels",
+        "mode",
+        "format",
+        "ignore_case",
+        "title"
+      ],
+      "strict": false,
+      "descriptionBytes": 301,
+      "definitionBytes": 917,
+      "adapterResultContract": false
+    },
+    {
+      "name": "view_list",
+      "group": "views",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 124,
+      "definitionBytes": 223,
+      "adapterResultContract": false
+    },
+    {
+      "name": "view_get",
+      "group": "views",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name"
+      ],
+      "strict": false,
+      "descriptionBytes": 67,
+      "definitionBytes": 221,
+      "adapterResultContract": false
+    },
+    {
+      "name": "view_save",
+      "group": "views",
+      "required": [
+        "name",
+        "description",
+        "html"
+      ],
+      "parameters": [
+        "name",
+        "description",
+        "html",
+        "sample"
+      ],
+      "strict": false,
+      "descriptionBytes": 601,
+      "definitionBytes": 1035,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_browse",
+      "group": "files",
+      "required": [
+        "store"
+      ],
+      "parameters": [
+        "store",
+        "dir",
+        "pattern",
+        "depth"
+      ],
+      "strict": false,
+      "descriptionBytes": 185,
+      "definitionBytes": 571,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_show",
+      "group": "files",
+      "required": [
+        "store",
+        "path"
+      ],
+      "parameters": [
+        "store",
+        "path"
+      ],
+      "strict": false,
+      "descriptionBytes": 219,
+      "definitionBytes": 436,
+      "adapterResultContract": false
+    },
+    {
+      "name": "call_history",
+      "group": "history",
+      "required": [],
+      "parameters": [
+        "q",
+        "tool",
+        "source",
+        "failed",
+        "status",
+        "kind",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 324,
+      "definitionBytes": 1117,
+      "adapterResultContract": false
+    },
+    {
+      "name": "dt_log",
+      "group": "history",
+      "required": [],
+      "parameters": [
+        "failed",
+        "tool",
+        "q",
+        "lines"
+      ],
+      "strict": false,
+      "descriptionBytes": 279,
+      "definitionBytes": 641,
+      "adapterResultContract": false
+    },
+    {
+      "name": "doctor",
+      "group": "history",
+      "required": [],
+      "parameters": [
+        "repo",
+        "deep"
+      ],
+      "strict": false,
+      "descriptionBytes": 409,
+      "definitionBytes": 680,
+      "adapterResultContract": false
+    },
+    {
+      "name": "job_cancel",
+      "group": "history",
+      "required": [
+        "job"
+      ],
+      "parameters": [
+        "job"
+      ],
+      "strict": false,
+      "descriptionBytes": 189,
+      "definitionBytes": 397,
+      "adapterResultContract": false
+    },
+    {
+      "name": "call_patterns",
+      "group": "history",
+      "required": [],
+      "parameters": [
+        "min",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 303,
+      "definitionBytes": 555,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_stores",
+      "group": "files",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 111,
+      "definitionBytes": 213,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_list",
+      "group": "files",
+      "required": [
+        "store"
+      ],
+      "parameters": [
+        "store",
+        "dir",
+        "path",
+        "pattern",
+        "recursive",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 142,
+      "definitionBytes": 663,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_search",
+      "group": "files",
+      "required": [
+        "store"
+      ],
+      "parameters": [
+        "store",
+        "dir",
+        "path",
+        "pattern",
+        "text",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 137,
+      "definitionBytes": 636,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_read",
+      "group": "files",
+      "required": [
+        "store",
+        "path"
+      ],
+      "parameters": [
+        "store",
+        "path"
+      ],
+      "strict": false,
+      "descriptionBytes": 230,
+      "definitionBytes": 447,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_write",
+      "group": "files",
+      "required": [
+        "store",
+        "path",
+        "content"
+      ],
+      "parameters": [
+        "store",
+        "path",
+        "content",
+        "base64",
+        "overwrite"
+      ],
+      "strict": false,
+      "descriptionBytes": 143,
+      "definitionBytes": 550,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_copy",
+      "group": "files",
+      "required": [
+        "from_store",
+        "from",
+        "to_store",
+        "to"
+      ],
+      "parameters": [
+        "from_store",
+        "from",
+        "to_store",
+        "to",
+        "overwrite"
+      ],
+      "strict": false,
+      "descriptionBytes": 142,
+      "definitionBytes": 545,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_delete",
+      "group": "files",
+      "required": [
+        "store",
+        "path",
+        "expected_revision"
+      ],
+      "parameters": [
+        "store",
+        "path",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 326,
+      "definitionBytes": 714,
+      "adapterResultContract": false
+    },
+    {
+      "name": "files_archive",
+      "group": "files",
+      "required": [
+        "store",
+        "path",
+        "context",
+        "expected_revision"
+      ],
+      "parameters": [
+        "store",
+        "path",
+        "context",
+        "expected_revision",
+        "summary"
+      ],
+      "strict": true,
+      "descriptionBytes": 267,
+      "definitionBytes": 842,
+      "adapterResultContract": false
+    },
+    {
+      "name": "showcase",
+      "group": "showcase",
+      "required": [],
+      "parameters": [
+        "service",
+        "target",
+        "refresh_passport",
+        "envs",
+        "ref",
+        "test",
+        "job"
+      ],
+      "strict": false,
+      "descriptionBytes": 240,
+      "definitionBytes": 962,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_index",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "service",
+        "project",
+        "repo",
+        "ref",
+        "versions"
+      ],
+      "strict": false,
+      "descriptionBytes": 257,
+      "definitionBytes": 730,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_search",
+      "group": "code",
+      "required": [
+        "pattern"
+      ],
+      "parameters": [
+        "pattern",
+        "regex",
+        "repo",
+        "repos",
+        "glob",
+        "ignore_case",
+        "context",
+        "tests",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 310,
+      "definitionBytes": 1227,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_symbols",
+      "group": "code",
+      "required": [
+        "q"
+      ],
+      "parameters": [
+        "q",
+        "repos",
+        "kind",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 197,
+      "definitionBytes": 708,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_read",
+      "group": "code",
+      "required": [
+        "repo",
+        "path"
+      ],
+      "parameters": [
+        "repo",
+        "path",
+        "from",
+        "to",
+        "expected_source_digest"
+      ],
+      "strict": false,
+      "descriptionBytes": 92,
+      "definitionBytes": 616,
+      "adapterResultContract": false
+    },
+    {
+      "name": "impact",
+      "group": "code",
+      "required": [
+        "target"
+      ],
+      "parameters": [
+        "target",
+        "env",
+        "db",
+        "repos",
+        "depth",
+        "limit",
+        "node_limit",
+        "time_ms",
+        "max_output_bytes",
+        "cursor"
+      ],
+      "strict": false,
+      "descriptionBytes": 805,
+      "definitionBytes": 1929,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ddl_snapshot",
+      "group": "code",
+      "required": [
+        "db"
+      ],
+      "parameters": [
+        "env",
+        "db",
+        "tables",
+        "functions",
+        "service",
+        "workspace",
+        "path"
+      ],
+      "strict": false,
+      "descriptionBytes": 446,
+      "definitionBytes": 1128,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_open",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "service",
+        "project",
+        "repo",
+        "ref",
+        "env",
+        "fresh",
+        "libraries",
+        "job"
+      ],
+      "strict": false,
+      "descriptionBytes": 420,
+      "definitionBytes": 1382,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_list",
+      "group": "code",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 152,
+      "definitionBytes": 256,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_read",
+      "group": "code",
+      "required": [
+        "workspace",
+        "path"
+      ],
+      "parameters": [
+        "workspace",
+        "path",
+        "from",
+        "to",
+        "line_numbers"
+      ],
+      "strict": false,
+      "descriptionBytes": 215,
+      "definitionBytes": 696,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_write",
+      "group": "code",
+      "required": [
+        "workspace",
+        "path"
+      ],
+      "parameters": [
+        "workspace",
+        "path",
+        "content",
+        "edits",
+        "expected_revision",
+        "check",
+        "fix"
+      ],
+      "strict": false,
+      "descriptionBytes": 898,
+      "definitionBytes": 1774,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_delete",
+      "group": "code",
+      "required": [
+        "workspace",
+        "path",
+        "expected_revision"
+      ],
+      "parameters": [
+        "workspace",
+        "path",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 273,
+      "definitionBytes": 673,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_patch",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace"
+      ],
+      "strict": false,
+      "descriptionBytes": 204,
+      "definitionBytes": 378,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_drop",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace"
+      ],
+      "strict": false,
+      "descriptionBytes": 73,
+      "definitionBytes": 246,
+      "adapterResultContract": false
+    },
+    {
+      "name": "test_context",
+      "group": "code",
+      "required": [
+        "workspace",
+        "target"
+      ],
+      "parameters": [
+        "workspace",
+        "target",
+        "env",
+        "db",
+        "flow",
+        "strategy"
+      ],
+      "strict": false,
+      "descriptionBytes": 450,
+      "definitionBytes": 1376,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_push",
+      "group": "code",
+      "required": [
+        "workspace",
+        "branch",
+        "message"
+      ],
+      "parameters": [
+        "workspace",
+        "branch",
+        "message"
+      ],
+      "strict": false,
+      "descriptionBytes": 327,
+      "definitionBytes": 693,
+      "adapterResultContract": false
+    },
+    {
+      "name": "test_data",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace",
+        "env",
+        "db",
+        "write"
+      ],
+      "strict": false,
+      "descriptionBytes": 1060,
+      "definitionBytes": 1587,
+      "adapterResultContract": false
+    },
+    {
+      "name": "test_targets",
+      "group": "code",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 221,
+      "definitionBytes": 323,
+      "adapterResultContract": false
+    },
+    {
+      "name": "differential_check",
+      "group": "code",
+      "required": [
+        "profile",
+        "baseline",
+        "candidate",
+        "inputs"
+      ],
+      "parameters": [
+        "profile",
+        "baseline",
+        "candidate",
+        "inputs",
+        "target",
+        "baseline_target",
+        "candidate_target",
+        "env"
+      ],
+      "strict": false,
+      "descriptionBytes": 345,
+      "definitionBytes": 1266,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_coverage_plan",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace",
+        "base"
+      ],
+      "strict": false,
+      "descriptionBytes": 228,
+      "definitionBytes": 521,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_coverage",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace",
+        "report",
+        "file"
+      ],
+      "strict": false,
+      "descriptionBytes": 272,
+      "definitionBytes": 618,
+      "adapterResultContract": false
+    },
+    {
+      "name": "test_run",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace",
+        "tests",
+        "files",
+        "mode",
+        "coverage",
+        "coverage_base",
+        "target",
+        "env",
+        "db",
+        "ddl_path",
+        "fixture_path",
+        "fixture_runtime",
+        "fixture_template",
+        "fixture_bindings",
+        "allow_incomplete",
+        "job",
+        "check",
+        "fix"
+      ],
+      "strict": false,
+      "descriptionBytes": 1204,
+      "definitionBytes": 4186,
+      "adapterResultContract": false
+    },
+    {
+      "name": "result_read",
+      "group": "context",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "cursor",
+        "max_bytes"
+      ],
+      "strict": true,
+      "descriptionBytes": 339,
+      "definitionBytes": 854,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_find",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "query",
+        "tickets",
+        "repositories",
+        "workspaces",
+        "chats",
+        "tasks",
+        "tags",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 674,
+      "definitionBytes": 2242,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_open",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id",
+        "title",
+        "summary",
+        "status",
+        "tickets",
+        "repositories",
+        "workspaces",
+        "chats",
+        "tasks",
+        "tags"
+      ],
+      "strict": true,
+      "descriptionBytes": 384,
+      "definitionBytes": 2080,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_get",
+      "group": "context",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 241,
+      "definitionBytes": 469,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_list",
+      "group": "context",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "dir",
+        "recursive",
+        "offset",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 171,
+      "definitionBytes": 664,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_search",
+      "group": "context",
+      "required": [
+        "id",
+        "query"
+      ],
+      "parameters": [
+        "id",
+        "query",
+        "dir",
+        "pattern",
+        "case_sensitive",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 227,
+      "definitionBytes": 819,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_edit",
+      "group": "context",
+      "required": [
+        "id",
+        "path",
+        "edits",
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "expected_revision",
+        "edits",
+        "summary"
+      ],
+      "strict": true,
+      "descriptionBytes": 223,
+      "definitionBytes": 1065,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_update",
+      "group": "context",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "title",
+        "summary",
+        "status",
+        "tickets",
+        "repositories",
+        "workspaces",
+        "chats",
+        "tasks",
+        "tags",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 186,
+      "definitionBytes": 2034,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_read",
+      "group": "context",
+      "required": [
+        "id",
+        "path"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "encoding",
+        "from",
+        "to"
+      ],
+      "strict": true,
+      "descriptionBytes": 131,
+      "definitionBytes": 672,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_write",
+      "group": "context",
+      "required": [
+        "id",
+        "path",
+        "content"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "content",
+        "summary",
+        "append",
+        "encoding",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 359,
+      "definitionBytes": 1118,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_delete_file",
+      "group": "context",
+      "required": [
+        "id",
+        "path"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 182,
+      "definitionBytes": 628,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_run",
+      "group": "context",
+      "required": [
+        "id",
+        "tool",
+        "arguments"
+      ],
+      "parameters": [
+        "id",
+        "tool",
+        "arguments",
+        "summary"
+      ],
+      "strict": true,
+      "descriptionBytes": 363,
+      "definitionBytes": 815,
+      "adapterResultContract": false
+    },
+    {
+      "name": "context_hint",
+      "group": "context",
+      "required": [
+        "id",
+        "goal"
+      ],
+      "parameters": [
+        "id",
+        "goal",
+        "use_model"
+      ],
+      "strict": true,
+      "descriptionBytes": 251,
+      "definitionBytes": 627,
+      "adapterResultContract": false
+    },
+    {
+      "name": "jenkins_jobs",
+      "group": "jenkins",
+      "required": [],
+      "parameters": [
+        "folder",
+        "q",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 157,
+      "definitionBytes": 587,
+      "adapterResultContract": false
+    },
+    {
+      "name": "jenkins_build",
+      "group": "jenkins",
+      "required": [
+        "job"
+      ],
+      "parameters": [
+        "job",
+        "build",
+        "queue_id",
+        "sha"
+      ],
+      "strict": true,
+      "descriptionBytes": 162,
+      "definitionBytes": 898,
+      "adapterResultContract": false
+    },
+    {
+      "name": "jenkins_log",
+      "group": "jenkins",
+      "required": [
+        "job"
+      ],
+      "parameters": [
+        "job",
+        "build",
+        "start",
+        "tail",
+        "max_bytes"
+      ],
+      "strict": true,
+      "descriptionBytes": 173,
+      "definitionBytes": 920,
+      "adapterResultContract": false
+    },
+    {
+      "name": "jenkins_tests",
+      "group": "jenkins",
+      "required": [
+        "job"
+      ],
+      "parameters": [
+        "job",
+        "build"
+      ],
+      "strict": true,
+      "descriptionBytes": 163,
+      "definitionBytes": 660,
+      "adapterResultContract": false
+    },
+    {
+      "name": "jenkins_wait",
+      "group": "jenkins",
+      "required": [
+        "job"
+      ],
+      "parameters": [
+        "job",
+        "build",
+        "queue_id",
+        "sha",
+        "cursor",
+        "wait_ms",
+        "poll_ms"
+      ],
+      "strict": true,
+      "descriptionBytes": 196,
+      "definitionBytes": 1312,
+      "adapterResultContract": false
+    },
+    {
+      "name": "jenkins_start",
+      "group": "jenkins",
+      "required": [
+        "job",
+        "request_id"
+      ],
+      "parameters": [
+        "job",
+        "request_id",
+        "parameters"
+      ],
+      "strict": true,
+      "descriptionBytes": 200,
+      "definitionBytes": 768,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_pr_status",
+      "group": "bitbucket",
+      "required": [
+        "repo",
+        "id"
+      ],
+      "parameters": [
+        "repo",
+        "project",
+        "id",
+        "sha",
+        "cursor",
+        "required_builds",
+        "min_approvals"
+      ],
+      "strict": true,
+      "descriptionBytes": 202,
+      "definitionBytes": 1190,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_pr_wait",
+      "group": "bitbucket",
+      "required": [
+        "repo",
+        "id"
+      ],
+      "parameters": [
+        "repo",
+        "project",
+        "id",
+        "sha",
+        "cursor",
+        "required_builds",
+        "min_approvals",
+        "until",
+        "wait_ms",
+        "poll_ms"
+      ],
+      "strict": true,
+      "descriptionBytes": 218,
+      "definitionBytes": 1558,
+      "adapterResultContract": false
+    },
+    {
+      "name": "bitbucket_pr_create",
+      "group": "bitbucket",
+      "required": [
+        "repo",
+        "from",
+        "to",
+        "title",
+        "request_id"
+      ],
+      "parameters": [
+        "repo",
+        "project",
+        "from",
+        "to",
+        "title",
+        "description",
+        "reviewers",
+        "request_id"
+      ],
+      "strict": true,
+      "descriptionBytes": 220,
+      "definitionBytes": 1175,
+      "adapterResultContract": false
+    },
+    {
+      "name": "chat_context_status",
+      "group": "context",
+      "required": [],
+      "parameters": [],
+      "strict": true,
+      "descriptionBytes": 197,
+      "definitionBytes": 335,
+      "adapterResultContract": false
+    },
+    {
+      "name": "chat_compaction_request",
+      "group": "context",
+      "required": [
+        "context",
+        "checkpoint"
+      ],
+      "parameters": [
+        "context",
+        "checkpoint"
+      ],
+      "strict": true,
+      "descriptionBytes": 224,
+      "definitionBytes": 673,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workbench_search",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "query",
+        "kind",
+        "context",
+        "workspace",
+        "service",
+        "env",
+        "content",
+        "offset",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 312,
+      "definitionBytes": 1056,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workbench_inspect",
+      "group": "context",
+      "required": [
+        "node"
+      ],
+      "parameters": [
+        "node",
+        "env"
+      ],
+      "strict": true,
+      "descriptionBytes": 244,
+      "definitionBytes": 487,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workbench_open",
+      "group": "views",
+      "required": [],
+      "parameters": [
+        "node",
+        "mode",
+        "env",
+        "context",
+        "service",
+        "task"
+      ],
+      "strict": true,
+      "descriptionBytes": 281,
+      "definitionBytes": 1180,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workbench_save",
+      "group": "context",
+      "required": [
+        "context",
+        "title",
+        "tool",
+        "arguments"
+      ],
+      "parameters": [
+        "context",
+        "title",
+        "tool",
+        "arguments",
+        "service",
+        "repository",
+        "path",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 239,
+      "definitionBytes": 945,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_branches",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace",
+        "refresh"
+      ],
+      "strict": true,
+      "descriptionBytes": 138,
+      "definitionBytes": 481,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_branch",
+      "group": "code",
+      "required": [
+        "workspace",
+        "ref"
+      ],
+      "parameters": [
+        "workspace",
+        "ref"
+      ],
+      "strict": true,
+      "descriptionBytes": 186,
+      "definitionBytes": 582,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_page",
+      "group": "views",
+      "required": [
+        "action"
+      ],
+      "parameters": [
+        "action",
+        "actionId",
+        "id",
+        "scope",
+        "template",
+        "q",
+        "revision",
+        "expected_revision",
+        "definition",
+        "params",
+        "job",
+        "waitMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 467,
+      "definitionBytes": 1342,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_page_data",
+      "group": "views",
+      "required": [
+        "kind"
+      ],
+      "parameters": [
+        "kind",
+        "env",
+        "services",
+        "db",
+        "schemas"
+      ],
+      "strict": true,
+      "descriptionBytes": 330,
+      "definitionBytes": 741,
+      "adapterResultContract": false
+    },
+    {
+      "name": "named_view",
+      "group": "views",
+      "required": [
+        "action"
+      ],
+      "parameters": [
+        "action",
+        "name",
+        "slug",
+        "scope",
+        "revision",
+        "expected_revision",
+        "target",
+        "share",
+        "q"
+      ],
+      "strict": true,
+      "descriptionBytes": 418,
+      "definitionBytes": 1069,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_event",
+      "group": "views",
+      "required": [
+        "action",
+        "channel"
+      ],
+      "parameters": [
+        "action",
+        "channel",
+        "type",
+        "data",
+        "after"
+      ],
+      "strict": true,
+      "descriptionBytes": 272,
+      "definitionBytes": 601,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_editor",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "action",
+        "workspace",
+        "path",
+        "query",
+        "cursor",
+        "limit",
+        "refresh",
+        "content",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 258,
+      "definitionBytes": 1126,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_terminal",
+      "group": "code",
+      "required": [
+        "workspace"
+      ],
+      "parameters": [
+        "workspace",
+        "action",
+        "command",
+        "job",
+        "allow_build"
+      ],
+      "strict": true,
+      "descriptionBytes": 304,
+      "definitionBytes": 815,
+      "adapterResultContract": false
+    },
+    {
+      "name": "gradle_inventory",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "action",
+        "repos",
+        "ref",
+        "revision",
+        "job",
+        "q",
+        "dependency",
+        "history",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 478,
+      "definitionBytes": 1465,
+      "adapterResultContract": false
+    },
+    {
+      "name": "gradle_bump",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "action",
+        "revision",
+        "dependency",
+        "version",
+        "workspace",
+        "plan"
+      ],
+      "strict": true,
+      "descriptionBytes": 402,
+      "definitionBytes": 1022,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_save",
+      "group": "automation",
+      "required": [
+        "id",
+        "expected_revision",
+        "definition"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "definition"
+      ],
+      "strict": true,
+      "descriptionBytes": 210,
+      "definitionBytes": 690,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_get",
+      "group": "automation",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 96,
+      "definitionBytes": 284,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_list",
+      "group": "automation",
+      "required": [],
+      "parameters": [],
+      "strict": true,
+      "descriptionBytes": 144,
+      "definitionBytes": 283,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_start",
+      "group": "automation",
+      "required": [
+        "id",
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "input",
+        "allow_model",
+        "await_completion"
+      ],
+      "strict": true,
+      "descriptionBytes": 261,
+      "definitionBytes": 840,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_status",
+      "group": "automation",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "detail"
+      ],
+      "strict": true,
+      "descriptionBytes": 169,
+      "definitionBytes": 413,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_resume",
+      "group": "automation",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "allow_model",
+        "await_completion"
+      ],
+      "strict": true,
+      "descriptionBytes": 214,
+      "definitionBytes": 640,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_resolve",
+      "group": "automation",
+      "required": [
+        "run",
+        "path",
+        "action",
+        "reason"
+      ],
+      "parameters": [
+        "run",
+        "path",
+        "action",
+        "result",
+        "acknowledge_uncertain",
+        "reason"
+      ],
+      "strict": true,
+      "descriptionBytes": 282,
+      "definitionBytes": 809,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_cancel",
+      "group": "automation",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "reason"
+      ],
+      "strict": true,
+      "descriptionBytes": 148,
+      "definitionBytes": 411,
+      "adapterResultContract": false
+    },
+    {
+      "name": "automation_flow_model",
+      "group": "automation",
+      "required": [
+        "prompt"
+      ],
+      "parameters": [
+        "prompt",
+        "model",
+        "max_tokens"
+      ],
+      "strict": true,
+      "descriptionBytes": 316,
+      "definitionBytes": 769,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_create",
+      "group": "context",
+      "required": [
+        "task_id",
+        "title"
+      ],
+      "parameters": [
+        "task_id",
+        "title",
+        "summary",
+        "contexts",
+        "projects",
+        "tickets",
+        "repositories",
+        "workspaces",
+        "chats",
+        "tasks",
+        "tags"
+      ],
+      "strict": true,
+      "descriptionBytes": 351,
+      "definitionBytes": 2162,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_find",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "query",
+        "task_id",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 266,
+      "definitionBytes": 676,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_attach",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id",
+        "detach"
+      ],
+      "strict": true,
+      "descriptionBytes": 218,
+      "definitionBytes": 512,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_get",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 252,
+      "definitionBytes": 499,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_checkpoint",
+      "group": "context",
+      "required": [
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "title",
+        "summary",
+        "status",
+        "progress",
+        "expected_progress_revision",
+        "projects",
+        "tickets",
+        "repositories",
+        "workspaces",
+        "chats",
+        "tasks",
+        "tags"
+      ],
+      "strict": true,
+      "descriptionBytes": 263,
+      "definitionBytes": 2318,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_read",
+      "group": "context",
+      "required": [
+        "path"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "encoding",
+        "from",
+        "to"
+      ],
+      "strict": true,
+      "descriptionBytes": 214,
+      "definitionBytes": 739,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_write",
+      "group": "context",
+      "required": [
+        "path",
+        "content",
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "path",
+        "content",
+        "summary",
+        "append",
+        "encoding",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 243,
+      "definitionBytes": 905,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_flow",
+      "group": "context",
+      "required": [
+        "action",
+        "arguments"
+      ],
+      "parameters": [
+        "id",
+        "action",
+        "arguments"
+      ],
+      "strict": true,
+      "descriptionBytes": 390,
+      "definitionBytes": 917,
+      "adapterResultContract": false
+    },
+    {
+      "name": "continuation_briefing",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id",
+        "max_chars"
+      ],
+      "strict": true,
+      "descriptionBytes": 261,
+      "definitionBytes": 633,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_action",
+      "group": "automation",
+      "required": [
+        "run",
+        "tool"
+      ],
+      "parameters": [
+        "run",
+        "tool",
+        "arguments"
+      ],
+      "strict": true,
+      "descriptionBytes": 198,
+      "definitionBytes": 666,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_catalog",
+      "group": "automation",
+      "required": [],
+      "parameters": [],
+      "strict": true,
+      "descriptionBytes": 131,
+      "definitionBytes": 266,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_start",
+      "group": "automation",
+      "required": [
+        "title",
+        "goal",
+        "allow_model"
+      ],
+      "parameters": [
+        "title",
+        "goal",
+        "ticket",
+        "task",
+        "mode",
+        "repositories",
+        "spaces",
+        "env",
+        "project_context",
+        "publish_code",
+        "branch",
+        "target_branch",
+        "publish",
+        "allow_model",
+        "auto_resume",
+        "max_steps",
+        "max_tokens",
+        "hours"
+      ],
+      "strict": true,
+      "descriptionBytes": 261,
+      "definitionBytes": 2051,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_list",
+      "group": "automation",
+      "required": [],
+      "parameters": [],
+      "strict": true,
+      "descriptionBytes": 151,
+      "definitionBytes": 283,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_status",
+      "group": "automation",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "after",
+        "detail",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 155,
+      "definitionBytes": 570,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_control",
+      "group": "automation",
+      "required": [
+        "run",
+        "action"
+      ],
+      "parameters": [
+        "run",
+        "action",
+        "message",
+        "result"
+      ],
+      "strict": true,
+      "descriptionBytes": 235,
+      "definitionBytes": 765,
+      "adapterResultContract": false
+    },
+    {
+      "name": "task_run_memory",
+      "group": "automation",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "path",
+        "content",
+        "summary",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 192,
+      "definitionBytes": 694,
+      "adapterResultContract": false
+    },
+    {
+      "name": "logic_model",
+      "group": "runtime",
+      "required": [
+        "action"
+      ],
+      "parameters": [
+        "action",
+        "name",
+        "template",
+        "model",
+        "expected_revision",
+        "engine",
+        "mode",
+        "coverage",
+        "seed",
+        "steps",
+        "traces",
+        "timeoutMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 599,
+      "definitionBytes": 1540,
+      "adapterResultContract": false
+    },
+    {
+      "name": "repo_model",
+      "group": "semantic",
+      "required": [],
+      "parameters": [
+        "action",
+        "id",
+        "analysis",
+        "job",
+        "from",
+        "waitMs",
+        "machine",
+        "forbidden",
+        "engine",
+        "mode",
+        "trace",
+        "format",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 529,
+      "definitionBytes": 1932,
+      "adapterResultContract": false
+    },
+    {
+      "name": "project_context_find",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "query",
+        "limit",
+        "offset",
+        "include_archived"
+      ],
+      "strict": true,
+      "descriptionBytes": 197,
+      "definitionBytes": 649,
+      "adapterResultContract": false
+    },
+    {
+      "name": "project_context_get",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id",
+        "revision",
+        "path",
+        "diagram",
+        "flow",
+        "encoding",
+        "from",
+        "to",
+        "history_limit",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 236,
+      "definitionBytes": 1184,
+      "adapterResultContract": false
+    },
+    {
+      "name": "project_context_save",
+      "group": "context",
+      "required": [
+        "id",
+        "expected_revision",
+        "reason"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "reason",
+        "restore_revision",
+        "document",
+        "dossier",
+        "files"
+      ],
+      "strict": true,
+      "descriptionBytes": 312,
+      "definitionBytes": 2242,
+      "adapterResultContract": false
+    },
+    {
+      "name": "job_get",
+      "group": "context",
+      "required": [
+        "job"
+      ],
+      "parameters": [
+        "job"
+      ],
+      "strict": true,
+      "descriptionBytes": 265,
+      "definitionBytes": 464,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_create",
+      "group": "context",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name",
+        "description",
+        "branch"
+      ],
+      "strict": true,
+      "descriptionBytes": 290,
+      "definitionBytes": 633,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workspace_program",
+      "group": "context",
+      "required": [
+        "workspace",
+        "path",
+        "allow_execute"
+      ],
+      "parameters": [
+        "workspace",
+        "path",
+        "runtime",
+        "args",
+        "allow_execute",
+        "timeout_ms"
+      ],
+      "strict": true,
+      "descriptionBytes": 383,
+      "definitionBytes": 1050,
+      "adapterResultContract": false
+    },
+    {
+      "name": "global_context_open",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id",
+        "title",
+        "summary",
+        "repositories"
+      ],
+      "strict": true,
+      "descriptionBytes": 315,
+      "definitionBytes": 838,
+      "adapterResultContract": false
+    },
+    {
+      "name": "global_context_find",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "query",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 225,
+      "definitionBytes": 552,
+      "adapterResultContract": false
+    },
+    {
+      "name": "global_context_get",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 224,
+      "definitionBytes": 490,
+      "adapterResultContract": false
+    },
+    {
+      "name": "global_context_call",
+      "group": "context",
+      "required": [
+        "id",
+        "tool",
+        "arguments"
+      ],
+      "parameters": [
+        "id",
+        "tool",
+        "arguments"
+      ],
+      "strict": true,
+      "descriptionBytes": 317,
+      "definitionBytes": 731,
+      "adapterResultContract": false
+    },
+    {
+      "name": "capability_map",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "object",
+        "query"
+      ],
+      "strict": true,
+      "descriptionBytes": 307,
+      "definitionBytes": 893,
+      "adapterResultContract": false
+    },
+    {
+      "name": "handbook",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "query",
+        "chapter",
+        "env",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 154,
+      "definitionBytes": 540,
+      "adapterResultContract": false
+    },
+    {
+      "name": "self_context",
+      "group": "context",
+      "required": [],
+      "parameters": [
+        "env",
+        "save"
+      ],
+      "strict": true,
+      "descriptionBytes": 231,
+      "definitionBytes": 486,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map",
+      "group": "map",
+      "required": [],
+      "parameters": [
+        "env",
+        "include_libraries",
+        "include_candidates",
+        "layer",
+        "limit",
+        "focus",
+        "depth",
+        "refresh"
+      ],
+      "strict": true,
+      "descriptionBytes": 311,
+      "definitionBytes": 1065,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_search",
+      "group": "map",
+      "required": [],
+      "parameters": [
+        "env",
+        "include_libraries",
+        "include_candidates",
+        "layer",
+        "limit",
+        "query",
+        "kind"
+      ],
+      "strict": true,
+      "descriptionBytes": 152,
+      "definitionBytes": 935,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_neighbors",
+      "group": "map",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "env",
+        "include_libraries",
+        "include_candidates",
+        "layer",
+        "limit",
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 155,
+      "definitionBytes": 766,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_path",
+      "group": "map",
+      "required": [
+        "from",
+        "to"
+      ],
+      "parameters": [
+        "env",
+        "include_libraries",
+        "include_candidates",
+        "layer",
+        "limit",
+        "from",
+        "to",
+        "directed",
+        "include_hierarchy",
+        "max_visited"
+      ],
+      "strict": true,
+      "descriptionBytes": 139,
+      "definitionBytes": 1118,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_node",
+      "group": "map",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "env",
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 259,
+      "definitionBytes": 529,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_ui_preview",
+      "group": "map",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "env",
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 161,
+      "definitionBytes": 452,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_adjustments",
+      "group": "map",
+      "required": [],
+      "parameters": [
+        "env",
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 197,
+      "definitionBytes": 505,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_adjust",
+      "group": "map",
+      "required": [
+        "id",
+        "evidence",
+        "nodes"
+      ],
+      "parameters": [
+        "env",
+        "id",
+        "title",
+        "evidence",
+        "expected_revision",
+        "nodes",
+        "edges"
+      ],
+      "strict": true,
+      "descriptionBytes": 232,
+      "definitionBytes": 1886,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_layers",
+      "group": "map",
+      "required": [],
+      "parameters": [
+        "env"
+      ],
+      "strict": true,
+      "descriptionBytes": 85,
+      "definitionBytes": 296,
+      "adapterResultContract": false
+    },
+    {
+      "name": "map_save",
+      "group": "map",
+      "required": [
+        "id",
+        "title",
+        "description",
+        "nodes"
+      ],
+      "parameters": [
+        "env",
+        "id",
+        "title",
+        "description",
+        "nodes",
+        "edges",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 171,
+      "definitionBytes": 1239,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_service",
+      "group": "architecture",
+      "required": [],
+      "parameters": [
+        "service",
+        "env",
+        "envs",
+        "revision",
+        "job",
+        "waitMs",
+        "refresh_passport",
+        "include_docs",
+        "live_docs",
+        "query",
+        "spaces",
+        "docs_limit",
+        "max_flows",
+        "depth",
+        "joern",
+        "analyses",
+        "semantic_queries"
+      ],
+      "strict": true,
+      "descriptionBytes": 428,
+      "definitionBytes": 2185,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_list",
+      "group": "architecture",
+      "required": [],
+      "parameters": [
+        "query",
+        "include_archived",
+        "limit",
+        "offset"
+      ],
+      "strict": true,
+      "descriptionBytes": 165,
+      "definitionBytes": 570,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_get",
+      "group": "architecture",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "revision",
+        "env",
+        "saved_view",
+        "history_limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 190,
+      "definitionBytes": 694,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_save",
+      "group": "architecture",
+      "required": [
+        "id",
+        "expected_revision",
+        "reason",
+        "document"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "reason",
+        "document"
+      ],
+      "strict": true,
+      "descriptionBytes": 277,
+      "definitionBytes": 4570,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_view",
+      "group": "architecture",
+      "required": [],
+      "parameters": [
+        "env",
+        "envs",
+        "document",
+        "revision",
+        "saved_view",
+        "type",
+        "focus",
+        "q",
+        "limit",
+        "include_candidates",
+        "include_libraries",
+        "flow"
+      ],
+      "strict": true,
+      "descriptionBytes": 259,
+      "definitionBytes": 1387,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_flow",
+      "group": "architecture",
+      "required": [
+        "document"
+      ],
+      "parameters": [
+        "env",
+        "envs",
+        "document",
+        "revision",
+        "saved_view",
+        "type",
+        "focus",
+        "q",
+        "limit",
+        "include_candidates",
+        "include_libraries",
+        "flow",
+        "job",
+        "waitMs",
+        "semantic"
+      ],
+      "strict": true,
+      "descriptionBytes": 260,
+      "definitionBytes": 1840,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_refresh",
+      "group": "architecture",
+      "required": [],
+      "parameters": [
+        "env",
+        "job",
+        "waitMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 243,
+      "definitionBytes": 633,
+      "adapterResultContract": false
+    },
+    {
+      "name": "architecture_export",
+      "group": "architecture",
+      "required": [],
+      "parameters": [
+        "env",
+        "envs",
+        "document",
+        "revision",
+        "saved_view",
+        "type",
+        "focus",
+        "q",
+        "limit",
+        "include_candidates",
+        "include_libraries",
+        "flow",
+        "result",
+        "format"
+      ],
+      "strict": true,
+      "descriptionBytes": 231,
+      "definitionBytes": 1527,
+      "adapterResultContract": false
+    },
+    {
+      "name": "observability",
+      "group": "runtime",
+      "required": [],
+      "parameters": [
+        "mode",
+        "trace",
+        "q",
+        "kind",
+        "outcome",
+        "from",
+        "to",
+        "cursor",
+        "limit",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 335,
+      "definitionBytes": 1228,
+      "adapterResultContract": false
+    },
+    {
+      "name": "test_coverage",
+      "group": "runtime",
+      "required": [],
+      "parameters": [
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 133,
+      "definitionBytes": 305,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_start",
+      "group": "runtime",
+      "required": [
+        "code"
+      ],
+      "parameters": [
+        "code",
+        "global_context",
+        "context",
+        "title",
+        "engine"
+      ],
+      "strict": true,
+      "descriptionBytes": 259,
+      "definitionBytes": 922,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_wait",
+      "group": "runtime",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "cursor",
+        "waitMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 130,
+      "definitionBytes": 500,
+      "adapterResultContract": false
+    },
+    {
+      "name": "code_cancel",
+      "group": "runtime",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "reason"
+      ],
+      "strict": true,
+      "descriptionBytes": 114,
+      "definitionBytes": 357,
+      "adapterResultContract": false
+    },
+    {
+      "name": "execution_list",
+      "group": "runtime",
+      "required": [],
+      "parameters": [
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 112,
+      "definitionBytes": 316,
+      "adapterResultContract": false
+    },
+    {
+      "name": "execution_get",
+      "group": "runtime",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 67,
+      "definitionBytes": 254,
+      "adapterResultContract": false
+    },
+    {
+      "name": "execution_cancel",
+      "group": "runtime",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "reason"
+      ],
+      "strict": true,
+      "descriptionBytes": 74,
+      "definitionBytes": 314,
+      "adapterResultContract": false
+    },
+    {
+      "name": "metadata_list",
+      "group": "runtime",
+      "required": [],
+      "parameters": [
+        "kind",
+        "limit",
+        "before"
+      ],
+      "strict": true,
+      "descriptionBytes": 121,
+      "definitionBytes": 471,
+      "adapterResultContract": false
+    },
+    {
+      "name": "metadata_get",
+      "group": "runtime",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "parameters": [
+        "kind",
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 62,
+      "definitionBytes": 314,
+      "adapterResultContract": false
+    },
+    {
+      "name": "metadata_edit",
+      "group": "runtime",
+      "required": [
+        "kind",
+        "id",
+        "expected_revision",
+        "patch"
+      ],
+      "parameters": [
+        "kind",
+        "id",
+        "expected_revision",
+        "patch"
+      ],
+      "strict": true,
+      "descriptionBytes": 137,
+      "definitionBytes": 699,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_plan",
+      "group": "runtime",
+      "required": [],
+      "parameters": [
+        "id",
+        "definition",
+        "worker"
+      ],
+      "strict": true,
+      "descriptionBytes": 349,
+      "definitionBytes": 1015,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_save",
+      "group": "runtime",
+      "required": [
+        "definition",
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "definition",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 337,
+      "definitionBytes": 760,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_start",
+      "group": "runtime",
+      "required": [
+        "definition",
+        "idempotency_key"
+      ],
+      "parameters": [
+        "definition",
+        "idempotency_key",
+        "warm"
+      ],
+      "strict": true,
+      "descriptionBytes": 368,
+      "definitionBytes": 751,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_status",
+      "group": "runtime",
+      "required": [],
+      "parameters": [
+        "id",
+        "job"
+      ],
+      "strict": true,
+      "descriptionBytes": 290,
+      "definitionBytes": 625,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_bindings",
+      "group": "runtime",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "service",
+        "reveal_secrets",
+        "read_path",
+        "write_path",
+        "expected_revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 387,
+      "definitionBytes": 1135,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_logs",
+      "group": "runtime",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "service",
+        "lines"
+      ],
+      "strict": true,
+      "descriptionBytes": 161,
+      "definitionBytes": 563,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_control",
+      "group": "runtime",
+      "required": [
+        "id",
+        "action"
+      ],
+      "parameters": [
+        "id",
+        "action",
+        "expected_generation",
+        "ttl_ms"
+      ],
+      "strict": true,
+      "descriptionBytes": 307,
+      "definitionBytes": 829,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_env_request",
+      "group": "runtime",
+      "required": [
+        "id",
+        "kind"
+      ],
+      "parameters": [
+        "id",
+        "kind",
+        "service",
+        "path",
+        "method",
+        "headers",
+        "body",
+        "database",
+        "sql",
+        "params",
+        "index",
+        "topic",
+        "limit",
+        "timeout_ms"
+      ],
+      "strict": true,
+      "descriptionBytes": 357,
+      "definitionBytes": 1553,
+      "adapterResultContract": false
+    },
+    {
+      "name": "service_debug",
+      "group": "runtime",
+      "required": [
+        "id",
+        "service",
+        "action"
+      ],
+      "parameters": [
+        "id",
+        "service",
+        "action",
+        "class_name",
+        "line",
+        "method",
+        "breakpoint",
+        "thread",
+        "cursor"
+      ],
+      "strict": true,
+      "descriptionBytes": 389,
+      "definitionBytes": 1281,
+      "adapterResultContract": false
+    },
+    {
+      "name": "semantic_capabilities",
+      "group": "semantic",
+      "required": [],
+      "parameters": [
+        "format",
+        "max_output_bytes"
+      ],
+      "strict": true,
+      "descriptionBytes": 143,
+      "definitionBytes": 610,
+      "adapterResultContract": false
+    },
+    {
+      "name": "semantic_index",
+      "group": "semantic",
+      "required": [],
+      "parameters": [
+        "format",
+        "max_output_bytes",
+        "env",
+        "service",
+        "repo",
+        "project",
+        "slug",
+        "ref",
+        "revisionKey",
+        "repos",
+        "language",
+        "versions",
+        "composite",
+        "reparse",
+        "job",
+        "waitMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 188,
+      "definitionBytes": 1874,
+      "adapterResultContract": false
+    },
+    {
+      "name": "semantic_search",
+      "group": "semantic",
+      "required": [],
+      "parameters": [
+        "format",
+        "max_output_bytes",
+        "env",
+        "service",
+        "repo",
+        "project",
+        "slug",
+        "ref",
+        "revisionKey",
+        "repos",
+        "language",
+        "revisionSet",
+        "analysis",
+        "analyses",
+        "query",
+        "kind",
+        "ports",
+        "limit",
+        "cursor",
+        "budgetMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 162,
+      "definitionBytes": 2378,
+      "adapterResultContract": false
+    },
+    {
+      "name": "semantic_trace",
+      "group": "semantic",
+      "required": [],
+      "parameters": [
+        "format",
+        "max_output_bytes",
+        "env",
+        "analysis",
+        "analyses",
+        "from",
+        "to",
+        "after_from",
+        "after_to",
+        "assumptions",
+        "includeControl",
+        "includeContext",
+        "maxPaths",
+        "maxHops",
+        "budgetMs",
+        "job",
+        "waitMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 397,
+      "definitionBytes": 11110,
+      "adapterResultContract": false
+    },
+    {
+      "name": "semantic_query",
+      "group": "semantic",
+      "required": [],
+      "parameters": [
+        "format",
+        "max_output_bytes",
+        "env",
+        "service",
+        "repo",
+        "project",
+        "slug",
+        "ref",
+        "revisionKey",
+        "repos",
+        "language",
+        "revisionSet",
+        "analysis",
+        "analyses",
+        "job",
+        "waitMs",
+        "operation",
+        "from",
+        "to",
+        "target",
+        "mode",
+        "query",
+        "kind",
+        "limit",
+        "cursor",
+        "budgetMs",
+        "maxMethods",
+        "maxStates",
+        "maxHops",
+        "maxPaths",
+        "includeBypasses"
+      ],
+      "strict": true,
+      "descriptionBytes": 384,
+      "definitionBytes": 9022,
+      "adapterResultContract": false
+    },
+    {
+      "name": "data_index",
+      "group": "pg",
+      "required": [],
+      "parameters": [
+        "env",
+        "repos",
+        "db",
+        "action",
+        "refresh",
+        "job",
+        "waitMs",
+        "expected_revision",
+        "rules",
+        "limit",
+        "cursor",
+        "generation",
+        "includeCandidates",
+        "includeObjectAccess",
+        "max_output_bytes",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 315,
+      "definitionBytes": 2033,
+      "adapterResultContract": false
+    },
+    {
+      "name": "data_readers",
+      "group": "pg",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "env",
+        "repos",
+        "db",
+        "name",
+        "mode",
+        "maxNodes",
+        "maxHops",
+        "budgetMs",
+        "limit",
+        "cursor",
+        "generation",
+        "includeCandidates",
+        "includeObjectAccess",
+        "max_output_bytes",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 338,
+      "definitionBytes": 2036,
+      "adapterResultContract": false
+    },
+    {
+      "name": "data_writers",
+      "group": "pg",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "env",
+        "repos",
+        "db",
+        "name",
+        "mode",
+        "maxNodes",
+        "maxHops",
+        "budgetMs",
+        "limit",
+        "cursor",
+        "generation",
+        "includeCandidates",
+        "includeObjectAccess",
+        "max_output_bytes",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 339,
+      "definitionBytes": 2037,
+      "adapterResultContract": false
+    },
+    {
+      "name": "data_trace",
+      "group": "code",
+      "required": [
+        "from",
+        "to"
+      ],
+      "parameters": [
+        "env",
+        "repos",
+        "db",
+        "from",
+        "to",
+        "service",
+        "maxHops",
+        "maxNodes",
+        "maxPaths",
+        "fanout",
+        "budgetMs",
+        "limit",
+        "cursor",
+        "generation",
+        "includeCandidates",
+        "includeObjectAccess",
+        "max_output_bytes",
+        "view"
+      ],
+      "strict": true,
+      "descriptionBytes": 300,
+      "definitionBytes": 2280,
+      "adapterResultContract": false
+    },
+    {
+      "name": "semantic_ports",
+      "group": "passport",
+      "required": [
+        "service"
+      ],
+      "parameters": [
+        "service",
+        "env",
+        "repo",
+        "revision",
+        "type",
+        "include_disabled",
+        "limit",
+        "cursor"
+      ],
+      "strict": true,
+      "descriptionBytes": 180,
+      "definitionBytes": 1063,
+      "adapterResultContract": false
+    },
+    {
+      "name": "passport_adjustments",
+      "group": "passport",
+      "required": [
+        "service"
+      ],
+      "parameters": [
+        "service",
+        "env",
+        "repo",
+        "revision",
+        "at_revision",
+        "history_limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 164,
+      "definitionBytes": 840,
+      "adapterResultContract": false
+    },
+    {
+      "name": "passport_adjust",
+      "group": "passport",
+      "required": [
+        "service",
+        "expected_revision",
+        "reason"
+      ],
+      "parameters": [
+        "service",
+        "env",
+        "repo",
+        "revision",
+        "expected_revision",
+        "reason",
+        "metadata",
+        "operations"
+      ],
+      "strict": true,
+      "descriptionBytes": 286,
+      "definitionBytes": 5182,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_schema",
+      "group": "code",
+      "required": [
+        "topic"
+      ],
+      "parameters": [
+        "env",
+        "topic",
+        "path"
+      ],
+      "strict": false,
+      "descriptionBytes": 282,
+      "definitionBytes": 623,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_plan",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "env",
+        "service",
+        "seeds",
+        "relations",
+        "topics",
+        "es",
+        "requiredReads",
+        "consistencyMode",
+        "limits",
+        "includeChildren"
+      ],
+      "strict": true,
+      "descriptionBytes": 376,
+      "definitionBytes": 2308,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_capture",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "plan",
+        "mask",
+        "job"
+      ],
+      "strict": true,
+      "descriptionBytes": 387,
+      "definitionBytes": 827,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_validate",
+      "group": "code",
+      "required": [
+        "capture"
+      ],
+      "parameters": [
+        "capture"
+      ],
+      "strict": false,
+      "descriptionBytes": 258,
+      "definitionBytes": 441,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_export",
+      "group": "code",
+      "required": [
+        "workspace",
+        "capture"
+      ],
+      "parameters": [
+        "workspace",
+        "capture",
+        "name",
+        "directory",
+        "overwrite"
+      ],
+      "strict": false,
+      "descriptionBytes": 320,
+      "definitionBytes": 822,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_replay",
+      "group": "code",
+      "required": [
+        "workspace",
+        "directory"
+      ],
+      "parameters": [
+        "workspace",
+        "directory",
+        "allow_incomplete"
+      ],
+      "strict": true,
+      "descriptionBytes": 351,
+      "definitionBytes": 745,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_preflight",
+      "group": "code",
+      "required": [
+        "workspace",
+        "directory",
+        "profile"
+      ],
+      "parameters": [
+        "workspace",
+        "directory",
+        "profile"
+      ],
+      "strict": true,
+      "descriptionBytes": 205,
+      "definitionBytes": 768,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_start",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "workspace",
+        "directory",
+        "profile",
+        "job"
+      ],
+      "strict": true,
+      "descriptionBytes": 331,
+      "definitionBytes": 932,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_bindings",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 235,
+      "definitionBytes": 452,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_arm",
+      "group": "code",
+      "required": [
+        "id",
+        "contract"
+      ],
+      "parameters": [
+        "id",
+        "contract"
+      ],
+      "strict": true,
+      "descriptionBytes": 471,
+      "definitionBytes": 804,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_observe",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "source",
+        "limit",
+        "offset"
+      ],
+      "strict": true,
+      "descriptionBytes": 228,
+      "definitionBytes": 727,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_check",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "limit",
+        "offset"
+      ],
+      "strict": true,
+      "descriptionBytes": 313,
+      "definitionBytes": 702,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_publish",
+      "group": "code",
+      "required": [
+        "id",
+        "topic",
+        "message"
+      ],
+      "parameters": [
+        "id",
+        "topic",
+        "message"
+      ],
+      "strict": true,
+      "descriptionBytes": 329,
+      "definitionBytes": 883,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_stop",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 143,
+      "definitionBytes": 356,
+      "adapterResultContract": false
+    },
+    {
+      "name": "fixture_runtime_cleanup",
+      "group": "code",
+      "required": [],
+      "parameters": [],
+      "strict": true,
+      "descriptionBytes": 147,
+      "definitionBytes": 289,
+      "adapterResultContract": false
+    },
+    {
+      "name": "experiment_save",
+      "group": "code",
+      "required": [
+        "id",
+        "code"
+      ],
+      "parameters": [
+        "id",
+        "description",
+        "code",
+        "defaults",
+        "tools"
+      ],
+      "strict": false,
+      "descriptionBytes": 302,
+      "definitionBytes": 795,
+      "adapterResultContract": false
+    },
+    {
+      "name": "experiment_run",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "params",
+        "capture",
+        "timeout_ms"
+      ],
+      "strict": false,
+      "descriptionBytes": 164,
+      "definitionBytes": 572,
+      "adapterResultContract": false
+    },
+    {
+      "name": "experiment_list",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "id"
+      ],
+      "strict": false,
+      "descriptionBytes": 107,
+      "definitionBytes": 273,
+      "adapterResultContract": false
+    },
+    {
+      "name": "experiment_compare",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "before",
+        "after"
+      ],
+      "strict": false,
+      "descriptionBytes": 153,
+      "definitionBytes": 430,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_inventory",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "service",
+        "passport",
+        "env",
+        "entry"
+      ],
+      "strict": false,
+      "descriptionBytes": 384,
+      "definitionBytes": 865,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_state_plan",
+      "group": "code",
+      "required": [
+        "inventory"
+      ],
+      "parameters": [
+        "inventory",
+        "bindings"
+      ],
+      "strict": false,
+      "descriptionBytes": 364,
+      "definitionBytes": 706,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_state_capture",
+      "group": "code",
+      "required": [
+        "plan"
+      ],
+      "parameters": [
+        "plan",
+        "mask"
+      ],
+      "strict": false,
+      "descriptionBytes": 330,
+      "definitionBytes": 646,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_state_get",
+      "group": "code",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "capture",
+        "state",
+        "id",
+        "where",
+        "key",
+        "request"
+      ],
+      "strict": false,
+      "descriptionBytes": 244,
+      "definitionBytes": 857,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_actions",
+      "group": "code",
+      "required": [
+        "inventory"
+      ],
+      "parameters": [
+        "inventory",
+        "bindings"
+      ],
+      "strict": false,
+      "descriptionBytes": 260,
+      "definitionBytes": 570,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_expectations",
+      "group": "code",
+      "required": [
+        "inventory"
+      ],
+      "parameters": [
+        "inventory",
+        "bindings"
+      ],
+      "strict": false,
+      "descriptionBytes": 276,
+      "definitionBytes": 612,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_check",
+      "group": "code",
+      "required": [
+        "expectations",
+        "observed"
+      ],
+      "parameters": [
+        "expectations",
+        "observed"
+      ],
+      "strict": false,
+      "descriptionBytes": 254,
+      "definitionBytes": 568,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_emulate",
+      "group": "code",
+      "required": [
+        "inventory",
+        "actions",
+        "expectations",
+        "code"
+      ],
+      "parameters": [
+        "inventory",
+        "capture",
+        "state",
+        "actions",
+        "expectations",
+        "code",
+        "timeout_ms"
+      ],
+      "strict": false,
+      "descriptionBytes": 438,
+      "definitionBytes": 1212,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_export",
+      "group": "code",
+      "required": [
+        "workspace",
+        "inventory",
+        "actions",
+        "expectations"
+      ],
+      "parameters": [
+        "workspace",
+        "inventory",
+        "capture",
+        "state",
+        "actions",
+        "expectations",
+        "name",
+        "directory",
+        "overwrite"
+      ],
+      "strict": false,
+      "descriptionBytes": 322,
+      "definitionBytes": 1179,
+      "adapterResultContract": false
+    },
+    {
+      "name": "adapter_capabilities",
+      "group": "catalog",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 155,
+      "definitionBytes": 265,
+      "adapterResultContract": false
+    },
+    {
+      "name": "evaluation_evidence",
+      "group": "history",
+      "required": [],
+      "parameters": [
+        "run",
+        "limit"
+      ],
+      "strict": true,
+      "descriptionBytes": 313,
+      "definitionBytes": 616,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workflow_plan",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "id"
+      ],
+      "strict": true,
+      "descriptionBytes": 216,
+      "definitionBytes": 439,
+      "adapterResultContract": false
+    },
+    {
+      "name": "tool_contracts",
+      "group": "catalog",
+      "required": [],
+      "parameters": [
+        "name"
+      ],
+      "strict": false,
+      "descriptionBytes": 254,
+      "definitionBytes": 461,
+      "adapterResultContract": false
+    },
+    {
+      "name": "tool_profiles",
+      "group": "catalog",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 137,
+      "definitionBytes": 240,
+      "adapterResultContract": false
+    },
+    {
+      "name": "tool_search",
+      "group": "catalog",
+      "required": [
+        "query"
+      ],
+      "parameters": [
+        "query",
+        "group",
+        "limit",
+        "max_bytes"
+      ],
+      "strict": false,
+      "descriptionBytes": 153,
+      "definitionBytes": 760,
+      "adapterResultContract": false
+    },
+    {
+      "name": "tool_describe",
+      "group": "catalog",
+      "required": [
+        "name"
+      ],
+      "parameters": [
+        "name"
+      ],
+      "strict": false,
+      "descriptionBytes": 112,
+      "definitionBytes": 277,
+      "adapterResultContract": false
+    },
+    {
+      "name": "tool_execute",
+      "group": "catalog",
+      "required": [
+        "name",
+        "arguments"
+      ],
+      "parameters": [
+        "name",
+        "arguments"
+      ],
+      "strict": false,
+      "descriptionBytes": 153,
+      "definitionBytes": 461,
+      "adapterResultContract": false
+    },
+    {
+      "name": "knowledge_sources",
+      "group": "knowledge",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 263,
+      "definitionBytes": 370,
+      "adapterResultContract": false
+    },
+    {
+      "name": "knowledge_sync",
+      "group": "knowledge",
+      "required": [],
+      "parameters": [
+        "source"
+      ],
+      "strict": false,
+      "descriptionBytes": 270,
+      "definitionBytes": 451,
+      "adapterResultContract": false
+    },
+    {
+      "name": "knowledge_search",
+      "group": "knowledge",
+      "required": [
+        "query"
+      ],
+      "parameters": [
+        "query",
+        "env",
+        "includeConfluence",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 257,
+      "definitionBytes": 757,
+      "adapterResultContract": true
+    },
+    {
+      "name": "knowledge_verify",
+      "group": "knowledge",
+      "required": [
+        "quotes"
+      ],
+      "parameters": [
+        "env",
+        "includeConfluence",
+        "quotes"
+      ],
+      "strict": false,
+      "descriptionBytes": 274,
+      "definitionBytes": 981,
+      "adapterResultContract": false
+    },
+    {
+      "name": "knowledge_graph",
+      "group": "knowledge",
+      "required": [],
+      "parameters": [
+        "env",
+        "includeConfluence",
+        "q",
+        "entity",
+        "hops",
+        "limit",
+        "kinds"
+      ],
+      "strict": false,
+      "descriptionBytes": 339,
+      "definitionBytes": 1087,
+      "adapterResultContract": true
+    },
+    {
+      "name": "knowledge_entity",
+      "group": "knowledge",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "env",
+        "includeConfluence",
+        "id"
+      ],
+      "strict": false,
+      "descriptionBytes": 210,
+      "definitionBytes": 612,
+      "adapterResultContract": false
+    },
+    {
+      "name": "workflow_share",
+      "group": "scripts",
+      "required": [
+        "action"
+      ],
+      "parameters": [
+        "action",
+        "name",
+        "id",
+        "revision",
+        "include_definitions",
+        "expected_revision",
+        "prefix"
+      ],
+      "strict": false,
+      "descriptionBytes": 376,
+      "definitionBytes": 1039,
+      "adapterResultContract": false
+    },
+    {
+      "name": "script_transfer",
+      "group": "scripts",
+      "required": [
+        "id",
+        "to",
+        "expected_revision"
+      ],
+      "parameters": [
+        "id",
+        "to",
+        "expected_revision",
+        "move"
+      ],
+      "strict": false,
+      "descriptionBytes": 225,
+      "definitionBytes": 607,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_get",
+      "group": "scripts",
+      "required": [
+        "collection"
+      ],
+      "parameters": [
+        "collection"
+      ],
+      "strict": false,
+      "descriptionBytes": 158,
+      "definitionBytes": 336,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_save",
+      "group": "scripts",
+      "required": [
+        "collection"
+      ],
+      "parameters": [
+        "collection",
+        "expected_revision",
+        "description",
+        "vars",
+        "before",
+        "after",
+        "finally",
+        "suite"
+      ],
+      "strict": false,
+      "descriptionBytes": 291,
+      "definitionBytes": 1163,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_delete",
+      "group": "scripts",
+      "required": [
+        "collection",
+        "expected_revision"
+      ],
+      "parameters": [
+        "collection",
+        "expected_revision",
+        "recursive"
+      ],
+      "strict": false,
+      "descriptionBytes": 228,
+      "definitionBytes": 663,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_plan",
+      "group": "scripts",
+      "required": [
+        "collection"
+      ],
+      "parameters": [
+        "collection",
+        "params",
+        "tags",
+        "exclude_tags",
+        "select",
+        "seed",
+        "datasets",
+        "matrix"
+      ],
+      "strict": false,
+      "descriptionBytes": 246,
+      "definitionBytes": 1219,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_validate",
+      "group": "scripts",
+      "required": [
+        "collection"
+      ],
+      "parameters": [
+        "collection",
+        "params",
+        "tags",
+        "exclude_tags",
+        "select",
+        "seed",
+        "datasets",
+        "matrix"
+      ],
+      "strict": false,
+      "descriptionBytes": 291,
+      "definitionBytes": 1268,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_run",
+      "group": "scripts",
+      "required": [],
+      "parameters": [
+        "collection",
+        "job",
+        "params",
+        "tags",
+        "exclude_tags",
+        "select",
+        "seed",
+        "datasets",
+        "matrix",
+        "timeout_ms",
+        "cleanup_timeout_ms",
+        "fail_fast",
+        "evidence",
+        "wait_ms"
+      ],
+      "strict": false,
+      "descriptionBytes": 333,
+      "definitionBytes": 1927,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_cancel",
+      "group": "scripts",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "reason"
+      ],
+      "strict": false,
+      "descriptionBytes": 251,
+      "definitionBytes": 497,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_check",
+      "group": "scripts",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run"
+      ],
+      "strict": false,
+      "descriptionBytes": 202,
+      "definitionBytes": 370,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_history",
+      "group": "scripts",
+      "required": [],
+      "parameters": [
+        "collection",
+        "run",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 299,
+      "definitionBytes": 621,
+      "adapterResultContract": false
+    },
+    {
+      "name": "collection_report",
+      "group": "scripts",
+      "required": [
+        "run"
+      ],
+      "parameters": [
+        "run",
+        "format"
+      ],
+      "strict": false,
+      "descriptionBytes": 223,
+      "definitionBytes": 467,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_capabilities",
+      "group": "code",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 270,
+      "definitionBytes": 379,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_plan",
+      "group": "code",
+      "required": [
+        "workspace",
+        "directory"
+      ],
+      "parameters": [
+        "mode",
+        "base",
+        "sanity",
+        "workspace",
+        "directory",
+        "policy",
+        "compatibility"
+      ],
+      "strict": false,
+      "descriptionBytes": 289,
+      "definitionBytes": 1284,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_initialize",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "label"
+      ],
+      "strict": false,
+      "descriptionBytes": 309,
+      "definitionBytes": 496,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_resources",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "limit",
+        "offset"
+      ],
+      "strict": false,
+      "descriptionBytes": 174,
+      "definitionBytes": 426,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_build",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "mode",
+        "base",
+        "sanity",
+        "job",
+        "workspace",
+        "directory",
+        "policy",
+        "compatibility",
+        "pin"
+      ],
+      "strict": false,
+      "descriptionBytes": 441,
+      "definitionBytes": 1626,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_list",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "limit",
+        "offset"
+      ],
+      "strict": false,
+      "descriptionBytes": 175,
+      "definitionBytes": 431,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_inspect",
+      "group": "code",
+      "required": [
+        "template"
+      ],
+      "parameters": [
+        "template"
+      ],
+      "strict": false,
+      "descriptionBytes": 160,
+      "definitionBytes": 388,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_verify",
+      "group": "code",
+      "required": [
+        "template"
+      ],
+      "parameters": [
+        "template",
+        "deep"
+      ],
+      "strict": false,
+      "descriptionBytes": 231,
+      "definitionBytes": 564,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_invalidate",
+      "group": "code",
+      "required": [
+        "template",
+        "reason"
+      ],
+      "parameters": [
+        "template",
+        "reason"
+      ],
+      "strict": false,
+      "descriptionBytes": 209,
+      "definitionBytes": 531,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_template_pin",
+      "group": "code",
+      "required": [
+        "template",
+        "pinned"
+      ],
+      "parameters": [
+        "template",
+        "pinned"
+      ],
+      "strict": false,
+      "descriptionBytes": 205,
+      "definitionBytes": 529,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_clone",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "job",
+        "template",
+        "runId",
+        "ttlMs",
+        "settings",
+        "idempotencyKey"
+      ],
+      "strict": false,
+      "descriptionBytes": 309,
+      "definitionBytes": 969,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_lease_inspect",
+      "group": "code",
+      "required": [
+        "lease"
+      ],
+      "parameters": [
+        "lease"
+      ],
+      "strict": false,
+      "descriptionBytes": 219,
+      "definitionBytes": 386,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_lease_renew",
+      "group": "code",
+      "required": [
+        "lease"
+      ],
+      "parameters": [
+        "lease",
+        "ttlMs"
+      ],
+      "strict": false,
+      "descriptionBytes": 133,
+      "definitionBytes": 389,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_reset",
+      "group": "code",
+      "required": [
+        "lease"
+      ],
+      "parameters": [
+        "lease",
+        "ttlMs"
+      ],
+      "strict": false,
+      "descriptionBytes": 247,
+      "definitionBytes": 495,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_release",
+      "group": "code",
+      "required": [
+        "lease"
+      ],
+      "parameters": [
+        "lease"
+      ],
+      "strict": false,
+      "descriptionBytes": 192,
+      "definitionBytes": 353,
+      "adapterResultContract": false
+    },
+    {
+      "name": "testdb_gc",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "templateTtlMs",
+        "maxBytes",
+        "maxTemplates",
+        "dryRun"
+      ],
+      "strict": false,
+      "descriptionBytes": 233,
+      "definitionBytes": 695,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_package",
+      "group": "code",
+      "required": [
+        "workspace",
+        "inventory",
+        "state",
+        "actions",
+        "expectations"
+      ],
+      "parameters": [
+        "workspace",
+        "name",
+        "inventory",
+        "state",
+        "actions",
+        "expectations",
+        "fixture_path",
+        "profile",
+        "directory",
+        "overwrite",
+        "include_artifact",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 354,
+      "definitionBytes": 1535,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_import",
+      "group": "code",
+      "required": [
+        "workspace",
+        "artifact"
+      ],
+      "parameters": [
+        "workspace",
+        "artifact",
+        "directory",
+        "overwrite",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 244,
+      "definitionBytes": 803,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_verify",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "workspace",
+        "package",
+        "view",
+        "artifact"
+      ],
+      "strict": false,
+      "descriptionBytes": 173,
+      "definitionBytes": 610,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_diff",
+      "group": "code",
+      "required": [
+        "before",
+        "after"
+      ],
+      "parameters": [
+        "before",
+        "after",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 193,
+      "definitionBytes": 555,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_explain",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "workspace",
+        "package",
+        "view",
+        "artifact"
+      ],
+      "strict": false,
+      "descriptionBytes": 166,
+      "definitionBytes": 604,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_preflight",
+      "group": "code",
+      "required": [
+        "workspace",
+        "package"
+      ],
+      "parameters": [
+        "workspace",
+        "package",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 263,
+      "definitionBytes": 651,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_start",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "workspace",
+        "package",
+        "view",
+        "job",
+        "ttl_ms"
+      ],
+      "strict": false,
+      "descriptionBytes": 302,
+      "definitionBytes": 843,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_act",
+      "group": "code",
+      "required": [
+        "session",
+        "action"
+      ],
+      "parameters": [
+        "session",
+        "action",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 172,
+      "definitionBytes": 526,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_observe",
+      "group": "code",
+      "required": [
+        "session"
+      ],
+      "parameters": [
+        "session",
+        "deadline_ms",
+        "quiet_ms",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 272,
+      "definitionBytes": 675,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_assert",
+      "group": "code",
+      "required": [
+        "session"
+      ],
+      "parameters": [
+        "session",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 209,
+      "definitionBytes": 501,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_inspect",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "session",
+        "view"
+      ],
+      "strict": false,
+      "descriptionBytes": 237,
+      "definitionBytes": 553,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_stop",
+      "group": "code",
+      "required": [
+        "session"
+      ],
+      "parameters": [
+        "session"
+      ],
+      "strict": false,
+      "descriptionBytes": 161,
+      "definitionBytes": 336,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_cleanup",
+      "group": "code",
+      "required": [],
+      "parameters": [],
+      "strict": false,
+      "descriptionBytes": 178,
+      "definitionBytes": 284,
+      "adapterResultContract": false
+    },
+    {
+      "name": "scenario_run",
+      "group": "code",
+      "required": [],
+      "parameters": [
+        "workspace",
+        "package",
+        "view",
+        "job",
+        "deadline_ms",
+        "quiet_ms"
+      ],
+      "strict": false,
+      "descriptionBytes": 402,
+      "definitionBytes": 980,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_instances_refresh",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "env",
+        "service",
+        "catalog"
+      ],
+      "strict": false,
+      "descriptionBytes": 303,
+      "definitionBytes": 601,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_database_inspect",
+      "group": "api",
+      "required": [
+        "db"
+      ],
+      "parameters": [
+        "env",
+        "db",
+        "q",
+        "offset",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 217,
+      "definitionBytes": 660,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_client_catalog",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "resources",
+        "resources_only",
+        "env",
+        "q",
+        "group",
+        "offset",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 282,
+      "definitionBytes": 1071,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_auth_profiles",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "url"
+      ],
+      "strict": false,
+      "descriptionBytes": 177,
+      "definitionBytes": 362,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_exchange_import",
+      "group": "api",
+      "required": [
+        "data"
+      ],
+      "parameters": [
+        "data",
+        "source"
+      ],
+      "strict": false,
+      "descriptionBytes": 322,
+      "definitionBytes": 623,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_exchange_list",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "q",
+        "limit"
+      ],
+      "strict": false,
+      "descriptionBytes": 166,
+      "definitionBytes": 410,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_exchange_get",
+      "group": "api",
+      "required": [
+        "exchange"
+      ],
+      "parameters": [
+        "exchange"
+      ],
+      "strict": false,
+      "descriptionBytes": 241,
+      "definitionBytes": 413,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_request_prepare",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "exchange",
+        "request",
+        "bindings",
+        "description",
+        "assertions"
+      ],
+      "strict": false,
+      "descriptionBytes": 395,
+      "definitionBytes": 1139,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_request_replay",
+      "group": "api",
+      "required": [],
+      "parameters": [
+        "prepared",
+        "exchange",
+        "request",
+        "bindings",
+        "parameter_schema",
+        "service_target",
+        "params",
+        "auth_profile",
+        "timeoutMs"
+      ],
+      "strict": false,
+      "descriptionBytes": 369,
+      "definitionBytes": 1569,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_request_save",
+      "group": "api",
+      "required": [
+        "id"
+      ],
+      "parameters": [
+        "id",
+        "prepared",
+        "exchange",
+        "request",
+        "bindings",
+        "description",
+        "tool",
+        "overwrite",
+        "assertions",
+        "capture",
+        "before",
+        "after",
+        "finally"
+      ],
+      "strict": false,
+      "descriptionBytes": 377,
+      "definitionBytes": 1610,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_browser_open",
+      "group": "browser",
+      "required": [],
+      "parameters": [
+        "site",
+        "link",
+        "params",
+        "url"
+      ],
+      "strict": false,
+      "descriptionBytes": 446,
+      "definitionBytes": 814,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_browser_action",
+      "group": "browser",
+      "required": [
+        "session"
+      ],
+      "parameters": [
+        "session",
+        "action",
+        "args",
+        "describe"
+      ],
+      "strict": false,
+      "descriptionBytes": 465,
+      "definitionBytes": 932,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_browser_capture",
+      "group": "browser",
+      "required": [
+        "session"
+      ],
+      "parameters": [
+        "session",
+        "source"
+      ],
+      "strict": false,
+      "descriptionBytes": 294,
+      "definitionBytes": 556,
+      "adapterResultContract": false
+    },
+    {
+      "name": "api_browser_close",
+      "group": "browser",
+      "required": [
+        "session"
+      ],
+      "parameters": [
+        "session"
+      ],
+      "strict": false,
+      "descriptionBytes": 122,
+      "definitionBytes": 298,
+      "adapterResultContract": false
+    },
+    {
+      "name": "mapping_debug",
+      "group": "api",
+      "required": [
+        "action"
+      ],
+      "parameters": [
+        "action",
+        "id",
+        "workspace",
+        "entry",
+        "max_output_bytes",
+        "service",
+        "env",
+        "q",
+        "expected_revision",
+        "definition",
+        "recording",
+        "steps",
+        "params",
+        "auth_profile",
+        "include_data"
+      ],
+      "strict": true,
+      "descriptionBytes": 496,
+      "definitionBytes": 2659,
+      "adapterResultContract": false
+    },
+    {
+      "name": "kafka_checkpoint",
+      "group": "kafka",
+      "required": [
+        "topic"
+      ],
+      "parameters": [
+        "env",
+        "cluster",
+        "topic"
+      ],
+      "strict": false,
+      "descriptionBytes": 162,
+      "definitionBytes": 500,
+      "adapterResultContract": false
+    },
+    {
+      "name": "kafka_wait",
+      "group": "kafka",
+      "required": [
+        "topic"
+      ],
+      "parameters": [
+        "env",
+        "cluster",
+        "topic",
+        "checkpoint",
+        "match",
+        "timeout_ms",
+        "poll_ms",
+        "max_messages",
+        "batch_size"
+      ],
+      "strict": false,
+      "descriptionBytes": 355,
+      "definitionBytes": 1308,
+      "adapterResultContract": false
+    },
+    {
+      "name": "kafka_produce",
+      "group": "kafka",
+      "required": [
+        "topic",
+        "partition",
+        "value"
+      ],
+      "parameters": [
+        "env",
+        "cluster",
+        "topic",
+        "partition",
+        "key",
+        "value",
+        "headers",
+        "key_serde",
+        "value_serde"
+      ],
+      "strict": false,
+      "descriptionBytes": 292,
+      "definitionBytes": 1146,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_trace_save",
+      "group": "browser",
+      "required": [
+        "id",
+        "expected_revision",
+        "definition"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "definition"
+      ],
+      "strict": true,
+      "descriptionBytes": 406,
+      "definitionBytes": 977,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_trace_edit",
+      "group": "browser",
+      "required": [
+        "id",
+        "expected_revision",
+        "patch"
+      ],
+      "parameters": [
+        "id",
+        "expected_revision",
+        "patch"
+      ],
+      "strict": true,
+      "descriptionBytes": 436,
+      "definitionBytes": 1231,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_trace_list",
+      "group": "browser",
+      "required": [],
+      "parameters": [
+        "q",
+        "id",
+        "revision"
+      ],
+      "strict": true,
+      "descriptionBytes": 151,
+      "definitionBytes": 473,
+      "adapterResultContract": false
+    },
+    {
+      "name": "ui_trace",
+      "group": "browser",
+      "required": [],
+      "parameters": [
+        "id",
+        "revision",
+        "env",
+        "capture",
+        "params",
+        "previous",
+        "exchange_ids",
+        "job",
+        "waitMs"
+      ],
+      "strict": true,
+      "descriptionBytes": 516,
+      "definitionBytes": 1369,
+      "adapterResultContract": false
+    }
+  ]
+}

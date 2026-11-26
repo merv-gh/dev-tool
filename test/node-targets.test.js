@@ -48,7 +48,7 @@ test('reviewed target manifests fail closed; live runner outage never falls back
 });
 test('all execution inputs and exact file contents change job identity; property ordering does not', () => {
   const {jobKey}=require('../lib/test-targets'), base={workspace:'node',tests:['test/value.test.cjs']};
-  const key=jobKey(base); assert.equal(key,jobKey({tests:base.tests,workspace:'node'}));
+  const key=jobKey(base); assert.equal(key,jobKey({tests:base.tests,workspace:'node'}));assert.equal(key,jobKey({...base,all:true}),'presentation cannot start a different execution');
   for(const extra of [{env:'dev'},{env:'staging'},{db:'orders'},{target:'remote'},{mode:'build'},{fixture_path:'a'},{fixture_bindings:{orders:'ONE'}},{files:[{path:'x.cjs',content:'one'}]},{check:false}])assert.notEqual(key,jobKey({...base,...extra}));
   const f=path.join(root,'src','value.cjs'), st=fs.statSync(f); fs.writeFileSync(f,'module.exports=3'); fs.utimesSync(f,st.atime,st.mtime); assert.notEqual(key,jobKey(base),'same-size same-mtime source edits change content fingerprint');
 });

@@ -26,7 +26,7 @@ const readJsonBody = (req, form = false) => new Promise((resolve, reject) => {
     try { resolve(chunks.length ? (form?Object.fromEntries(new URLSearchParams(Buffer.concat(chunks).toString('utf8'))):JSON.parse(Buffer.concat(chunks))) : {}); } catch (e) { reject(e); }
   });
 });
-const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.code === 'DT_API_NETWORK' && e.exchange ? {exchange:e.exchange} : {}), ...(e.issues ? { issues: e.issues } : {}), ...(e.retryAfter?{retryAfter:e.retryAfter}:{}) });
+const errorPayload = e => require('./lib/redact').clean({ error: e.message, ...(e.code ? { code: e.code } : {}), ...(e.code === 'DT_API_NETWORK' && e.exchange ? {exchange:e.exchange} : {}), ...(e.issues ? { issues: e.issues } : {}), ...(e.candidates?{candidates:e.candidates}:{}), ...(e.retryAfter?{retryAfter:e.retryAfter}:{}) });
 
 // Tools reach the infrastructure with your credentials. Allowed: this machine; a request with
 // DT_API_KEY (Authorization: Bearer, or the dt_key cookie set by /admin?key=...); or anyone on the
@@ -75,7 +75,7 @@ async function mcpHandle(msg, session, requestSignal) {
       if(mcpRequests.has(key))return {jsonrpc:'2.0',id:msg.id,error:{code:-32600,message:'Request id is already active in this session'}};
       const lifecycle=require('./lib/state-machine').create(require('./lib/lifecycles').mcp),controller=new AbortController(),abort=controller.abort.bind(controller);controller.abort=why=>{if(lifecycle.terminal)return;lifecycle.to('cancelling');abort(why);};const onAbort=()=>controller.abort(requestSignal.reason);if(requestSignal?.aborted)onAbort();else requestSignal?.addEventListener('abort',onAbort,{once:true});mcpRequests.set(key,controller);
       try {
-        const delivered = require('./lib/chat-pressure').response(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal }),{session,usage:msg.params?._meta?.['dev-tool/context']});
+        const delivered = require('./lib/chat-pressure').response(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: 'mcp', session,signal:controller.signal }),{session,usage:msg.params?._meta?.['dev-tool/context'],all:msg.params.arguments?.all===true || msg.params.arguments?.arguments?.all===true});
         const result = delivered.value;
         lifecycle.to('replied');
         return reply({ content: [{ type: 'text', text: typeof result === 'string' ? result : JSON.stringify(result) }],_meta:{'dev-tool/context':delivered.meta} });
@@ -131,7 +131,7 @@ async function oapi(req, res, url) {
   // Open WebUI says which chat a call comes from when ENABLE_FORWARD_USER_INFO_HEADERS is on
   const session = req.headers['x-openwebui-chat-id'] || req.headers['x-chat-id'] || null;
   let pressure;
-  try { const delivered = require('./lib/chat-pressure').response(name, await tools.call(name, await readJsonBody(req), { source: 'openapi', session, signal:req.dtSignal }),{session,usage:req.headers['x-dt-context-usage']});result=delivered.value;pressure=delivered.meta; }
+  try { const args=await readJsonBody(req);const delivered = require('./lib/chat-pressure').response(name, await tools.call(name, args, { source: 'openapi', session, signal:req.dtSignal }),{session,usage:req.headers['x-dt-context-usage'],all:args.all===true || args.arguments?.all===true});result=delivered.value;pressure=delivered.meta; }
   catch (e) { return send(res, e.statusCode || 400, errorPayload(e)); }
   const target = result && typeof result === 'object' && (result.view || result.dashboard);
   const embed = typeof target === 'string' ? target + (target.includes('?') ? '&' : '?') + 'embed=1' : null;

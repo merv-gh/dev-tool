@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "20b15223f9e22925449fa2703193ce13c9af7301dbfb459b94074b42fde236d9",
+      sourceDigest: "234d6cc086a6f737db7b5625d2d4239c09f686dfe244c96bb88ffa19933da12e",
       machines: [
         {
           id: "IO.atomic-file",
@@ -19722,7 +19722,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/tools.js",
-              line: 1013,
+              line: 1024,
               snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
             }
           ],
@@ -21013,7 +21013,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/testrun.js",
-              line: 522,
+              line: 528,
               snippet: "const lifecycle = require('./state-machine').create(require('./lifecycles').testInvocation);"
             }
           ],
@@ -21053,7 +21053,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/testrun.js",
-              line: 487,
+              line: 493,
               snippet: "const evidence = require('./state-machine').create(require('./lifecycles').testProof);"
             }
           ],
@@ -51651,6 +51651,8 @@ var require_tool_search = __commonJS({
     var STOP = new Set("a an and are as at be before but by can do does every for from get how i if in into is it its me my of on or our show that the their then these this through to use was we what when where which who why with without you your".split(" "));
     var cache = /* @__PURE__ */ new Map();
     var INTENTS = [
+      [/\b(scripts?|saved workflows?|saved queries|saved requests)\b/, ["script_search", "script_list", "script_get", "script_run"]],
+      [/\b(run (all |changed |affected |diff )?tests|test runner|test_run)\b/, ["test_run", "test_targets", "test_context"]],
       [/\b(interactive workbench|browse (contexts|tasks|services)|navigate (contexts|tasks|services)|service scripts|save (query|action))\b/, ["workbench_open", "workbench_save"]],
       [/\b(change(d)? coverage|coverage (on|of|for) (the )?change|uncovered (lines|branches)|touched code)\b/, ["workspace_coverage_plan", "workspace_coverage", "test_run"]],
       [/\b(jenkins|ci build|build (log|status|failure|queue)|wait for (the )?build)\b/, ["jenkins_jobs", "jenkins_build", "jenkins_wait", "jenkins_log", "jenkins_tests"]],
@@ -59651,6 +59653,7 @@ var require_test_targets = __commonJS({
     function jobKey(args) {
       const clean = { ...args };
       delete clean.job;
+      delete clean.all;
       const cfg = require_config().getTests();
       let workspace;
       try {
@@ -66272,6 +66275,112 @@ var require_fixture_runtime_bridge = __commonJS({
   }
 });
 
+// lib/test-selection.js
+var require_test_selection = __commonJS({
+  "lib/test-selection.js"(exports2, module2) {
+    var fs3 = require("node:fs");
+    var path3 = require("node:path");
+    var invalid = (message, extra = {}) => Object.assign(new Error(message), { code: "DT_ARGUMENT_INVALID", ...extra });
+    var diffAliases = /* @__PURE__ */ new Set(["-diff", "--diff", "diff", "changed"]);
+    function normalize(input) {
+      const a = { ...input };
+      if (a.job) {
+        if (Object.keys(a).some((k) => !["job", "workspace", "all"].includes(k))) throw invalid("Poll with job only (optional workspace and all); start options cannot accompany a job");
+        const job = require_jobs().get(a.job);
+        if (!job || !job.key.startsWith("tests:")) throw Object.assign(new Error("Test job not found in this scope"), { code: "DT_NOT_FOUND" });
+        const workspace = job.key.split(":")[1];
+        if (a.workspace && a.workspace !== workspace) throw invalid("test job belongs to a different workspace");
+        return { ...a, workspace };
+      }
+      let scope = a.scope;
+      const setScope = (s) => {
+        if (scope && scope !== s) throw invalid("Conflicting test selection; use scope=all, scope=diff, or named tests");
+        scope = s;
+      };
+      if (a.diff === true || a["-diff"] === true) setScope("diff");
+      for (const key of ["diff", "-diff"]) {
+        if (a[key] !== void 0 && typeof a[key] !== "boolean") throw invalid(`${key} must be boolean`);
+        delete a[key];
+      }
+      if (["all", ...diffAliases].includes(a.mode)) {
+        setScope(a.mode === "all" ? "all" : "diff");
+        a.mode = "auto";
+      }
+      if (typeof a.tests === "string") a.tests = a.tests.split(",").map((t) => t.trim());
+      if (a.tests !== void 0 && (!Array.isArray(a.tests) || a.tests.some((t) => typeof t !== "string" || !t.trim()))) throw invalid('tests must be a test name or array of nonempty names; omit for all, or use scope="diff"');
+      if (a.tests) a.tests = a.tests.map((t) => t.trim());
+      if (a.tests?.length === 1 && (diffAliases.has(a.tests[0]) || ["all", "*"].includes(a.tests[0]))) {
+        setScope(diffAliases.has(a.tests[0]) ? "diff" : "all");
+        delete a.tests;
+      }
+      if (scope && a.tests?.length) throw invalid("Choose scope or named tests, not both");
+      if (!a.tests?.length) {
+        a.tests = [];
+        scope ||= "all";
+      }
+      if (scope) a.scope = scope;
+      if (!a.workspace) {
+        const candidates = require_workspace().list().filter((w) => w.exists);
+        if (candidates.length !== 1) throw invalid(candidates.length ? "Multiple workspaces: choose workspace from candidates" : "No workspace in this scope; open one with workspace_open or workspace_create", { code: candidates.length ? "DT_WORKSPACE_AMBIGUOUS" : "DT_WORKSPACE_REQUIRED", candidates });
+        a.workspace = candidates[0].id;
+      }
+      return a;
+    }
+    function discover(root) {
+      const node = [], jvm = [], modules = [];
+      function walk(dir) {
+        const entries = fs3.readdirSync(dir, { withFileTypes: true });
+        if (entries.some((e) => e.isFile() && ["pom.xml", "build.gradle", "build.gradle.kts"].includes(e.name))) modules.push(path3.relative(root, dir) || ".");
+        for (const e of entries) {
+          const file = path3.join(dir, e.name), rel = path3.relative(root, file).split(path3.sep).join("/");
+          if (e.isDirectory()) {
+            if (!/^(\..*|node_modules|target|build|out|dist|vendor|fixtures|__fixtures__|cache)$/.test(e.name)) walk(file);
+          } else if (e.isFile()) {
+            if (/\.(?:test|spec)\.[cm]?js$/.test(e.name)) node.push(rel);
+            if (/(^|\/)src\/(test|it|integrationTest)\/.+\.(java|kt|groovy|scala)$/.test(rel)) jvm.push(rel);
+          }
+        }
+      }
+      walk(root);
+      return { node: node.sort(), jvm: jvm.sort(), modules: modules.sort() };
+    }
+    async function verifyBase(root, base) {
+      if (typeof base !== "string" || !base || base.length > 512 || /^-|[\x00-\x20]/.test(base)) throw invalid("base must be a Git commit or ref");
+      try {
+        return await require_git().git(["rev-parse", "--verify", `${base}^{commit}`], root);
+      } catch {
+        throw invalid(`Cannot resolve diff base ${base}; pass base with a valid commit or ref`);
+      }
+    }
+    async function select(root, metadata, { tests = [], scope, base } = {}) {
+      if (tests.length) return { tests, selection: { scope: "named", selected: tests.length, complete: true } };
+      const found = discover(root), isJvm = found.modules.length > 0;
+      if (isJvm && found.node.length) throw invalid("Workspace has JVM and Node suites; choose explicit tests to select an execution profile");
+      if (!isJvm && !found.node.length) throw invalid("No supported test suite: use a Maven/Gradle project or Node .test/.spec.js/.cjs/.mjs files");
+      const selection = { scope: scope || "all", profile: isJvm ? "jvm-build" : "node:test", selected: isJvm ? null : found.node.length, ...isJvm ? { testSourceFiles: found.jvm.length } : {}, modules: found.modules, complete: true };
+      if (scope === "diff") {
+        const pin = await verifyBase(root, base || metadata.sha || "HEAD");
+        const G = require_git(), parts = await Promise.all([
+          G.git(["diff", "--name-only", "--no-renames", "-z", pin, "--"], root),
+          G.git(["ls-files", "--others", "--exclude-standard", "-z"], root)
+        ]);
+        const changed = [...new Set(parts.flatMap((x) => x.split("\0").filter(Boolean)))];
+        Object.assign(selection, { base: pin, changed: changed.length });
+        const meaningful = changed.filter((f) => !/^(docs\/|README(?:\.|$)|LICENSE(?:\.|$))/.test(f) && !/^\.dt\//.test(f));
+        if (!meaningful.length) return { tests: [], noRun: true, selection: { ...selection, selected: 0 } };
+        if (!isJvm && meaningful.every((f) => found.node.includes(f))) {
+          return { tests: meaningful, selection: { ...selection, selected: meaningful.length } };
+        }
+        selection.complete = false;
+        selection.fallback = "all";
+        selection.reason = "Dependency coverage is not proven complete; run the full supported suite for changed runtime/build inputs";
+      }
+      return { tests: isJvm ? [] : found.node, buildAll: isJvm, selection };
+    }
+    module2.exports = { normalize, discover, verifyBase, select };
+  }
+});
+
 // lib/node-test.js
 var require_node_test = __commonJS({
   "lib/node-test.js"(exports2, module2) {
@@ -67543,7 +67652,7 @@ var require_testrun = __commonJS({
           "-B",
           "-ntp",
           "test",
-          `-Dtest=${sel.join(",")}`,
+          ...!p.buildAll ? [`-Dtest=${sel.join(",")}`] : [],
           "-Dsurefire.failIfNoSpecifiedTests=false",
           "-DfailIfNoTests=false",
           "-Djacoco.skip=true",
@@ -67701,7 +67810,7 @@ ${e.message}`, ms: Date.now() - started });
         });
       });
     }
-    async function runUnlocked(id, { tests = [], db, fixturePath, fixtureRuntime, fixtureBindings, fixtureTemplate = false, allowIncomplete = false, scenarioPath, scenarioOutput, log = () => {
+    async function runUnlocked(id, { tests = [], scope, base, db, fixturePath, fixtureRuntime, fixtureBindings, fixtureTemplate = false, allowIncomplete = false, scenarioPath, scenarioOutput, log = () => {
     }, mode = "auto", target = "local", sourceEnv, files: writes = [], check: checkFiles = true, fix, coverage = false, coverageBase } = {}) {
       if (fixtureRuntime !== void 0 && !/^[a-f0-9]{24}$/.test(fixtureRuntime || "")) throw new Error("invalid fixture_runtime lease id");
       if (fixtureRuntime && (db || fixturePath || fixtureTemplate)) throw new Error("choose fixture_runtime or db/ddl_path/fixture_path/template, never both");
@@ -67710,6 +67819,7 @@ ${e.message}`, ms: Date.now() - started });
       const nativeFixture = fixtureRuntime ? await require_fixture_runtime_bridge().resolve(fixtureRuntime, { workspace: id, executionTarget, fixtureBindings }) : null;
       const m = W.checkId(id);
       const root = m.path;
+      if (scope === "diff") await require_test_selection().verifyBase(root, base || m.sha || "HEAD");
       const written = writes.map((f) => W.write(id, f.path, { content: f.content, edits: f.edits }));
       const check = written.length && checkFiles !== false ? await require_javacheck().check(id, written.map((w) => w.path), { fix }).catch((e) => ({ skipped: e.message })) : null;
       if (check?.errors?.length) {
@@ -67742,15 +67852,22 @@ ${e.message}`, ms: Date.now() - started });
       }
       const idx = W.index(id);
       const g = idx.graph_();
-      if (!tests.length) throw new Error("name the tests to run (class names like FooTest, or Class#method)");
+      const selected = await require_test_selection().select(root, m, { tests, scope, base });
+      tests = selected.tests;
+      const selection = selected.selection;
+      if (selected.noRun) return { workspace: id, selection, execution: executionTarget.metadata, outcome: "not-run", reason: "no-affected-tests", mode: "build", counts: { tests: 0, passed: 0, failed: 0, errors: 0, skipped: 0 }, failureKinds: { assertions: 0, testErrors: 0 }, cases: [], compile: [], parts: [], hints: [], ms: 0, written: written.map((w) => w.path) };
       const nodeFound = tests.map((t) => require_node_test().find(root, t));
       if (nodeFound.some(Boolean) && !nodeFound.every(Boolean)) throw new Error("do not mix Node file selectors with JVM class selectors in one run");
-      const isNode = nodeFound.every(Boolean);
+      const isNode = !selected.buildAll && nodeFound.every(Boolean);
       const found = isNode ? nodeFound : tests.map((t) => findTest(root, g, t));
       const missing = tests.filter((t, i) => !found[i]);
       if (missing.length) throw new Error(`no test class ${missing.join(", ")} in ${id} (write it with workspace_write first, or give the full name com.acme.FooTest)`);
       const files = found.map((f) => f.file);
       const p = isNode ? { tool: "node", module: ".", modDir: root } : plan(root, files);
+      if (selected.buildAll) {
+        p.buildAll = true;
+        mode = "build";
+      }
       const cfg = getTests();
       const fast = require_fastrun();
       const why = isNode ? "reviewed node:test profile" : executionTarget.requireRunner ? "reviewed remote target requires its project build" : mode === "build" ? "mode=build" : fast.supported(root, p, files);
@@ -67815,7 +67932,7 @@ ${e.message}`, ms: Date.now() - started });
       const failureKinds = { assertions: 0, testErrors: 0 };
       const cleanupErrors = [];
       let executionError;
-      const reportDirs = isNode ? [] : [path3.join(p.modDir, "target", "surefire-reports"), path3.join(p.modDir, "build", "test-results", "test")];
+      const reportDirs = isNode ? [] : (selected.buildAll ? require_test_selection().discover(root).modules.map((d) => path3.join(root, d)) : [p.modDir]).flatMap((d) => [path3.join(d, "target", "surefire-reports"), path3.join(d, "build", "test-results", "test")]);
       try {
         await require_javacheck().idle(id);
         const started = Date.now();
@@ -67926,6 +68043,7 @@ ${e.message}`, ms: Date.now() - started });
       return {
         execution: { ...executionTarget.metadata, host: r.runner || executionTarget.metadata.host },
         workspace: id,
+        selection,
         tool: p.tool,
         mode: why ? p.tool === "gradle" ? "gradle" : "build" : "fast",
         ...why && mode !== "build" && p.tool !== "gradle" ? { buildBecause: why } : {},
@@ -78725,19 +78843,19 @@ var require_tools_code = __commonJS({
               }
             }
             rows.sort((x, y) => (x.kind === "class" ? 0 : 1) - (y.kind === "class" ? 0 : 1) || x.id.length - y.id.length);
-            return tabular("code-symbols", rows.slice(0, a.limit || 50), { query: `symbols: ${a.q}` }, { preview: 25 });
+            return { ...tabular("code-symbols", rows, { query: `symbols: ${a.q}` }, { preview: a.all ? rows.length : Math.min(a.limit || 50, 25) }), ...rows.length > 2e3 ? { truncated: true } : {} };
           }
         },
         {
           name: "code_read",
           group: "code",
-          description: "Read a file of an indexed repo or workspace with line numbers (from..to, 400 lines at most).",
+          description: "Read indexed source with line numbers (from..to, preview up to 400 lines). all=true removes the preview cap; explicit from/to still select a range.",
           input: { repo: str("PROJECT/repo or work/<workspace id>"), path: str("File path in the repo"), from: int("First line", 1), to: int("Last line (default from+299)"), expected_source_digest: str("Optional source digest from retained evidence; rejects changed index/live files") },
           required: ["repo", "path"],
           run: (a) => {
             const CI = require_codeindex();
             const key = CI.select(a.repo)[0] || a.repo;
-            return CI.read(key, a.path, { from: a.from || 1, to: a.to ? Math.min(a.to, (a.from || 1) + 399) : void 0, expected_source_digest: a.expected_source_digest });
+            return CI.read(key, a.path, { from: a.from || 1, to: a.all ? a.to ?? Number.MAX_SAFE_INTEGER : a.to ? Math.min(a.to, (a.from || 1) + 399) : void 0, expected_source_digest: a.expected_source_digest });
           }
         },
         {
@@ -78767,7 +78885,7 @@ var require_tools_code = __commonJS({
             if (a.workspace) {
               const p = a.path || `src/test/resources/dt-schema/${a.db}.sql`;
               out2.written = require_workspace().write(a.workspace, p, { content: s.sql });
-            } else out2.sql = clip(s.sql, 12e3);
+            } else out2.sql = a.all ? s.sql : clip(s.sql, 12e3);
             return out2;
           }
         },
@@ -78807,7 +78925,7 @@ var require_tools_code = __commonJS({
           description: "Read copyable workspace source with its line range, or list a folder. line_numbers=true adds display prefixes; never copy those prefixes into workspace_write content. Prefer exact find/replace edits for small fixes.",
           input: { workspace: str("Workspace id"), path: str("File or folder path"), from: int("First line", 1), to: int("Last line"), line_numbers: bool("Add display line-number prefixes (plain source by default)", false) },
           required: ["workspace", "path"],
-          run: (a) => require_workspace().read(a.workspace, a.path, { from: a.from || 1, to: a.to, lineNumbers: a.line_numbers === true })
+          run: (a) => require_workspace().read(a.workspace, a.path, { from: a.from || 1, to: a.to ?? (a.all ? Number.MAX_SAFE_INTEGER : void 0), lineNumbers: a.line_numbers === true })
         },
         {
           name: "workspace_write",
@@ -78922,12 +79040,16 @@ var require_tools_code = __commonJS({
         {
           name: "test_run",
           group: "code",
-          description: `Run tests of a workspace using reviewed Node node:test file execution or the JVM build. Select target for actual execution placement/dependencies; env is source-catalog provenance. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). coverage=true measures changed production lines/branches with fresh JaCoCo data; workspace_coverage_plan previews scope; workspace_coverage reads remaining gaps. The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.`,
+          description: 'Run all, changed, or named tests in an owned workspace. Omit tests for all; scope="diff" (or tests="-diff") selects changed tests and conservatively widens to all if impact is uncertain. tests accepts a name or list. Omit workspace when this scope has exactly one. Poll with job only. mode=auto/fast/build chooses execution engine. env is source-catalog provenance; target chooses reviewed execution/dependencies. Optional files writes before running; fixtures/db provide scratch dependencies. coverage=true measures changed JVM production lines. all=true returns the full retained report; compact failures and view are returned by default.',
           input: {
-            workspace: str("Workspace id"),
-            tests: list("JVM classes (FooTest), Class#method, or explicit Node .test.js/.cjs/.mjs file paths"),
+            workspace: str("Optional workspace id; inferred only when exactly one owned workspace exists"),
+            tests: { oneOf: [{ type: "string", minLength: 1 }, { type: "array", items: { type: "string", minLength: 1 } }], description: 'Test name/list (FooTest, Class#method or Node path). Omit/[] for all; "-diff" is a changed-test alias' },
+            scope: { type: "string", enum: ["all", "diff"], description: "Suite selection; omit for all or when tests names are provided" },
+            base: str("Diff Git base; default pinned workspace checkout commit"),
+            diff: bool("Alias for scope=diff"),
+            "-diff": bool("Compatibility alias for scope=diff"),
             files: { type: "array", items: { type: "object", properties: { path: { type: "string" }, content: { type: "string" }, edits: { type: "array", items: { type: "object", properties: { find: { type: "string" }, replace: { type: "string" } } } } }, required: ["path"] }, description: "Write these first (like workspace_write), then run: one call per try" },
-            mode: { type: "string", enum: ["auto", "fast", "build"], default: "auto", description: "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits" },
+            mode: { type: "string", enum: ["auto", "fast", "build", "all", "diff", "-diff", "--diff", "changed"], default: "auto", description: "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits" },
             coverage: bool("Collect fresh JaCoCo coverage of changed JVM production lines only; no project-wide coverage baseline required"),
             coverage_base: str("Optional Git comparison base for coverage; defaults to the workspace base commit"),
             target: str("Reviewed execution target id from test_targets; default local. env alone never selects a live deployment"),
@@ -78942,7 +79064,8 @@ var require_tools_code = __commonJS({
             job: str('A job id from an earlier "running" answer'),
             ...CHECK
           },
-          required: ["workspace"],
+          required: [],
+          strictInput: true,
           run: async (a) => {
             const J = require_jobs();
             const cfg = require_config().getTests();
@@ -78950,18 +79073,19 @@ var require_tools_code = __commonJS({
             if (a.job && !job) throw new Error(`no job ${a.job}`);
             if (job && !job.key.startsWith(`tests:${a.workspace}:`)) throw new Error("test job belongs to a different workspace");
             if (!job) {
-              if (!a.tests?.length) throw new Error("tests: which test classes to run");
               const db = a.ddl_path || a.db ? { env: a.env || require_config().envNames()[0], db: a.db, ddlPath: a.ddl_path } : null;
               require_test_targets().resolve(a.target || "local", { env: a.env, fixturePath: a.fixture_path, fixtureRuntime: a.fixture_runtime, db });
-              job = J.start(require_test_targets().jobKey(a), `tests ${a.tests.join(", ")} in ${a.workspace}`, async (log) => {
-                const r = await require_testrun().run(a.workspace, { tests: a.tests, target: a.target || "local", sourceEnv: a.env, db, fixturePath: a.fixture_path, fixtureRuntime: a.fixture_runtime, fixtureBindings: a.fixture_bindings, fixtureTemplate: a.fixture_template, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix, coverage: a.coverage, coverageBase: a.coverage_base });
-                const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests.join(", ")}` });
+              job = J.start(require_test_targets().jobKey(a), `tests ${a.tests?.length ? a.tests.join(", ") : a.scope || "all"} in ${a.workspace}`, async (log) => {
+                const r = await require_testrun().run(a.workspace, { tests: a.tests, scope: a.scope, base: a.base, target: a.target || "local", sourceEnv: a.env, db, fixturePath: a.fixture_path, fixtureRuntime: a.fixture_runtime, fixtureBindings: a.fixture_bindings, fixtureTemplate: a.fixture_template, allowIncomplete: a.allow_incomplete, log, mode: a.mode || "auto", files: a.files || [], check: a.check, fix: a.fix, coverage: a.coverage, coverageBase: a.coverage_base });
+                const view = R().saveView("tests", r, { title: `${r.outcome}: ${a.tests?.length ? a.tests.join(", ") : a.scope || "all"}` });
                 const failing = r.cases.filter((c) => c.status === "failed" || c.status === "error");
                 return {
                   workspace: r.workspace,
+                  selection: r.selection,
                   execution: r.execution,
                   ...r.coverage ? { coverage: r.coverage } : {},
                   outcome: r.outcome,
+                  ...r.reason ? { reason: r.reason } : {},
                   counts: r.counts,
                   failureKinds: r.failureKinds,
                   ms: r.ms,
@@ -78997,6 +79121,7 @@ var require_tools_code = __commonJS({
                   database: r.database || void 0,
                   hints: r.hints.length ? r.hints : void 0,
                   fixture: r.fixture,
+                  ...r.cleanupErrors?.length ? { cleanupErrors: r.cleanupErrors } : {},
                   // the build log only when it is the answer: no test results, or the build itself failed
                   tail: r.outcome === "passed" || r.cases.length && !r.compile.length ? void 0 : r.tail,
                   view,
@@ -79097,7 +79222,7 @@ var require_chat_context = __commonJS({
         saveError = require_redact().clean(error.message);
       }
       const id = stored?.split("/").pop();
-      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "view"];
+      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "complete", "truncated", "nextCursor", "gaps", "proof", "cleanupErrors", "total", "view"];
       const ordered = value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries([...priority.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !priority.includes(k))]) : null;
       const out2 = {
         ...ordered ? short(ordered) : { preview: short(value) },
@@ -79118,12 +79243,16 @@ var require_chat_context = __commonJS({
       if (bytes(out2) > limit) return { modelContext: out2.modelContext, ...stored ? { view: stored } : {} };
       return out2;
     }
-    function read({ id, path: path3 = "", cursor, max_bytes }) {
+    function read({ id, path: path3 = "", cursor, max_bytes, all = false }) {
       if (typeof path3 !== "string" || path3.length > 2e3 || path3 && !path3.startsWith("/")) throw invalid("path must be an RFC 6901 JSON pointer, such as /rows/0");
       const meta = require_results().toolMeta(id);
-      if (!meta) throw missing();
-      let value;
-      if (path3) {
+      let value, backing;
+      if (!meta) {
+        const record = require_results().load(id);
+        if (!record || record.toolResponse) throw missing();
+        backing = record.kind === "view" ? record.data : { rows: record.rows, total: record.total, truncated: record.truncated };
+        value = backing;
+      } else if (path3 || all) {
         const record = require_results().load(id);
         if (!record) throw missing();
         value = record.data;
@@ -79134,7 +79263,11 @@ var require_chat_context = __commonJS({
         if (!value || typeof value !== "object" || !Object.hasOwn(value, key)) throw invalid("JSON pointer does not exist in the retained response");
         value = value[key];
       }
-      const buffer = path3 ? Buffer.from(JSON.stringify(value)) : null, total = buffer ? buffer.length : meta.info.bodyBytes, hash = crypto.createHash("sha256").update(id + "\0" + path3).digest("hex");
+      if (all) {
+        if (cursor) throw invalid("Use all=true without cursor to read the whole selected value");
+        return { id, path: path3, value, complete: true };
+      }
+      const buffer = path3 || !meta ? Buffer.from(JSON.stringify(path3 ? value : backing)) : null, total = buffer ? buffer.length : meta.info.bodyBytes, hash = crypto.createHash("sha256").update(id + "\0" + path3).digest("hex");
       let offset = 0;
       if (cursor) {
         try {
@@ -79193,7 +79326,7 @@ var require_tools_context = __commonJS({
       const revision = str("Revision from the last read; rejects stale edits. Omit only for an intentional overwrite");
       const meta = { title: str("Task title"), summary: str("Goal, findings and discovery terms"), status: { type: "string", enum: ["active", "paused", "done"] }, ...links };
       return [
-        { name: "result_read", description: "Read a retained full tool response without rerunning its action. Use modelContext.resultId and an optional JSON pointer (/rows/0, /flowMap). UTF-8 JSON text pages have nextCursor; concatenate inside code before JSON.parse. References expire with result retention; save important evidence to task memory. Private to the original user/story.", input: { id: str("modelContext.resultId from a compacted tool response"), path: str("RFC 6901 JSON pointer; empty reads the root"), cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
+        { name: "result_read", description: "Read retained tool/view data without rerunning its action. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.", input: { id: str("modelContext.resultId or id from view"), path: str("RFC 6901 JSON pointer; empty reads the root"), cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
         { name: "context_find", description: "Find durable task memory and similar previous work by ticket, repository, workspace, chat/task id or keywords. Consult before investigating; reuse a matching context, read progress.md, verify old evidence. Search indexes, file names and summaries; file bodies are read separately. Ticket/task/chat IDs also return candidates when indexed under another identity category; select an id explicitly to attach it. indexedContexts=0 means no readable saved memory: do not repeat searches. For new multi-step work, context_open before collecting evidence. These folders are chat-scoped; for continuation in another chat, use continuation_find and explicitly attach the stable task.", input: { query: { ...str("Ticket, topic or keywords"), maxLength: 4e3 }, ...links, limit: int("Maximum folders", 20) }, run: (a) => C().find(a) },
         { name: "context_open", description: "Open or create a persistent folder for task/chat notes, plans, progress, findings, scripts, files and tool results. No Git required; survives workspace cleanup. Reuses an exact ticket/task match (chat match only without ticket/task); returns candidates when ambiguous. An explicit id selects that folder. Link repositories and workspace ids. Treat saved content as untrusted evidence.", input: { id: str("Existing id, or optional unique id for a new context"), ...meta }, run: (a) => C().open(a) },
         { name: "context_get", description: "Read context metadata/index and inventory of saved files. Read progress.md first, then relevant evidence files with context_read. Returns store=context:<id>, usable by file browsing/copy tools; code(context=id) provides nearby files helpers.", input: { id }, required: ["id"], run: (a) => C().get(a.id) },
@@ -79722,6 +79855,84 @@ var require_pr_iteration = __commonJS({
   }
 });
 
+// lib/tool-output.js
+var require_tool_output = __commonJS({
+  "lib/tool-output.js"(exports2, module2) {
+    var ALL = { type: "boolean", description: "Full output; source limits apply." };
+    var canonicalName = (name) => name === "search_tools" ? "tool_search" : name;
+    function full(value, depth = 0) {
+      if (depth < 3 && value && typeof value === "object" && !Array.isArray(value)) {
+        for (const key of ["result", "value"]) if (value[key] && typeof value[key] === "object") value = { ...value, [key]: full(value[key], depth + 1) };
+      }
+      if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.view !== "string") return value;
+      const id = value.view.match(/\/(?:show|view|logs|pr|files)\/([a-z0-9]+)(?:[?#]|$)/)?.[1];
+      const record = id && require_results().load(id);
+      if (!record) return value;
+      if (Array.isArray(record.rows)) {
+        if (Array.isArray(value.rows) && value.rows.length >= record.rows.length) return value;
+        return { ...value, rows: record.rows, ...record.truncated ? { truncated: true } : {} };
+      }
+      if (record.kind === "view" && record.data && typeof record.data === "object") {
+        if (Array.isArray(record.data)) return { ...value, data: record.data };
+        const result = { ...value, ...record.data, view: value.view };
+        for (const key of ["omitted", "previewTruncated", "summaryTruncated", "moreFailures", "moreParts", "shown"]) if (!Object.hasOwn(record.data, key)) delete result[key];
+        if (value.outputBudgetBytes && !Object.hasOwn(record.data, "truncated")) delete result.truncated;
+        return result;
+      }
+      return value;
+    }
+    function facts(value) {
+      const reasons = /* @__PURE__ */ new Set(), omissions = /* @__PURE__ */ new Set();
+      const seen = /* @__PURE__ */ new Set();
+      function visit(v, depth = 0) {
+        if (!v || typeof v !== "object" || depth > 8 || seen.has(v)) return;
+        seen.add(v);
+        if (Array.isArray(v)) {
+          for (const item of v) visit(item, depth + 1);
+          return;
+        }
+        if (depth < 3 && typeof v.view === "string") {
+          const id = v.view.match(/\/show\/([a-z0-9]+)(?:[?#]|$)/)?.[1], record = id && require_results().load(id), data = record?.data;
+          if (data && typeof data === "object" && !Array.isArray(data) && Object.keys(data).some((k) => data[k] !== void 0 && (v[k] === void 0 || Array.isArray(data[k]) && Array.isArray(v[k]) && data[k].length > v[k].length))) omissions.add("retained-details");
+        }
+        if (v.truncated === true || v.previewTruncated === true || v.summaryTruncated === true) reasons.add("source-or-tool-limit");
+        if (v.complete === false || v.traversalComplete === false) reasons.add("incomplete-source");
+        if (v.nextCursor || v.continuation) reasons.add("more-pages");
+        if (Number.isFinite(v.totalHits) && Number.isFinite(v.total) && v.totalHits > v.total) reasons.add("query-limit");
+        if (v.omitted && Object.values(v.omitted).some((n) => typeof n === "number" && n > 0)) omissions.add("tool-preview");
+        for (const key of ["rows", "results", "nodes", "edges", "fields", "tools", "scripts", "matches", "samples", "usedBy", "uses"]) {
+          const n = v[key]?.length;
+          const total = key === "rows" || key === "results" || key === "tools" || key === "scripts" || key === "matches" ? v.total : v[key + "Total"];
+          if (Array.isArray(v[key]) && Number.isFinite(total) && total > n) omissions.add(key);
+        }
+        if (Number.isFinite(v.shown) && Number.isFinite(v.total) && v.shown < v.total) omissions.add("items");
+        if (Number.isFinite(v.lines) && Number.isFinite(v.to) && (v.to < v.lines || v.from > 1)) omissions.add("lines");
+        for (const [k, x] of Object.entries(v)) {
+          if (/^(moreFailures|moreParts|usedByTotal)$/.test(k) && x > (k === "usedByTotal" ? v.usedBy?.length || 0 : 0)) omissions.add(k);
+          if (typeof x === "string" && /\[(?:\d+ more chars|preview)\]|\.\.\. \(cut\)|… \(\d+ chars\)/.test(x)) omissions.add("text");
+          if (!["modelContext", "view", "read", "next", "inputSchema", "resultSchema"].includes(k)) visit(x, depth + 1);
+        }
+      }
+      visit(value);
+      return { reasons: [...reasons], omissions: [...omissions] };
+    }
+    function annotate(original, delivered, { all = false } = {}) {
+      const { reasons, omissions } = facts(original);
+      const compacted = !!delivered?.modelContext?.compacted;
+      const output = {
+        status: compacted || reasons.includes("source-or-tool-limit") ? "truncated" : omissions.length || reasons.includes("more-pages") ? "part" : "all",
+        source: reasons.length ? "partial" : "unknown",
+        ...reasons.length ? { limits: reasons } : {},
+        ...omissions.length ? { omitted: omissions } : {},
+        ...all ? { requestedAll: true } : {}
+      };
+      const value = delivered && typeof delivered === "object" && !Array.isArray(delivered) ? delivered : { result: delivered };
+      return { ...value, modelContext: { ...value.modelContext, output } };
+    }
+    module2.exports = { ALL, canonicalName, full, facts, annotate };
+  }
+});
+
 // lib/chat-pressure.js
 var require_chat_pressure = __commonJS({
   "lib/chat-pressure.js"(exports2, module2) {
@@ -79775,9 +79986,9 @@ var require_chat_pressure = __commonJS({
         limitations: "Tool tokens use UTF-8 bytes/3, not a tokenizer. Without client usage, system prompt, tool schemas, user/assistant text and attachments are unknown. Counts begin at process/session observation; a request is not proof of compaction."
       };
     }
-    function response(tool, original, { session, usage } = {}) {
-      const C = require_chat_context();
-      let value = C.prepare(tool, original), meta;
+    function response(tool, original, { session, usage, all = false } = {}) {
+      const C = require_chat_context(), O = require_tool_output();
+      let value = all ? O.full(original) : C.prepare(tool, original, { reserveBytes: 512 }), meta;
       try {
         let reportError;
         try {
@@ -79794,13 +80005,13 @@ var require_chat_pressure = __commonJS({
           const hint = { pressure: "high", source: meta.source, contextWindow: meta.contextWindow, estimatedUsedTokens: meta.estimatedUsedTokens, estimatedToolTokens: meta.estimatedToolTokens, advisory: true, next: { tool: "chat_compaction_request", guidance: "Save task progress/checkpoint, then explicitly request compaction. Use native context_compact if available; otherwise ask the client to Compact. Do not claim it happened from this hint." } };
           const wrap = (result) => result && typeof result === "object" && !Array.isArray(result) ? { ...result, modelContext: { ...result.modelContext, pressure: hint } } : { result, modelContext: { pressure: hint } };
           const limit = require_config().getTools().modelResultBytes;
-          if (limit && Buffer.byteLength(JSON.stringify(wrap(value))) > limit) value = C.prepare(tool, original, { reserveBytes: 1024 });
+          if (!all && limit && Buffer.byteLength(JSON.stringify(wrap(value))) > limit) value = C.prepare(tool, original, { reserveBytes: 1024 });
           value = wrap(value);
         }
       } catch {
         meta = { source: "unavailable", advisory: true, limitation: "Context diagnostics unavailable; the tool result is still valid" };
       }
-      return { value, meta };
+      return { value: O.annotate(original, value, { all }), meta };
     }
     function compactRequest({ context: context2, checkpoint }) {
       const C = require_context();
@@ -83109,7 +83320,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "20b15223f9e22925449fa2703193ce13c9af7301dbfb459b94074b42fde236d9";
+      if (true) return "234d6cc086a6f737db7b5625d2d4239c09f686dfe244c96bb88ffa19933da12e";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -83915,6 +84126,7 @@ var require_tool_profiles = __commonJS({
       "show",
       "diff",
       "code",
+      "script_search",
       "script_list",
       "script_run",
       "showcase",
@@ -84015,6 +84227,7 @@ var require_tool_profiles = __commonJS({
       "api_request_prepare",
       "api_request_replay",
       "api_request_save",
+      "script_search",
       "script_list",
       "script_get",
       "script_run",
@@ -84059,10 +84272,10 @@ var require_tool_profiles = __commonJS({
       lean: { description: "Four discovery tools. Search the catalog capability, describe it, then execute; expand profiles on request.", includeCore: false, names: DISCOVERY },
       "lean-find": { description: "Five tools: cached catalog search plus discovery; expand capabilities on request.", includeCore: false, names: [...DISCOVERY, "find"] },
       investigate: { description: "Find services and data, inspect evidence, follow logs and visualize dependencies.", names: [...CORE, "mapping_debug", "passport", "passports", "pg_query", "pg_usage", "data_readers", "data_writers", "data_trace", "data_index", "es_search", "kafka_last", "logs_search", "logs_trace", "health", "overview", "impact", "code_search", "feature", "experiment_list", "experiment_run"] },
-      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["service_env_", "fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_coverage_plan", "workspace_coverage", "workspace_open", "workspace_read", "workspace_write", "workspace_delete", "workspace_patch", "script_list", "script_get", "script_save", "script_delete", "script_run"] },
+      testing: { description: "Build reproducible fixtures, scenario contracts, collections and isolated test runs.", prefixes: ["service_env_", "fixture_", "scenario_", "collection_", "testdb_", "test_"], names: [...CORE, "workspace_coverage_plan", "workspace_coverage", "workspace_open", "workspace_read", "workspace_write", "workspace_delete", "workspace_patch", "script_search", "script_list", "script_get", "script_save", "script_delete", "script_run"] },
       develop: { description: "Inspect code, make a workspace change, compile and verify its behavior.", prefixes: ["service_env_", "workspace_", "code_", "test_", "semantic_", "passport_adjust", "jenkins_", "bitbucket_pr_"], names: [...CORE, "service_debug", "passport", "repo_fetch", "impact", "experiment_save", "experiment_run", "experiment_compare"] },
       knowledge: { description: "Inspect source-neutral documentation, contracts, architecture and provenance.", prefixes: ["knowledge_", "docs_", "architecture_", "project_context_"], names: [...CORE, "feature", "passport", "who_uses"] },
-      api: { description: "Explore API/UI traffic and run mixed collections across HTTP, UI, Postgres, Elasticsearch and Kafka.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "mapping_debug", "pg_query", "es_search", "kafka_checkpoint", "kafka_wait", "kafka_produce", "script_list", "script_get", "script_run", "script_save", "script_delete", "script_transfer", "workflow_share", "pg_table", "pg_function", "script_collection", "routes_discover", "routes_learn"] },
+      api: { description: "Explore API/UI traffic and run mixed collections across HTTP, UI, Postgres, Elasticsearch and Kafka.", groups: ["api", "browser"], prefixes: ["api_", "collection_"], names: [...CORE, "mapping_debug", "pg_query", "es_search", "kafka_checkpoint", "kafka_wait", "kafka_produce", "script_search", "script_list", "script_get", "script_run", "script_save", "script_delete", "script_transfer", "workflow_share", "pg_table", "pg_function", "script_collection", "routes_discover", "routes_learn"] },
       all: { description: "Every enabled tool; compatible with existing installations." }
     };
     function definitions() {
@@ -89581,7 +89794,7 @@ var require_tools_semantic = __commonJS({
         } }
       ].map((tool) => ({ ...tool, description: tool.description + (tool.name === "semantic_query" ? " compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions." : ""), input: { ...response, ...tool.input }, run: async (a) => {
         const result = await tool.run(a);
-        return a.format === "full" ? result : (tool.name === "semantic_trace" ? require_semantic_path_trace() : require_semantic_response()).compact(result, a.max_output_bytes || 16384);
+        return a.all || a.format === "full" ? result : (tool.name === "semantic_trace" ? require_semantic_path_trace() : require_semantic_response()).compact(result, a.max_output_bytes || 16384);
       }, group: "semantic", origin: "built-in", strictInput: true }));
     };
     module2.exports.present = present;
@@ -92307,7 +92520,7 @@ var require_tools_discovery = __commonJS({
       {
         name: "tool_search",
         group: "catalog",
-        description: "Find enabled capabilities by action, not an object name. Inspect tool_describe, then call tool_execute. Results can include planning guides; no task runs",
+        description: "Discover tools and specialized searches by action (saved scripts: script_search). Read exact inputs with tool_describe.",
         input: { query: { ...str("Task/action or exact tool name; object names alone do not search code"), maxLength: 4e3 }, group: str("Optional tool category (context/views/code/consul), never an object/ticket. Omit if unsure."), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("JSON response budget; full oversized result in view", 4096), minimum: 2048, maximum: 16384 } },
         required: ["query"],
         run: async (a) => {
@@ -92315,17 +92528,19 @@ var require_tools_discovery = __commonJS({
           if (a.group && !tools.some((t) => t.group === a.group)) return { error: { code: "DT_TOOL_GROUP_UNKNOWN", message: "Unknown tool category. Omit group; tickets and service names belong in task arguments." }, groups: [...new Set(tools.map((t) => t.group))].sort(), retry: { tool: "tool_search", arguments: { query: a.query } }, hint: "Retry once without group, then describe an exact capability and call tool_execute." };
           const S = require_tool_search(), ranker = require_config().getTools().discoveryRanker, { matches, lexical } = S.search(tools, a.query, a.group, ranker);
           const broader = a.group ? S.rank(tools, a.query, void 0, ranker)[0]?.t : null, groupHint = broader && broader.group !== a.group ? { message: "This group excludes the leading capability for the requested action. The filtered results below still use your group.", candidate: { name: broader.name, group: broader.group }, retry: { tool: "tool_search", arguments: { query: a.query } }, next: { tool: "tool_describe", arguments: { name: broader.name } } } : null;
-          return W.bounded({ ...groupHint ? { groupHint } : {}, total: matches.length, tools: matches.slice(0, a.limit).map(({ t }) => ({ name: t.name, group: t.group, description: t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", args: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" }, a.max_bytes);
+          const result = { ...groupHint ? { groupHint } : {}, total: matches.length, tools: (a.all ? matches : matches.slice(0, a.limit)).map(({ t }) => ({ name: t.name, group: t.group, description: a.all ? t.description : t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", arguments: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" };
+          return a.all ? result : W.bounded(result, a.max_bytes);
         }
       },
       { name: "tool_describe", group: "catalog", description: "Read one enabled tool\u2019s exact schema, required fields and guidance before tool_execute. Grants stay unchanged.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
-        const tool = (await registry()).find((t) => t.name === a.name);
+        const tool = (await registry()).find((t) => t.name === require_tool_output().canonicalName(a.name));
         if (!tool) throw new Error(`Unknown or disabled tool ${a.name}`);
         return tool;
       } },
       { name: "tool_execute", group: "catalog", description: "Call a described tool with exact arguments and normal permissions, validation and tracing. Preserves native views; cannot dispatch discovery recursively.", input: { name: str("Exact enabled tool name"), arguments: { type: "object", additionalProperties: true, description: "Arguments conforming to tool_describe inputSchema" } }, required: ["name", "arguments"], run: (a) => {
-        if (["tool_execute", "tool_search", "tool_describe", "tool_profiles"].includes(a.name)) throw new Error("Call discovery tools directly");
-        return require_tools().call(a.name, a.arguments, { source: "tool_execute" });
+        const name = require_tool_output().canonicalName(a.name);
+        if (["tool_execute", "tool_search", "tool_describe", "tool_profiles"].includes(name)) throw new Error("Call discovery tools directly");
+        return require_tools().call(name, { ...a.arguments, ...a.all ? { all: true } : {} }, { source: "tool_execute" });
       } }
     ];
   }
@@ -94898,7 +95113,7 @@ var require_tools = __commonJS({
         run: (a) => {
           const found = require_pgindex().describe(a.env, a.name).filter((o) => !["function", "procedure", "aggregate", "window"].includes(o.kind));
           if (!found.length) throw new Error(`${a.name} not in the ${a.env} catalog; use find (or catalog_sync if it is new)`);
-          return found.map((o) => ({ ...o, usedBy: o.usedBy.slice(0, 60), usedByTotal: o.usedBy.length, uses: o.uses.slice(0, 40), note: require_notes().get(o.object, o.db) }));
+          return found.map((o) => ({ ...o, usedBy: a.all ? o.usedBy : o.usedBy.slice(0, 60), usedByTotal: o.usedBy.length, uses: a.all ? o.uses : o.uses.slice(0, 40), usesTotal: o.uses.length, note: require_notes().get(o.object, o.db) }));
         }
       },
       {
@@ -94908,9 +95123,9 @@ var require_tools = __commonJS({
         input: { name: str("schema.function"), env, body: { type: "boolean", default: true, description: "Include the body" } },
         required: ["name"],
         run: (a) => {
-          const found = require_pgindex().describe(a.env, a.name, { body: a.body !== false, bodyLimit: 8e3 }).filter((o) => ["function", "procedure", "aggregate", "window"].includes(o.kind) || o.kind === "unknown");
+          const found = require_pgindex().describe(a.env, a.name, { body: a.body !== false, bodyLimit: a.all ? Infinity : 8e3 }).filter((o) => ["function", "procedure", "aggregate", "window"].includes(o.kind) || o.kind === "unknown");
           if (!found.length) throw new Error(`${a.name} not in the ${a.env} catalog; use find with "pgfn:"`);
-          return found.map(({ body, ...o }) => ({ ...o, ...a.body !== false ? { body: clip(body, 8e3) } : {}, usedBy: o.usedBy.slice(0, 60), usedByTotal: o.usedBy.length, uses: o.uses.slice(0, 60), note: require_notes().get(o.object, o.db) }));
+          return found.map(({ body, ...o }) => ({ ...o, ...a.body !== false ? { body: a.all ? body : clip(body, 8e3) } : {}, usedBy: a.all ? o.usedBy : o.usedBy.slice(0, 60), usedByTotal: o.usedBy.length, uses: a.all ? o.uses : o.uses.slice(0, 60), usesTotal: o.uses.length, note: require_notes().get(o.object, o.db) }));
         }
       },
       {
@@ -94999,7 +95214,7 @@ var require_tools = __commonJS({
         run: (a) => {
           const t = readJson(path3.join(CACHE2, a.env, "kafka", `${safeName(a.topic)}.json`));
           if (!t) throw new Error(`${a.topic} not in cache; try find with "kafka:"`);
-          return { ...t, samples: t.samples.slice(0, 1) };
+          return { ...t, samples: a.all ? t.samples : t.samples.slice(0, 1), samplesTotal: t.samples.length };
         }
       },
       {
@@ -95172,7 +95387,7 @@ var require_tools = __commonJS({
         limit: () => "confluence",
         run: async (a) => {
           const p = await require_atlassian().confluencePage(a.id);
-          return { ...p, text: clip(p.text, 6e4) };
+          return { ...p, text: a.all ? p.text : clip(p.text, 6e4) };
         }
       },
       {
@@ -95218,7 +95433,7 @@ var require_tools = __commonJS({
           const A = require_atlassian(), { project, repo } = await A.projectOf(a.project, a.repo);
           const pr = await A.prDetails(project, repo, a.id);
           const view = require_results().save("pr", pr.files, { query: `${project}/${repo}#${a.id} ${pr.title}`, pr });
-          return { ...pr, diff: clip(pr.diff, 4e4), view };
+          return { ...pr, diff: a.all ? pr.diff : clip(pr.diff, 4e4), view };
         }
       },
       {
@@ -95352,6 +95567,19 @@ var require_tools = __commonJS({
             const m = S.getCollection(c.collection);
             return { ...c, description: m.description, tool: m.toolName };
           }) };
+        }
+      },
+      {
+        name: "script_search",
+        group: "scripts",
+        description: "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids for script_get or script_run. Use tool_search to discover other specialized searches.",
+        input: { query: str("Words or script id; all words must match"), collection: str("Optional collection prefix"), limit: int("Preview matches", 10) },
+        required: ["query"],
+        run: (a) => {
+          const words = a.query.toLowerCase().split(/\s+/).filter(Boolean);
+          const scripts = require_scripts().list(a.collection || "").scripts.filter((s) => words.every((w) => `${s.id} ${s.description || ""} ${(s.params || []).join(" ")}`.toLowerCase().includes(w)));
+          const view = require_results().saveView("json", { total: scripts.length, scripts }, { title: "Saved script search" });
+          return { total: scripts.length, scripts: a.all ? scripts : scripts.slice(0, Math.max(1, Math.min(a.limit || 10, 100))), view };
         }
       },
       {
@@ -95669,7 +95897,7 @@ var require_tools = __commonJS({
         required: ["store", "path"],
         run: async (a) => {
           const r = await require_files().read(a.store, a.path);
-          return r.text !== void 0 ? { ...r, text: clip(r.text, 6e4) } : r;
+          return r.text !== void 0 ? { ...r, text: a.all ? r.text : clip(r.text, 6e4) } : r;
         }
       },
       {
@@ -96093,7 +96321,7 @@ var require_tools = __commonJS({
       });
     }
     function toolInputSchema(t) {
-      return { ...t.inputRules, type: "object", properties: props(t.input), required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} };
+      return { ...t.inputRules, type: "object", properties: { ...props(t.input), all: require_tool_output().ALL }, required: t.required || [], ...t.strictInput ? { additionalProperties: false } : {} };
     }
     async function schemas({ profile = "all", metadata = false } = {}) {
       const r = await ready();
@@ -96112,6 +96340,7 @@ var require_tools = __commonJS({
       }));
     }
     async function call(name, args = {}, { source, session, signal, _owned = false, _observation } = {}) {
+      name = require_tool_output().canonicalName(name);
       const E = require_execution(), C = require_config();
       require_access().checkTool(name);
       if (!_owned) {
@@ -96181,13 +96410,16 @@ var require_tools = __commonJS({
       }
     }
     async function callTool(name, args = {}, { isolated = false, admitted = false } = {}) {
+      name = require_tool_output().canonicalName(name);
       require_access().checkTool(name);
       require_execution().check();
       const t = (await ready()).byName[name];
       if (!t) throw Object.assign(new Error(`Unknown tool ${name}`), { code: "DT_TOOL_UNKNOWN" });
       if (!pluginApproved(t)) throw Object.assign(new Error("Plugin approval changed; approve and reload its current source before execution"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
       if (!args || typeof args !== "object" || Array.isArray(args)) throw Object.assign(new Error("Tool arguments must be an object"), { code: "DT_ARGUMENT_INVALID" });
-      const a = { ...args };
+      const a = name === "test_run" ? require_test_selection().normalize(args) : { ...args };
+      if (a.all === true && ["tool_execute", "context_run", "global_context_call"].includes(name) && a.arguments && typeof a.arguments === "object" && !Array.isArray(a.arguments)) a.arguments = { ...a.arguments, all: true };
+      if (a.all === true && t.input.format?.enum?.includes("full")) a.format = "full";
       for (const [k, s] of Object.entries(props(t.input))) if (a[k] === void 0 && s.default !== void 0) a[k] = s.default;
       for (const k of t.required || []) if (a[k] === void 0 || a[k] === "") throw Object.assign(new Error(`Missing argument: ${k}`), { code: "DT_ARGUMENT_INVALID", issues: [{ path: `$.${k}`, message: "required" }] });
       require_schema().assert(a, toolInputSchema(t));
@@ -96201,7 +96433,8 @@ var require_tools = __commonJS({
         const issues = require_schema().validate(value, t.adapterSchema);
         if (issues.length) throw Object.assign(new Error(`Tool result violates ${name} adapter contract: ${issues[0].path} ${issues[0].message}`), { code: "DT_BACKEND_CONTRACT", issues });
       }
-      return t.present ? t.present(value, a) : value;
+      const presented = t.present ? t.present(value, a) : value;
+      return a.all ? require_tool_output().full(presented) : presented;
     }
     async function groups() {
       const r = await ready();
@@ -98411,9 +98644,8 @@ var require_workbench = __commonJS({
     function fieldSchema(schema, field) {
       let current = schema;
       for (const segment of field.split(".")) {
-        if (/^\d+$/.test(segment) && current?.items) current = current.items;
-        else
-          current = (Object.hasOwn(current?.properties || {}, segment) ? current.properties[segment] : null) || (typeof current?.additionalProperties === "object" ? current.additionalProperties : current?.additionalProperties === true ? {} : null);
+        const variants = [current, ...current?.oneOf || [], ...current?.anyOf || []];
+        current = variants.map((s) => /^\d+$/.test(segment) && s?.items ? s.items : Object.hasOwn(s?.properties || {}, segment) ? s.properties[segment] : typeof s?.additionalProperties === "object" ? s.additionalProperties : s?.additionalProperties === true ? {} : null).find(Boolean);
         if (!current) return null;
       }
       return current;
@@ -103350,7 +103582,7 @@ var require_server2 = __commonJS({
         }
       });
     });
-    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.code === "DT_API_NETWORK" && e.exchange ? { exchange: e.exchange } : {}, ...e.issues ? { issues: e.issues } : {}, ...e.retryAfter ? { retryAfter: e.retryAfter } : {} });
+    var errorPayload = (e) => require_redact().clean({ error: e.message, ...e.code ? { code: e.code } : {}, ...e.code === "DT_API_NETWORK" && e.exchange ? { exchange: e.exchange } : {}, ...e.issues ? { issues: e.issues } : {}, ...e.candidates ? { candidates: e.candidates } : {}, ...e.retryAfter ? { retryAfter: e.retryAfter } : {} });
     var cookie = (req, name) => (String(req.headers.cookie || "").match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`)) || [])[1];
     function trusted(req) {
       return !!require_access().identity(req);
@@ -103408,7 +103640,7 @@ var require_server2 = __commonJS({
           else requestSignal?.addEventListener("abort", onAbort, { once: true });
           mcpRequests.set(key, controller);
           try {
-            const delivered = require_chat_pressure().response(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: "mcp", session, signal: controller.signal }), { session, usage: msg.params?._meta?.["dev-tool/context"] });
+            const delivered = require_chat_pressure().response(msg.params.name, await tools.call(msg.params.name, msg.params.arguments || {}, { source: "mcp", session, signal: controller.signal }), { session, usage: msg.params?._meta?.["dev-tool/context"], all: msg.params.arguments?.all === true || msg.params.arguments?.arguments?.all === true });
             const result = delivered.value;
             lifecycle.to("replied");
             return reply({ content: [{ type: "text", text: typeof result === "string" ? result : JSON.stringify(result) }], _meta: { "dev-tool/context": delivered.meta } });
@@ -103460,7 +103692,8 @@ var require_server2 = __commonJS({
       const session = req.headers["x-openwebui-chat-id"] || req.headers["x-chat-id"] || null;
       let pressure;
       try {
-        const delivered = require_chat_pressure().response(name, await tools.call(name, await readJsonBody(req), { source: "openapi", session, signal: req.dtSignal }), { session, usage: req.headers["x-dt-context-usage"] });
+        const args = await readJsonBody(req);
+        const delivered = require_chat_pressure().response(name, await tools.call(name, args, { source: "openapi", session, signal: req.dtSignal }), { session, usage: req.headers["x-dt-context-usage"], all: args.all === true || args.arguments?.all === true });
         result = delivered.value;
         pressure = delivered.meta;
       } catch (e) {
@@ -104045,7 +104278,7 @@ Serve
 
 Global: --env <name> (default: first env), --pretty.  Config folder: DT_HOME (default: this folder)
 `.trim();
-var BOOL_FLAGS = /* @__PURE__ */ new Set(["pretty", "compact", "lan", "help", "uses", "dry-run", "update", "deep"]);
+var BOOL_FLAGS = /* @__PURE__ */ new Set(["pretty", "compact", "all", "diff", "lan", "help", "uses", "dry-run", "update", "deep"]);
 function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < argv.length; i++) {
@@ -104203,7 +104436,10 @@ var commands = {
     const [name, json] = opts._;
     if (!name) return (await require_tools().schemas()).map((t) => `${t.name}: ${t.description}`);
     try {
-      return await require_tools().call(name, json ? JSON.parse(json) : {}, { source: "cli" });
+      const args = json && json !== "-diff" ? JSON.parse(json) : {};
+      if (opts.all) args.all = true;
+      if (opts.diff || json === "-diff") args.scope = "diff";
+      return await require_tools().call(name, args, { source: "cli" });
     } finally {
       await require_pg().closeAll();
     }

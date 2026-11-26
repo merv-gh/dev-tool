@@ -49,6 +49,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "type": "integer",
       "description": "Max lines",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -97,6 +101,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "type": "integer",
       "description": "Page size, up to 500",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -151,6 +159,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "type": "integer",
       "description": "Page size, up to 500",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -202,6 +214,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     "reference": {
       "type": "string",
       "description": "Owned reference id to release"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -263,6 +279,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     "job": {
       "type": "string",
       "description": "A job id from an earlier \"running\" answer: wait for that job instead of starting a sync"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -316,6 +336,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "type": "string",
       "description": "Optional question or tool search",
       "maxLength": 300
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -359,6 +383,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "type": "integer",
       "description": "Maximum chapter matches",
       "default": 6
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -380,7 +408,12 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -404,6 +437,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     "id": {
       "type": "string",
       "description": "Exact guide id from tool_search; omit to list guides"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -430,6 +467,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     "name": {
       "type": "string",
       "description": "Optional exact contract name, e.g. v1/tool-request.schema.json"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -451,7 +492,12 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -462,7 +508,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_search
 
-Find enabled capabilities by action, not an object name. Inspect tool_describe, then call tool_execute. Results can include planning guides; no task runs
+Discover tools and specialized searches by action (saved scripts: script_search). Read exact inputs with tool_describe.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -494,6 +540,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "default": 4096,
       "minimum": 2048,
       "maximum": 16384
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -521,6 +571,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     "name": {
       "type": "string",
       "description": "Exact tool name"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -553,6 +607,10 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
       "type": "object",
       "additionalProperties": true,
       "description": "Arguments conforming to tool_describe inputSchema"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -571,6 +629,9 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 - [`field_trace`](#tool-field_trace)
 - [`pg_usage`](#tool-pg_usage)
 - [`pg_query`](#tool-pg_query)
+- [`data_index`](#tool-data_index)
+- [`data_readers`](#tool-data_readers)
+- [`data_writers`](#tool-data_writers)
 
 <a id="tool-pg_table"></a>
 
@@ -597,6 +658,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -637,6 +702,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "type": "boolean",
       "default": true,
       "description": "Include the body"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -680,6 +749,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     "repos": {
       "type": "string",
       "description": "Code index keys or globs to search (default: the repos of the services that call it)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -723,6 +796,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
         "uses"
       ],
       "default": "used_by"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -781,13 +858,348 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "default": false,
-      "description": "Return every row (up to 10000) instead of a preview: for scripts that compare or process them"
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
     "sql"
   ]
+}
+```
+
+</details>
+
+<a id="tool-data_index"></a>
+
+### data_index
+
+Inspect/build the cached code+database access index in an owned background job. Missing/stale reader/writer/trace queries start it automatically. Reuses source revisions; keeps last good generations. job observes progress; job_cancel cancels. configure saves private aliases/reviewed links with revision protection.
+
+Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Repository/index keys or globs; default all cached repositories and pinned libraries"
+    },
+    "db": {
+      "type": "string",
+      "description": "Exact configured database when names collide"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "status",
+        "refresh",
+        "configure"
+      ],
+      "default": "refresh"
+    },
+    "refresh": {
+      "type": "boolean",
+      "default": false
+    },
+    "job": {
+      "type": "string",
+      "description": "Returned owned data index job id"
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Observation wait, max 30000 ms",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 30000
+    },
+    "expected_revision": {
+      "type": "string",
+      "description": "rulesRevision from status, required for configure"
+    },
+    "rules": {
+      "type": "object",
+      "description": "Private rules: aliases [{target,names:[...]}], links [{from,to,relation,access,evidence}]; links use exact canonical ids"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Evidence rows per retained page",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Continuation from this query"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Retained data index generation"
+    },
+    "includeCandidates": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include labelled ORM/ambiguous candidates"
+    },
+    "includeObjectAccess": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show getters/setters separately from persisted database reads/writes"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "description": "Model preview bytes; retained view keeps the page",
+      "default": 16384,
+      "minimum": 4096,
+      "maximum": 65536
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-data_readers"></a>
+
+### data_readers
+
+Who reads a table, column, procedure/function, topic or ES index across services and pinned libraries? Exact name (db:schema.table.column) or canonical id. Separates SQL, ORM candidates and getter/setter object access; mode=mentions pages substring candidates. Missing/stale indices refresh in background; returns job and inline evidence.
+
+Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Repository/index keys or globs; default all cached repositories and pinned libraries"
+    },
+    "db": {
+      "type": "string",
+      "description": "Exact configured database when names collide"
+    },
+    "name": {
+      "type": "string",
+      "description": "Exact table/column/function, topic:name, es:index or canonical id"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "access",
+        "mentions"
+      ],
+      "default": "access"
+    },
+    "maxNodes": {
+      "type": "integer",
+      "description": "Upstream attribution node budget per evidence source",
+      "default": 500,
+      "minimum": 10,
+      "maximum": 5000
+    },
+    "maxHops": {
+      "type": "integer",
+      "description": "Upstream attribution depth",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 80
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Total upstream attribution time budget",
+      "default": 1000,
+      "minimum": 50,
+      "maximum": 5000
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Evidence rows per retained page",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Continuation from this query"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Retained data index generation"
+    },
+    "includeCandidates": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include labelled ORM/ambiguous candidates"
+    },
+    "includeObjectAccess": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show getters/setters separately from persisted database reads/writes"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "description": "Model preview bytes; retained view keeps the page",
+      "default": 16384,
+      "minimum": 4096,
+      "maximum": 65536
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-data_writers"></a>
+
+### data_writers
+
+Who writes a table, column, procedure/function, topic or ES index across services and pinned libraries? Exact name (db:schema.table.column) or canonical id. Separates SQL, ORM candidates and getter/setter object access; mode=mentions pages substring candidates. Missing/stale indices refresh in background; returns job and inline evidence.
+
+Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Repository/index keys or globs; default all cached repositories and pinned libraries"
+    },
+    "db": {
+      "type": "string",
+      "description": "Exact configured database when names collide"
+    },
+    "name": {
+      "type": "string",
+      "description": "Exact table/column/function, topic:name, es:index or canonical id"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "access",
+        "mentions"
+      ],
+      "default": "access"
+    },
+    "maxNodes": {
+      "type": "integer",
+      "description": "Upstream attribution node budget per evidence source",
+      "default": 500,
+      "minimum": 10,
+      "maximum": 5000
+    },
+    "maxHops": {
+      "type": "integer",
+      "description": "Upstream attribution depth",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 80
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Total upstream attribution time budget",
+      "default": 1000,
+      "minimum": 50,
+      "maximum": 5000
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Evidence rows per retained page",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Continuation from this query"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Retained data index generation"
+    },
+    "includeCandidates": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include labelled ORM/ambiguous candidates"
+    },
+    "includeObjectAccess": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show getters/setters separately from persisted database reads/writes"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "description": "Model preview bytes; retained view keeps the page",
+      "default": 16384,
+      "minimum": 4096,
+      "maximum": 65536
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "additionalProperties": false
 }
 ```
 
@@ -832,6 +1244,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "type": "integer",
       "description": "Hits",
       "default": 20
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -863,6 +1279,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -905,6 +1325,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -945,6 +1369,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "type": "integer",
       "description": "Messages",
       "default": 5
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -981,6 +1409,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "type": "integer",
       "description": "Groups to fetch",
       "default": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -1018,6 +1450,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     "topic": {
       "type": "string",
       "description": "Topic name"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1087,6 +1523,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "type": "integer",
       "description": "Per-partition page, 1..500",
       "default": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1149,6 +1589,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     "value_serde": {
       "type": "string",
       "description": "Kafka UI value serializer, default String"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1193,6 +1637,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       "type": "boolean",
       "default": false,
       "description": "Preview only services that are not healthy"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -1222,6 +1670,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -1265,6 +1717,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       "type": "boolean",
       "default": true,
       "description": "Also probe /version on passing replicas; false reads Consul health only"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1305,6 +1761,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     "filter": {
       "type": "string",
       "description": "Part of repo name"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -1342,6 +1802,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     "at": {
       "type": "string",
       "description": "Branch/tag/commit"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1381,6 +1845,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     "at": {
       "type": "string",
       "description": "Branch/tag/commit"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1423,6 +1891,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
         "ALL"
       ],
       "default": "OPEN"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1458,6 +1930,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     "project": {
       "type": "string",
       "description": "Project key; optional when the slug is unique"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1501,6 +1977,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
         "ALL"
       ],
       "default": "OPEN"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -1539,6 +2019,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
       "type": "boolean",
       "default": false,
       "description": "Also build the code graph"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1604,6 +2088,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
       "default": 1,
       "minimum": 0,
       "maximum": 20
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1693,6 +2181,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
       "default": 3000,
       "minimum": 100,
       "maximum": 10000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1762,6 +2254,10 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
       "type": "string",
       "description": "Stable idempotency key for this exact action; reuse it after a lost reply",
       "maxLength": 160
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1825,6 +2321,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "rerank": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1864,6 +2364,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "version": {
       "type": "integer",
       "description": "Cached historical version (optional)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1914,6 +2418,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
           "text"
         ]
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -1963,6 +2471,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
       "type": "boolean",
       "default": false,
       "description": "Render PlantUML SVG using configured local/runner JAR or Kroki; Mermaid renders in the view by default"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2007,6 +2519,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "render": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2038,6 +2554,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "space": {
       "type": "string",
       "description": "Space key (optional)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2065,6 +2585,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "id": {
       "type": "string",
       "description": "Page id from confluence_search"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2126,6 +2650,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
       "type": "integer",
       "description": "Log lines to fetch",
       "default": 200
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -2163,6 +2691,10 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     "from": {
       "type": "string",
       "description": "How far back to look: 24h default"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2230,6 +2762,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "job": {
       "type": "string",
       "description": "Passport job id to inspect without starting another build"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2253,7 +2789,12 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -2285,6 +2826,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2359,6 +2904,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "cursor": {
       "type": "string",
       "description": "Continuation bound to this exact port projection"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2417,6 +2966,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       "type": "integer",
       "description": "History entries 1..100",
       "default": 20
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2870,6 +3423,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
           "action"
         ]
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2913,6 +3470,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "site": {
       "type": "string",
       "description": "Only this site (optional)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -2947,6 +3508,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "object",
       "description": "Values for the <param> placeholders, e.g. {\"orderId\": \"123\"}",
       "additionalProperties": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -2987,6 +3552,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "url": {
       "type": "string",
       "description": "Or explicit http(s) URL"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3026,6 +3595,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "boolean",
       "default": false,
       "description": "Inspect this action schema without executing"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3057,6 +3630,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "source": {
       "type": "string",
       "description": "What UI action these exchanges explain"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3084,6 +3661,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "session": {
       "type": "string",
       "description": "Session to close"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3123,6 +3704,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "object",
       "additionalProperties": true,
       "description": "title, description, recipe:{url,steps}; optional services, fields, transports, databases and database_links arrays. Read the handbook for reviewed binding shapes."
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3162,6 +3747,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "object",
       "additionalProperties": true,
       "description": "Partial definition. databases:[{service,repo,sha,file,line,db,object,signature?,columns?,reason}]; database_links:[{db,object,signature?,target_db,target_object,target_signature?,columns?,access?,reason}]. services:[{service,analysis,entry,path?,method?,reason?}], fields:[{service,repo,sha,file,line,db,object,column,signature?,reason}], transports:[{service,repo,sha,file,line,target_service,method,path,reason}]."
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3200,6 +3789,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "revision": {
       "type": "string",
       "description": "Optional immutable recipe revision"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -3269,6 +3862,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "default": 0,
       "minimum": 0,
       "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -3320,6 +3917,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "host": {
       "type": "string",
       "description": "Only this host or site"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3349,6 +3950,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "source": {
       "type": "string",
       "description": "Where it came from, e.g. \"shop: order page\""
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3394,6 +3999,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "integer",
       "description": "Seconds to wait for the page to load data",
       "default": 3
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3429,6 +4038,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "catalog": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3472,6 +4085,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "integer",
       "description": "Objects per page, max 50",
       "default": 30
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3526,6 +4143,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "integer",
       "description": "Routes per page, maximum 250",
       "default": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3551,6 +4172,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "url": {
       "type": "string",
       "description": "Request URL to match configured scopes"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3579,6 +4204,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "source": {
       "type": "string",
       "description": "Provenance note, without credentials"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3611,6 +4240,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "integer",
       "description": "Max records, at most 500",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3636,6 +4269,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "exchange": {
       "type": "string",
       "description": "Exchange id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3686,6 +4323,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
         "description": "Named script assertion"
       },
       "description": "Assertions retained when saving"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3750,6 +4391,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
       "type": "integer",
       "description": "Request time limit, max 120000",
       "default": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -3832,6 +4477,10 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     "finally": {
       "type": "string",
       "description": "Existing script step finally hook"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3846,7 +4495,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
 
 ### mapping_debug
 
-Debug raw-to-response mappings side by side. Discover cached service SQL/source/topic references; save/edit a named notebook with HTTP request, PG/ES/Kafka read probes and JSON-pointer comparisons. Save/open never execute. run explicitly sends only selected steps (api may mutate); no model calls or retries. Private durable recordings freeze the definition, retain errors/timing and compare fields without claiming runtime lineage. open gives inline visualization and interactive workbench. Same user can resume across chats.
+Debug raw-to-response mappings. discover+workspace bundles entry call chains and copyable source files; discover+service reads cached SQL/ports. Named notebook: HTTP request, PG/ES/Kafka probes, pointer comparisons and optional selections (filters, ordering, whole-row fields, fallback). Candidates explain exclusions/winner; incomplete evidence stays inconclusive. Save/open never execute; run sends selected steps. Private recordings, inline/live views; contract checks are not runtime lineage.
 
 Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origin: built-in
 
@@ -3872,6 +4521,21 @@ Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origi
       "type": "string",
       "description": "Lowercase notebook/recording name"
     },
+    "workspace": {
+      "type": "string",
+      "description": "discover: owned workspace for bounded source context"
+    },
+    "entry": {
+      "type": "string",
+      "description": "discover+workspace: optional exact handler method or entry from returned list"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "minimum": 4096,
+      "maximum": 32768,
+      "default": 16384,
+      "description": "discover+workspace source preview budget"
+    },
     "service": {
       "type": "string",
       "description": "Exact service for discover"
@@ -3894,7 +4558,7 @@ Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origi
     "definition": {
       "type": "object",
       "additionalProperties": true,
-      "description": "version:1,title,service,env,follow_service,request:{method,url,headers,body:{kind,value}},probes:[{id,label,kind:pg|es|kafka,env,db,sql,params,index,query,topic,limit}],comparisons:[{label,probe,response_path:\"/name\",source_path:\"/0/name\"}],assumptions:[]"
+      "description": "version:1,title,service,env,request,probes:[{id,label,kind:pg|es|kafka,env,db,sql,params,index,query,topic,limit}],comparisons:[{label,probe,response_path,source_path}],assumptions:[],selections?:[{id,label,probe,row_id:\"/id\",filters:[{field,op:eq|ne|lt|lte|gt|gte|nonblank,value OR value_from:responsePointer,allow_null?}],order:[{field,direction:asc|desc,type?:text|number|integer|date}],fields:[{source_path,response_path}],fallback?:{probe,source_path,fields}}]. JSON pointers; lexical/numeric ordering is explicit."
     },
     "recording": {
       "type": "string",
@@ -3921,6 +4585,10 @@ Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origi
       "type": "boolean",
       "default": false,
       "description": "get: include bounded raw evidence; default compact receipts"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -3935,6 +4603,7 @@ Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origi
 ## scripts
 
 - [`script_list`](#tool-script_list)
+- [`script_search`](#tool-script_search)
 - [`script_collection`](#tool-script_collection)
 - [`script_get`](#tool-script_get)
 - [`script_save`](#tool-script_save)
@@ -3972,9 +4641,53 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "collection": {
       "type": "string",
       "description": "Only this collection (and below), e.g. \"orders\""
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
+}
+```
+
+</details>
+
+<a id="tool-script_search"></a>
+
+### script_search
+
+Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids for script_get or script_run. Use tool_search to discover other specialized searches.
+
+Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Words or script id; all words must match"
+    },
+    "collection": {
+      "type": "string",
+      "description": "Optional collection prefix"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Preview matches",
+      "default": 10
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "query"
+  ]
 }
 ```
 
@@ -4026,6 +4739,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "finally": {
       "type": "string",
       "description": "Cleanup after every script, including errors"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4053,6 +4770,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "id": {
       "type": "string",
       "description": "Script id, name or a close name, e.g. \"orders/support/refund-check\" or \"refund check\""
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4140,6 +4861,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
         "type": "string"
       },
       "description": "Collection suite selection tags"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4174,6 +4899,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "string",
       "pattern": "^[a-f0-9]{64}$",
       "description": "Revision returned by script_get"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4207,6 +4936,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "object",
       "description": "Param values",
       "additionalProperties": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4235,6 +4968,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "string",
       "description": "JavaScript (top-level await works)"
     },
+    "global_context": {
+      "type": "string",
+      "description": "Persistent project id from global_context_open: tools, scripts, workspaces and files use this principal-owned cross-chat scope; current permissions still apply. files defaults to this project memory."
+    },
     "context": {
       "type": "string",
       "description": "Context id from context_open: binds nearby files.list/search/read/readFile/readJson/write/writeJson/edit/remove helpers. Paths are relative to that folder. Read before overwriting; writes use saved revisions."
@@ -4251,6 +4988,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       ],
       "default": "node",
       "description": "QuickJS prototype supports pure transforms; Node also supports tools and direct fetch"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4291,6 +5032,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "result": {
       "description": "result (any JSON)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4350,6 +5095,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "prefix": {
       "type": "string",
       "description": "New private collection for import"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4389,6 +5138,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "move": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4418,6 +5171,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "collection": {
       "type": "string",
       "description": "Collection path"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4478,6 +5235,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "object",
       "additionalProperties": true,
       "description": "Suite configuration: order, tags, params, datasets, matrix, before, after, finally"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4515,6 +5276,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "boolean",
       "default": false,
       "description": "Explicitly include nested workflow definitions"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4587,6 +5352,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "object",
       "additionalProperties": true,
       "description": "Cartesian product: parameter name → array of typed values"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4658,6 +5427,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "object",
       "additionalProperties": true,
       "description": "Cartesian product: parameter name → array of typed values"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4756,6 +5529,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "integer",
       "description": "Wait before returning a background job, 0..50000",
       "default": 1000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -4785,6 +5562,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "reason": {
       "type": "string",
       "description": "Reason recorded with cancellation"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4812,6 +5593,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     "run": {
       "type": "string",
       "description": "Collection run id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4848,6 +5633,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
       "type": "integer",
       "description": "Newest runs, up to 100",
       "default": 30
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -4882,6 +5671,10 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
         "junit"
       ],
       "default": "view"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4929,6 +5722,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     "title": {
       "type": "string",
       "description": "Title"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -4992,6 +5789,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     "title": {
       "type": "string",
       "description": "Title"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5016,7 +5817,12 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -5040,6 +5846,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     "name": {
       "type": "string",
       "description": "View name"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5078,6 +5888,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "sample": {
       "description": "Sample DATA, for the preview on /admin"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5132,6 +5946,10 @@ Workflow: [Your first investigation](README.md#start) · Origin: built-in
     "task": {
       "type": "string",
       "description": "Ticket/task identifier from the user, e.g. ORDERS-142. No context creation or prior lookup required."
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -5213,6 +6031,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
       "minimum": 0,
       "maximum": 30000,
       "default": 0
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5266,6 +6088,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
       "items": {
         "type": "string"
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5334,6 +6160,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "q": {
       "type": "string"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5378,6 +6208,10 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "after": {
       "type": "string"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5433,6 +6267,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "integer",
       "description": "Levels of subfolders",
       "default": 6
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5464,6 +6302,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "path": {
       "type": "string",
       "description": "File path"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5488,7 +6330,12 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -5533,6 +6380,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "integer",
       "description": "Max entries",
       "default": 200
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5581,6 +6432,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "integer",
       "description": "Max files",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5612,6 +6467,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "path": {
       "type": "string",
       "description": "File path"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5656,6 +6515,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "overwrite": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5701,6 +6564,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "overwrite": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5739,6 +6606,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "expected_revision": {
       "type": "string",
       "description": "SHA256 revision from the last read/write"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5785,6 +6656,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "summary": {
       "type": "string",
       "description": "Why this file is archived"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5858,6 +6733,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "type": "integer",
       "description": "Max calls",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -5897,6 +6776,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "type": "integer",
       "description": "Max events",
       "default": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -5927,6 +6810,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "type": "boolean",
       "default": false,
       "description": "Also fetch the repo into a scratch folder"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -5952,6 +6839,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "job": {
       "type": "string",
       "description": "Job id (from a \"running\" answer, call_history or /admin Jobs)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -5985,6 +6876,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "type": "integer",
       "description": "Max patterns",
       "default": 10
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -6017,6 +6912,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "default": 20,
       "minimum": 1,
       "maximum": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -6072,6 +6971,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "job": {
       "type": "string",
       "description": "A job id from an earlier \"running\" answer"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -6109,6 +7012,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
 - [`workspace_terminal`](#tool-workspace_terminal)
 - [`gradle_inventory`](#tool-gradle_inventory)
 - [`gradle_bump`](#tool-gradle_bump)
+- [`data_trace`](#tool-data_trace)
 - [`fixture_schema`](#tool-fixture_schema)
 - [`fixture_plan`](#tool-fixture_plan)
 - [`fixture_capture`](#tool-fixture_capture)
@@ -6202,6 +7106,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "boolean",
       "default": false,
       "description": "Include stored commit indexes when listing"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -6264,6 +7172,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "integer",
       "description": "Max hits",
       "default": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6310,6 +7222,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "integer",
       "description": "Max results",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6324,7 +7240,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### code_read
 
-Read a file of an indexed repo or workspace with line numbers (from..to, 400 lines at most).
+Read indexed source with line numbers (from..to, preview up to 400 lines). all=true removes the preview cap; explicit from/to still select a range.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -6350,6 +7266,14 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "to": {
       "type": "integer",
       "description": "Last line (default from+299)"
+    },
+    "expected_source_digest": {
+      "type": "string",
+      "description": "Optional source digest from retained evidence; rejects changed index/live files"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6423,6 +7347,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "cursor": {
       "type": "string",
       "description": "Continuation for the same query and graph revision"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6484,6 +7412,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "path": {
       "type": "string",
       "description": "File path in the workspace"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6541,6 +7473,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "job": {
       "type": "string",
       "description": "A job id from an earlier \"running\" answer"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -6562,7 +7498,12 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -6604,6 +7545,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "boolean",
       "default": false,
       "description": "Add display line-number prefixes (plain source by default)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6676,6 +7621,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "boolean",
       "default": true,
       "description": "Apply the clear compile fixes to the files (false: offer them as suggestions)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6712,6 +7661,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "expected_revision": {
       "type": "string",
       "description": "SHA256 revision from workspace_read or workspace_write"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6742,6 +7695,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "workspace": {
       "type": "string",
       "description": "Workspace id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6769,6 +7726,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "workspace": {
       "type": "string",
       "description": "Workspace id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6783,7 +7744,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### test_context
 
-Plan an outside-in test from an HTTP/listener/job entry through real service and internal-library code to observable exits. A class target resolves to public callers; multiple callers require choosing the behavior. Returns chain, boundary doubles, fixtures, source, skeleton and an explicit integrationPlan. Database/client mocks do not prove SQL, wire or broker behavior. Use flow=false or strategy=unit for intentional class isolation; env supplies real-schema DDL.
+Plan outside-in entry-to-exit tests and Testcontainers/warm-lease setup through real service and internal-library code. Returns chain, fixtures, source, skeleton and integrationPlan with dependency-provider guidance. A class target resolves to public callers; choose among multiple entries. Database/client mocks do not prove SQL, wire or broker behavior. Use flow=false or strategy=unit for intentional class isolation; env supplies real-schema DDL.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -6825,6 +7786,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       ],
       "default": "outside-in",
       "description": "Prefer entry-to-exit behavior; unit explicitly requests class isolation"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6861,6 +7826,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "message": {
       "type": "string",
       "description": "Commit message"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6907,6 +7876,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "boolean",
       "default": true,
       "description": "Write it into the workspace (false: return the source)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -6930,7 +7903,12 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -6998,6 +7976,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "env": {
       "type": "string",
       "description": "Source environment provenance"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7032,6 +8014,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "base": {
       "type": "string",
       "description": "Optional Git base commit/ref; defaults to the workspace checkout base"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7067,6 +8053,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "file": {
       "type": "string",
       "description": "Optional exact source path for full line detail"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7081,7 +8071,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### test_run
 
-Run tests of a workspace using reviewed Node node:test file execution or the JVM build. Select target for actual execution placement/dependencies; env is source-catalog provenance. Fast by default on Maven projects: after one Maven prepare per workspace, only changed sources are compiled and the tests run in one JVM (seconds); mode="build" runs the project's Maven/Gradle (the final check). files=[{path, content|edits}] writes before running, so a try is one call. Every result is kept per test, so workspace_patch can show which tests failed before the fix and pass after it (red-green). coverage=true measures changed production lines/branches with fresh JaCoCo data; workspace_coverage_plan previews scope; workspace_coverage reads remaining gaps. The answer has: each test, its status and time, failures with message and the code parts to work on (the repo frames of the stack trace with the lines around them), compile errors with their lines, and the output tail. With env + db (or ddl_path), the run gets a throwaway Postgres database loaded with the DDL snapshot, passed to Spring as SPRING_DATASOURCE_*. Shown as a view. Takes a while: if it answers "running", call it again with that job id.
+Run all, changed, or named tests in an owned workspace. Omit tests for all; scope="diff" (or tests="-diff") selects changed tests and conservatively widens to all if impact is uncertain. tests accepts a name or list. Omit workspace when this scope has exactly one. Poll with job only. mode=auto/fast/build chooses execution engine. env is source-catalog provenance; target chooses reviewed execution/dependencies. Optional files writes before running; fixtures/db provide scratch dependencies. coverage=true measures changed JVM production lines. all=true returns the full retained report; compact failures and view are returned by default.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -7093,14 +8083,45 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
   "properties": {
     "workspace": {
       "type": "string",
-      "description": "Workspace id"
+      "description": "Optional workspace id; inferred only when exactly one owned workspace exists"
     },
     "tests": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "JVM classes (FooTest), Class#method, or explicit Node .test.js/.cjs/.mjs file paths"
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      ],
+      "description": "Test name/list (FooTest, Class#method or Node path). Omit/[] for all; \"-diff\" is a changed-test alias"
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "all",
+        "diff"
+      ],
+      "description": "Suite selection; omit for all or when tests names are provided"
+    },
+    "base": {
+      "type": "string",
+      "description": "Diff Git base; default pinned workspace checkout commit"
+    },
+    "diff": {
+      "type": "boolean",
+      "default": false,
+      "description": "Alias for scope=diff"
+    },
+    "-diff": {
+      "type": "boolean",
+      "default": false,
+      "description": "Compatibility alias for scope=diff"
     },
     "files": {
       "type": "array",
@@ -7139,7 +8160,12 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "enum": [
         "auto",
         "fast",
-        "build"
+        "build",
+        "all",
+        "diff",
+        "-diff",
+        "--diff",
+        "changed"
       ],
       "default": "auto",
       "description": "fast: compile only what changed and run in one JVM (Maven projects; a few seconds); build: the project's Maven/Gradle (the final check before the patch); auto: fast where it fits"
@@ -7207,11 +8233,14 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "boolean",
       "default": true,
       "description": "Apply the clear compile fixes to the files (false: offer them as suggestions)"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
-  "required": [
-    "workspace"
-  ]
+  "required": [],
+  "additionalProperties": false
 }
 ```
 
@@ -7238,6 +8267,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "refresh": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7270,6 +8303,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "ref": {
       "type": "string",
       "description": "Exact branch/ref from workspace_branches or the user."
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7286,7 +8323,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
 
 ### workspace_editor
 
-Offline workspace editor: list owned workspaces, list a folder, read complete UTF-8 text with a revision, or save with required expected_revision CAS. Open the UI at /editor?workspace=<id>. No compile fixes or external writes are implicit.
+Offline workspace editor: list owned workspaces, page folders or search file paths (next_cursor), read UTF-8 text with a revision, save with expected_revision CAS. UI: /editor?workspace=<id>&path=<file>&line=<n>. No implicit compile fixes or external writes.
 
 Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
 
@@ -7301,6 +8338,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "enum": [
         "list",
         "tree",
+        "search",
         "read",
         "save"
       ],
@@ -7314,6 +8352,23 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "string",
       "description": "Relative file or folder path"
     },
+    "query": {
+      "type": "string",
+      "description": "File name or relative path substring for search"
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Opaque next_cursor from tree/search; refresh if stale"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000
+    },
+    "refresh": {
+      "type": "boolean",
+      "description": "Rebuild the cached file path index"
+    },
     "content": {
       "type": "string",
       "description": "Complete UTF-8 source for save"
@@ -7324,6 +8379,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
         "null"
       ],
       "description": "SHA-256 from read; null only to create a new file"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -7372,6 +8431,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "allow_build": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7444,6 +8507,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "integer",
       "description": "Search row cap (1..500)",
       "default": 300
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -7494,9 +8561,141 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "plan": {
       "type": "string",
       "description": "Saved bump plan id for explicit apply"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-data_trace"></a>
+
+### data_trace
+
+Trace API/service/method to a table/column or exit through indexed calls, inherited libraries, procedures, Kafka and ES. Call/access topology, not runtime or value-flow proof. Cross-cluster topics stay separate; payload gaps and candidate links are labelled. Missing/stale index builds in background.
+
+Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "repos": {
+      "type": "string",
+      "description": "Repository/index keys or globs; default all cached repositories and pinned libraries"
+    },
+    "db": {
+      "type": "string",
+      "description": "Exact configured database when names collide"
+    },
+    "from": {
+      "type": "string",
+      "description": "Exact canonical id, GET /route, service:name or fully qualified method signature"
+    },
+    "to": {
+      "type": "string",
+      "description": "Exact column/table/function, topic:name, es:index or canonical symbol"
+    },
+    "service": {
+      "type": "string",
+      "description": "Source service when routes collide"
+    },
+    "maxHops": {
+      "type": "integer",
+      "description": "Path depth",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 80
+    },
+    "maxNodes": {
+      "type": "integer",
+      "description": "Traversal node budget",
+      "default": 3000,
+      "minimum": 10,
+      "maximum": 20000
+    },
+    "maxPaths": {
+      "type": "integer",
+      "description": "Alternative paths",
+      "default": 5,
+      "minimum": 1,
+      "maximum": 20
+    },
+    "fanout": {
+      "type": "integer",
+      "description": "Outgoing edges per node",
+      "default": 200,
+      "minimum": 10,
+      "maximum": 1000
+    },
+    "budgetMs": {
+      "type": "integer",
+      "description": "Traversal time budget",
+      "default": 1000,
+      "minimum": 50,
+      "maximum": 5000
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Evidence rows per retained page",
+      "default": 30,
+      "minimum": 1,
+      "maximum": 200
+    },
+    "cursor": {
+      "type": "string",
+      "description": "Continuation from this query"
+    },
+    "generation": {
+      "type": "string",
+      "description": "Retained data index generation"
+    },
+    "includeCandidates": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include labelled ORM/ambiguous candidates"
+    },
+    "includeObjectAccess": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show getters/setters separately from persisted database reads/writes"
+    },
+    "max_output_bytes": {
+      "type": "integer",
+      "description": "Model preview bytes; retained view keeps the page",
+      "default": 16384,
+      "minimum": 4096,
+      "maximum": 65536
+    },
+    "view": {
+      "type": "boolean",
+      "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "from",
+    "to"
+  ],
   "additionalProperties": false
 }
 ```
@@ -7532,6 +8731,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "path": {
       "type": "string",
       "description": "Optional value/key/headers path, including []"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7625,6 +8828,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Also follow reverse FKs (bounded); default only required parents"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -7661,6 +8868,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "job": {
       "type": "string",
       "description": "Poll a running capture instead of starting another"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -7687,6 +8898,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "capture": {
       "type": "string",
       "description": "Saved fixture capture id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7731,6 +8946,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Replace this fixture if it exists"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7768,6 +8987,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Replay despite reported capture gaps"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7805,6 +9028,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "profile": {
       "type": "string",
       "description": "Reviewed workspace JSON profile: {version:1,adapter:\"native-containers\",images?:{pg,es,kafka},kafka:{allowOffsetRemap:true}}. Existing images only; no arbitrary commands or source endpoints."
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7847,6 +9074,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "job": {
       "type": "string",
       "description": "Poll an existing native replay job"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -7873,6 +9104,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "id": {
       "type": "string",
       "description": "Owned native fixture runtime id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7906,6 +9141,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "object",
       "additionalProperties": true,
       "description": "Reviewed immutable effect contract"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7949,6 +9188,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "default": 0,
       "description": "Nonnegative source/record page offset"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -7987,6 +9230,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "default": 0,
       "description": "Nonnegative failed-check offset"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8038,6 +9285,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
         "partition",
         "value"
       ]
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8068,6 +9319,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "id": {
       "type": "string",
       "description": "Owned native fixture runtime id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8092,7 +9347,12 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": [],
   "additionalProperties": false
 }
@@ -8137,6 +9397,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
         "type": "string"
       },
       "description": "Explicit read-only tools, default [find]"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8179,6 +9443,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
       "type": "integer",
       "description": "Time limit, at most 120000",
       "default": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8206,6 +9474,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "id": {
       "type": "string",
       "description": "Optional experiment id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -8239,6 +9511,10 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     "after": {
       "type": "string",
       "description": "Later run id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8283,6 +9559,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "entry": {
       "type": "string",
       "description": "Optional exact flow entry, e.g. POST /orders/{id}/release or kafka orders.paid"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -8314,6 +9594,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "object",
       "additionalProperties": true,
       "description": "Dependency id -> explicit state binding"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8347,6 +9631,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": true,
       "description": "Mask sensitive fields across all dependencies"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8397,6 +9685,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "object",
       "additionalProperties": true,
       "description": "Request matched against provided exchanges [{request,response}]"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8430,6 +9722,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "object",
       "additionalProperties": true,
       "description": "Action id -> payload"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8463,6 +9759,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "object",
       "additionalProperties": true,
       "description": "Expectation id -> independent predicate"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8494,6 +9794,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "observed": {
       "description": "Observed value map or array of observation records"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8550,6 +9854,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "timeout_ms": {
       "type": "integer",
       "default": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8617,6 +9925,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Replace existing resources"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8643,7 +9955,12 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -8703,6 +10020,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "object",
       "additionalProperties": true,
       "description": "Required PostgreSQL major/collation/extensions"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8731,6 +10052,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "label": {
       "type": "string",
       "description": "Human-readable scratch cluster purpose"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -8762,6 +10087,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "description": "Page offset",
       "default": 0
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -8832,6 +10161,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Keep base from ordinary garbage collection"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -8863,6 +10196,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "description": "Page offset",
       "default": 0
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -8888,6 +10225,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "template": {
       "type": "string",
       "description": "Exact immutable template key from testdb_template_build/list"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8920,6 +10261,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Verify actual content through a disposable copy"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8951,6 +10296,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "reason": {
       "type": "string",
       "description": "Why this base must no longer be reused"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -8984,6 +10333,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": true,
       "description": "Protect this base from eviction"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9034,6 +10387,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "idempotencyKey": {
       "type": "string",
       "description": "Optional unique allocation request id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9059,6 +10416,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "lease": {
       "type": "string",
       "description": "Lease id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9091,6 +10452,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "description": "TTL from now, 1..604800000 ms",
       "default": 3600000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9123,6 +10488,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "description": "New lease TTL",
       "default": 3600000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9150,6 +10519,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "lease": {
       "type": "string",
       "description": "Lease id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9191,6 +10564,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "default": false,
       "description": "Preview without deleting resources"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9262,6 +10639,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9310,6 +10691,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9351,6 +10736,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "artifact": {
       "type": "object",
       "description": "Or inline portable artifact"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9385,6 +10774,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9426,6 +10819,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "artifact": {
       "type": "object",
       "description": "Or inline portable artifact"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9460,6 +10857,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9507,6 +10908,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "default": 300000,
       "minimum": 1000,
       "maximum": 3600000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9541,6 +10946,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9584,6 +10993,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9616,6 +11029,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9648,6 +11065,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "boolean",
       "description": "Include an interactive result view; default true",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9673,6 +11094,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     "session": {
       "type": "string",
       "description": "Scenario session id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9696,7 +11121,12 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -9743,6 +11173,10 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
       "type": "integer",
       "minimum": 0,
       "maximum": 10000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -9783,13 +11217,20 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 - [`project_context_find`](#tool-project_context_find)
 - [`project_context_get`](#tool-project_context_get)
 - [`project_context_save`](#tool-project_context_save)
+- [`job_get`](#tool-job_get)
+- [`workspace_create`](#tool-workspace_create)
+- [`workspace_program`](#tool-workspace_program)
+- [`global_context_open`](#tool-global_context_open)
+- [`global_context_find`](#tool-global_context_find)
+- [`global_context_get`](#tool-global_context_get)
+- [`global_context_call`](#tool-global_context_call)
 - [`self_context`](#tool-self_context)
 
 <a id="tool-result_read"></a>
 
 ### result_read
 
-Read a retained full tool response without rerunning its action. Use modelContext.resultId and an optional JSON pointer (/rows/0, /flowMap). UTF-8 JSON text pages have nextCursor; concatenate inside code before JSON.parse. References expire with result retention; save important evidence to task memory. Private to the original user/story.
+Read retained tool/view data without rerunning its action. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.
 
 Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
 
@@ -9801,7 +11242,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
   "properties": {
     "id": {
       "type": "string",
-      "description": "modelContext.resultId from a compacted tool response"
+      "description": "modelContext.resultId or id from view"
     },
     "path": {
       "type": "string",
@@ -9817,6 +11258,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "default": 1024,
       "minimum": 128,
       "maximum": 1536
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -9911,6 +11356,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "integer",
       "description": "Maximum folders",
       "default": 20
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -10013,6 +11462,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       },
       "maxItems": 100,
       "description": "tags: stable identifiers used to rediscover this folder across chats"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -10039,6 +11492,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "id": {
       "type": "string",
       "description": "Context folder id returned by context_find/context_open"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10085,6 +11542,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "integer",
       "description": "Maximum entries",
       "default": 200
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10134,6 +11595,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "integer",
       "description": "Maximum matching lines",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10198,6 +11663,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "summary": {
       "type": "string",
       "description": "Updated searchable file description"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10309,6 +11778,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "expected_revision": {
       "type": "string",
       "description": "Revision from the last read; rejects stale edits. Omit only for an intentional overwrite"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10357,6 +11830,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "to": {
       "type": "integer",
       "description": "Last line; with from defaults to 200 lines"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10417,6 +11894,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
         "null"
       ],
       "description": "Revision from context_read; null requires a new file"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10455,6 +11936,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "expected_revision": {
       "type": "string",
       "description": "Revision from the last read; rejects stale edits. Omit only for an intentional overwrite"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10496,6 +11981,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "summary": {
       "type": "string",
       "description": "Why this evidence matters"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10535,6 +12024,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "use_model": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10560,7 +12053,12 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": [],
   "additionalProperties": false
 }
@@ -10592,6 +12090,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "description": "Goal, constraints, exact revisions, build/PR ids, review findings, completed actions and next steps; no credentials",
       "minLength": 1,
       "maxLength": 12000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10663,6 +12165,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "minimum": 1,
       "maximum": 100,
       "default": 40
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -10692,6 +12198,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "env": {
       "type": "string"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10748,6 +12258,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
         "string",
         "null"
       ]
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10871,6 +12385,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
         "maxLength": 500
       },
       "description": "Exact tags discovery links; supplied lists replace the old list"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -10911,6 +12429,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "default": 20,
       "minimum": 1,
       "maximum": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -10941,6 +12463,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "detach": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -10967,6 +12493,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "id": {
       "type": "string",
       "description": "Stable continuation id; omit only after explicit attachment in this story"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -11097,6 +12627,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
         "maxLength": 500
       },
       "description": "Exact tags discovery links; supplied lists replace the old list"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11145,6 +12679,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "to": {
       "type": "integer",
       "description": "Optional last text line"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11203,6 +12741,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
         "string",
         "null"
       ]
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11251,6 +12793,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "type": "object",
       "additionalProperties": true,
       "description": "Exact arguments for automation_flow_<action>; ordinary schema/revision checks apply"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11287,6 +12833,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
       "default": 16000,
       "minimum": 1000,
       "maximum": 32000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -11329,6 +12879,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "include_archived": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -11399,6 +12953,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "view": {
       "type": "boolean",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -11508,12 +13066,308 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
           }
         }
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
     "id",
     "expected_revision",
     "reason"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-job_get"></a>
+
+### job_get
+
+Read one owned retained background job, its progress, result and execution outcome without restarting it. Use inside the same global_context scope that started a persistent project program. Transport loss or interrupted state does not establish a successful effect.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "job": {
+      "type": "string",
+      "description": "Job id returned by an action"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "job"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workspace_create"></a>
+
+### workspace_create
+
+Create a new owned local Git repository with an initial empty commit, ready for workspace_write/read/editor, code search and tests. No clone, remote creation or push. Use inside code(global_context=id) to retain it across chats; use workspace_open for an existing remote publication target.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Safe repository name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Purpose"
+    },
+    "branch": {
+      "type": "string",
+      "description": "Initial codex/ branch, default codex/work"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "name"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-workspace_program"></a>
+
+### workspace_program
+
+Run an authored Node/Python/Bash entrypoint in an owned workspace on the configured authenticated build runner. Admin-only, workspaceEditor.programs=true and allow_execute=true required. Starts a cancellable job; use job_get/job_cancel in the same scope. No local fallback, no shell interpolation, no automatic retry. Programs have runner-level privileges; review their source first.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string",
+      "description": "Owned workspace id"
+    },
+    "path": {
+      "type": "string",
+      "description": "Relative entrypoint file"
+    },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "node",
+        "python3",
+        "bash"
+      ],
+      "default": "node"
+    },
+    "args": {
+      "type": "array",
+      "maxItems": 100,
+      "items": {
+        "type": "string",
+        "description": "Literal command argument; no credentials"
+      }
+    },
+    "allow_execute": {
+      "type": "boolean",
+      "default": false
+    },
+    "timeout_ms": {
+      "type": "integer",
+      "description": "Execution timeout",
+      "default": 300000,
+      "minimum": 1000,
+      "maximum": 3600000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "workspace",
+    "path",
+    "allow_execute"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-global_context_open"></a>
+
+### global_context_open
+
+Open/create persistent project execution context across chats and restarts. Includes memory files, reusable code-mode scripts, repositories/workspaces and jobs. Explicit selection never imports private chat notes. Use code(global_context=id); normal tool grants still apply. Omit id for your default global context.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable project scope id, e.g. postgres-snapshotter; private to this principal across chats"
+    },
+    "title": {
+      "type": "string",
+      "description": "Project title on creation"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Project purpose/discovery terms on creation"
+    },
+    "repositories": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "Exact repository identity"
+      }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-global_context_find"></a>
+
+### global_context_find
+
+Find this principal’s persistent project scopes and understanding across chats. Searches titles, summaries, repository identities and memory file summaries; does not execute saved scripts or load other principals’ memory.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Project, script purpose or understanding keywords"
+    },
+    "limit": {
+      "type": "integer",
+      "description": "Maximum matches",
+      "default": 20,
+      "minimum": 1,
+      "maximum": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-global_context_get"></a>
+
+### global_context_get
+
+Read a persistent project memory index, reusable script inventory and repository workspaces. Read relevant memory with global_context_call(context_read) or code(global_context=id) files helpers. Execution is always explicit.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable project scope id, e.g. postgres-snapshotter; private to this principal across chats"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-global_context_call"></a>
+
+### global_context_call
+
+Execute one concrete enabled tool inside an explicitly selected persistent project scope: script_save/list/run, workspace_create/read/write, test_run, job, etc. Both tool grants apply. Effects run once; read retained jobs/results rather than repeating uncertain effects. Same user across chats, no shared publication.
+
+Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable project scope id, e.g. postgres-snapshotter; private to this principal across chats"
+    },
+    "tool": {
+      "type": "string",
+      "description": "Exact concrete tool name"
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "id",
+    "tool",
+    "arguments"
   ],
   "additionalProperties": false
 }
@@ -11546,6 +13400,10 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     "save": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -11593,6 +13451,10 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
       "default": 50,
       "minimum": 1,
       "maximum": 200
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -11648,6 +13510,10 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
       "type": "string",
       "description": "Full source commit SHA to verify, not a branch label",
       "pattern": "^[a-fA-F0-9]{40}([a-fA-F0-9]{24})?$"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11712,6 +13578,10 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
       "default": 8192,
       "minimum": 256,
       "maximum": 32768
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11759,6 +13629,10 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
           ]
         }
       ]
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11835,6 +13709,10 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
       "default": 3000,
       "minimum": 100,
       "maximum": 10000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11887,6 +13765,10 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
           }
         ]
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11910,6 +13792,13 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
 - [`automation_flow_resolve`](#tool-automation_flow_resolve)
 - [`automation_flow_cancel`](#tool-automation_flow_cancel)
 - [`automation_flow_model`](#tool-automation_flow_model)
+- [`task_run_action`](#tool-task_run_action)
+- [`task_run_catalog`](#tool-task_run_catalog)
+- [`task_run_start`](#tool-task_run_start)
+- [`task_run_list`](#tool-task_run_list)
+- [`task_run_status`](#tool-task_run_status)
+- [`task_run_control`](#tool-task_run_control)
+- [`task_run_memory`](#tool-task_run_memory)
 
 <a id="tool-automation_flow_save"></a>
 
@@ -11940,6 +13829,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
       "type": "object",
       "additionalProperties": true,
       "description": "title, nodes, optional limits; typed node definitions validated recursively"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11970,6 +13863,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     "id": {
       "type": "string",
       "description": "Flow id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -11994,7 +13891,12 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": [],
   "additionalProperties": false
 }
@@ -12036,6 +13938,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     "await_completion": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12069,6 +13975,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     "detail": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12106,6 +14016,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     "await_completion": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12155,6 +14069,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     "reason": {
       "type": "string",
       "description": "Required evidence/reason for this outcome decision"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12190,6 +14108,10 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     "reason": {
       "type": "string",
       "description": "Cancellation reason"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12230,10 +14152,385 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
       "default": 1200,
       "minimum": 1,
       "maximum": 8192
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
     "prompt"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_action"></a>
+
+### task_run_action
+
+Open this principal’s task-owned workspace editor/terminal from any chat, including a story-bound credential. The concrete tool must also be granted. Active worker writes stay locked until paused.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Persistent run id; available across this principal’s chats"
+    },
+    "tool": {
+      "type": "string",
+      "enum": [
+        "workspace_editor",
+        "workspace_terminal",
+        "workspace_list",
+        "workspace_branches",
+        "workspace_branch",
+        "gradle_inventory",
+        "gradle_bump"
+      ]
+    },
+    "arguments": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "run",
+    "tool"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_catalog"></a>
+
+### task_run_catalog
+
+Discover the autonomous web task desk, configured model, available research tools and global publication permission. No model call.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_start"></a>
+
+### task_run_start
+
+Start a persistent autonomous task from /tasks or tools. Gather Confluence/repository evidence into stable memory; optionally let an admin publish findings to one global context. Continues without an open browser; explicit auto_resume controls restart recovery.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Short task title"
+    },
+    "goal": {
+      "type": "string",
+      "description": "Goal, expected result, relevant sources and acceptance criteria"
+    },
+    "ticket": {
+      "type": "string",
+      "description": "Ticket or task identity; optional"
+    },
+    "task": {
+      "type": "string",
+      "description": "Optional existing continuation id"
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "research",
+        "change"
+      ],
+      "default": "research"
+    },
+    "repositories": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "string"
+      }
+    },
+    "spaces": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "string"
+      }
+    },
+    "env": {
+      "type": "string",
+      "description": "Environment scope"
+    },
+    "project_context": {
+      "type": "string",
+      "description": "Global knowledge context id"
+    },
+    "publish_code": {
+      "type": "boolean",
+      "default": false,
+      "description": "Standing task-branch push and draft PR permission; current-tree tests and changed-production coverage are mandatory"
+    },
+    "branch": {
+      "type": "string",
+      "description": "Dedicated codex/ task branch"
+    },
+    "target_branch": {
+      "type": "string",
+      "description": "PR destination; omitted uses verified remote default branch"
+    },
+    "publish": {
+      "type": "boolean",
+      "default": false,
+      "description": "Admin standing permission to publish report, notes and evidence globally on completion"
+    },
+    "allow_model": {
+      "type": "boolean",
+      "default": false
+    },
+    "auto_resume": {
+      "type": "boolean",
+      "default": true
+    },
+    "max_steps": {
+      "type": "integer",
+      "description": "Total model/tool step budget",
+      "default": 80,
+      "minimum": 1,
+      "maximum": 500
+    },
+    "max_tokens": {
+      "type": "integer",
+      "description": "Total model token budget",
+      "default": 200000,
+      "minimum": 1000,
+      "maximum": 2000000
+    },
+    "hours": {
+      "type": "integer",
+      "description": "Wall deadline, including downtime",
+      "default": 12,
+      "minimum": 1,
+      "maximum": 168
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "title",
+    "goal",
+    "allow_model"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_list"></a>
+
+### task_run_list
+
+List this principal’s persistent autonomous tasks across chats, with progress, budgets, waits and next actions. Does not resume work or call a model.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_status"></a>
+
+### task_run_status
+
+Read durable task progress and journal after a cursor. detail includes the actual retained model messages and context manifest. No execution or model call.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Persistent run id; available across this principal’s chats"
+    },
+    "after": {
+      "type": "integer",
+      "description": "Durable journal cursor",
+      "default": 0,
+      "minimum": 0
+    },
+    "detail": {
+      "type": "boolean",
+      "default": false
+    },
+    "view": {
+      "type": "boolean",
+      "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "run"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_control"></a>
+
+### task_run_control
+
+Steer, pause, resume, stop or explicitly checkpoint a persistent worker. Commands are saved before acknowledgement. resolve records a verified uncertain outcome; it never repeats an effect. A checkpoint retains the previous transcript.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Persistent run id; available across this principal’s chats"
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "pause",
+        "resume",
+        "stop",
+        "steer",
+        "checkpoint",
+        "resolve"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "Steering, explicit checkpoint or verified reconciliation evidence"
+    },
+    "result": {
+      "description": "Verified result for resolve; omitted means no result"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "run",
+    "action"
+  ],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-task_run_memory"></a>
+
+### task_run_memory
+
+Browse, read or edit persistent task memory across chats. Omit path for its searchable file index. Editing requires a paused worker and the exact file revision; scripts remain stored evidence.
+
+Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "run": {
+      "type": "string",
+      "description": "Persistent run id; available across this principal’s chats"
+    },
+    "path": {
+      "type": "string",
+      "description": "Exact memory file path from the index"
+    },
+    "content": {
+      "type": "string",
+      "description": "Optional edited UTF-8 content"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Searchable purpose"
+    },
+    "expected_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
+  "required": [
+    "run"
   ],
   "additionalProperties": false
 }
@@ -12355,6 +14652,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "minimum": 1000,
       "maximum": 120000,
       "default": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12436,6 +14737,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "view": {
       "type": "boolean",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -12462,6 +14767,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "view": {
       "type": "boolean",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -12475,7 +14784,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
 
 ### code_start
 
-Start an owned JavaScript cell and return its id immediately. Observe with code_wait; a short wait does not restart/cancel it. Node permits network fetch. QuickJS is an optional pure-transform engine.
+Start an owned JavaScript cell and return its id immediately. Observe with code_wait; a short wait does not restart/cancel it. global_context binds tools/files to durable project scope. Node permits network fetch. QuickJS is an optional pure-transform engine.
 
 Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: built-in
 
@@ -12488,6 +14797,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "code": {
       "type": "string",
       "description": "JavaScript with top-level await"
+    },
+    "global_context": {
+      "type": "string",
+      "description": "Persistent project execution scope from global_context_open; tools and files survive changing chats"
     },
     "context": {
       "type": "string",
@@ -12505,6 +14818,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       ],
       "default": "node",
       "description": "Node supports tools and direct fetch; QuickJS prototype is for pure transforms"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12543,6 +14860,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "type": "integer",
       "description": "Observation wait, up to 30000 ms",
       "default": 1000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12575,6 +14896,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "reason": {
       "type": "string",
       "description": "Cancellation reason"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12604,6 +14929,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
       "type": "integer",
       "description": "Maximum entries",
       "default": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -12630,6 +14959,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "id": {
       "type": "string",
       "description": "Execution id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12662,6 +14995,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "reason": {
       "type": "string",
       "description": "Reason"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12704,6 +15041,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "before": {
       "type": "string",
       "description": "Cursor from the previous page"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -12738,6 +15079,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     "id": {
       "type": "string",
       "description": "Record id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12800,6 +15145,10 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
         }
       },
       "additionalProperties": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12840,6 +15189,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     "worker": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -12877,6 +15230,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
         "string",
         "null"
       ]
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12914,6 +15271,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     "warm": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -12947,6 +15308,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     "job": {
       "type": "string",
       "description": "Optional preparation job id from pull-images"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -12996,6 +15361,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
         "null"
       ],
       "description": "Required only for write_path: existing file SHA-256 or null for new file"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -13033,6 +15402,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
       "type": "integer",
       "description": "Tail lines 1..500",
       "default": 100
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -13080,6 +15453,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
       "type": "integer",
       "description": "Renewal duration 60000..86400000",
       "default": 1800000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -13177,6 +15554,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
       "type": "integer",
       "description": "HTTP deadline 100..120000",
       "default": 15000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -13248,6 +15629,10 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
       "type": "integer",
       "description": "Event sequence cursor",
       "default": 0
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -13381,6 +15766,10 @@ Workflow: [Explore dev-tool from its own sources](README.md#self-reflection) · 
     "view": {
       "type": "boolean",
       "default": true
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -13419,6 +15808,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "maximum": 65536,
       "default": 16384,
       "description": "Compact JSON byte budget; preview omissions are explicit"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -13525,6 +15918,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "default": 0,
       "minimum": 0,
       "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -13654,6 +16051,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "default": 5000,
       "minimum": 100,
       "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -14377,6 +16778,10 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "default": 0,
       "minimum": 0,
       "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -14398,6 +16803,23 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 
 ```json
 {
+  "if": {
+    "required": [
+      "job"
+    ]
+  },
+  "then": {
+    "properties": {
+      "job": {
+        "minLength": 1
+      }
+    }
+  },
+  "else": {
+    "required": [
+      "operation"
+    ]
+  },
   "type": "object",
   "properties": {
     "format": {
@@ -14912,11 +17334,13 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
       "type": "boolean",
       "default": false,
       "description": "Include supported bypass/counterexample evidence"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
-  "required": [
-    "operation"
-  ],
+  "required": [],
   "additionalProperties": false
 }
 ```
@@ -14987,6 +17411,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "refresh": {
       "type": "boolean",
       "default": false
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -15042,6 +17470,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "kind": {
       "type": "string",
       "description": "prefix, service, ui, ui-repository, kafka, postgres, table, elasticsearch, elk, feature, library"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -15093,6 +17525,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "id": {
       "type": "string",
       "description": "Exact map node id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -15164,6 +17600,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       "type": "integer",
       "description": "Visited node budget, max 100000",
       "default": 10000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -15201,6 +17641,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "id": {
       "type": "string",
       "description": "Exact map node id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -15237,6 +17681,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "id": {
       "type": "string",
       "description": "Exact ui node id from map_search"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -15273,6 +17721,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "id": {
       "type": "string",
       "description": "Optional correction id to read with full nodes/edges"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -15403,6 +17855,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
         ],
         "additionalProperties": false
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -15437,6 +17893,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
       ],
       "default": "dev",
       "description": "Environment"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -15522,6 +17982,10 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     "expected_revision": {
       "type": "string",
       "description": "Existing revision; omitted only for a new id"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -15656,6 +18120,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
       "default": 12,
       "minimum": 1,
       "maximum": 40
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -15696,6 +18164,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
       "type": "integer",
       "description": "Page offset",
       "default": 0
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -15743,6 +18215,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
       "type": "integer",
       "description": "Recent publications, max 100",
       "default": 20
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -16114,6 +18590,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
           }
         }
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -16208,6 +18688,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "flow": {
       "type": "string",
       "description": "Named flow id for dynamic/dataflow"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -16335,6 +18819,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
           "additionalProperties": true
         }
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -16378,6 +18866,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
       "default": 0,
       "minimum": 0,
       "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -16481,6 +18973,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
         "plantuml"
       ],
       "default": "svg"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [],
@@ -16512,7 +19008,12 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
 ```json
 {
   "type": "object",
-  "properties": {},
+  "properties": {
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
+    }
+  },
   "required": []
 }
 ```
@@ -16536,6 +19037,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "source": {
       "type": "string",
       "description": "Configured source id; omit for all"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -16581,6 +19086,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
       "default": 15,
       "minimum": 1,
       "maximum": 50
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -16646,6 +19155,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
           "text"
         ]
       }
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [
@@ -16711,6 +19224,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
         "type": "string"
       },
       "description": "Optional seed entity kinds"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": []
@@ -16749,6 +19266,10 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     "id": {
       "type": "string",
       "description": "Exact entity id or unambiguous alias"
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full output; source limits apply."
     }
   },
   "required": [

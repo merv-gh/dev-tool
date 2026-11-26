@@ -71,7 +71,7 @@ test('small retained primitives, damaged files and invalid page arguments fail e
 });
 test('context pressure is advisory, session-scoped and does not compact or alter normal result types',async()=>{
  const P=require('../lib/chat-pressure');assert.equal(P.status('isolated').pressure,'unknown');
- const low=P.response('small',false,{session:'low'});assert.equal(low.value,false);assert.equal(low.meta.reportedUsedTokens,null);
+ const low=P.response('small',false,{session:'low'});assert.equal(low.value.result,false);assert.equal(low.value.modelContext.output.status,'all');assert.equal(low.meta.reportedUsedTokens,null);
  const high=P.response('small',{ok:true,job:'already-submitted'},{session:'high',usage:{usedTokens:240000,contextWindow:262144,model:'qwen3.8:27b'}});
  assert.equal(high.value.ok,true);assert.equal(high.value.modelContext.pressure.pressure,'high');assert.equal(high.meta.advisory,true);assert.equal(P.status('low').compactionRecommended,false);
  assert.equal(A.run({principalId:'other',storyId:'one'},()=>P.status('high')).pressure,'unknown');

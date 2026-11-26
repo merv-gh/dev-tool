@@ -34,6 +34,7 @@ Examples use illustrative `checkout`, `DEMO/checkout`, `orders`, `HANDBOOK-101` 
 - [Build and review a draft change](#ci-review)
 - [Developer studio: continue, coordinate and verify](#developer-studio)
 - [Debug service response mappings](#mapping-debugger)
+- [Leave a task working overnight](#task-harness)
 
 [Complete built-in tool reference](tools.md) · [Source and verification](../benchmarks/handbook-verification.json) · [Task-based novice review](novice-task-review.md)
 
@@ -640,6 +641,25 @@ Prepared action: `catalog_sync`
 {
   "env": "{{env}}",
   "what": "index"
+}
+```
+
+#### Cross-repository data access
+
+Column/table readers, writers and bounded API/library/Kafka/ES access paths.
+
+- Source: Cached source revisions, pinned libraries, PostgreSQL catalog and private rules
+- Relative location: `cache/{env}/data-lineage.sqlite (principal-scoped in multi-user mode)`
+- Identity: Atomic retained generations; unchanged source segments reused.
+- Query tools: `data_readers`, `data_writers`, `data_trace`, `data_index`
+- Limit: Static topology, not runtime/value-flow proof. Object access, ORM candidates and substring matches stay separate. Missing/stale queries start owned background jobs; failed refreshes keep the last good generation.
+
+Prepared action: `data_index`
+
+```json
+{
+  "env": "{{env}}",
+  "action": "refresh"
 }
 ```
 
@@ -2465,6 +2485,16 @@ How does this UI action reach a database field? Inspect the captured UI state an
 
 </details>
 
+#### data-lineage
+
+Who reads or writes this column, and which API can reach it? Search retained SQL and ORM evidence; keep object getters/setters and substring candidates separate. Inspect flat API/library/procedure/Kafka/ES paths, assumptions and exact source identities. Missing/stale indices build in owned background jobs; failed refreshes preserve the last good generation. Prepare source reads, job observation or refresh in Workbench. Static topology does not prove runtime/value flow.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in data-lineage presentation sample](../screenshots/sample-data-lineage.png)
+
+</details>
+
 #### ui-page
 
 How can I keep this question as a reusable dashboard? Filter retained tables/comparisons, expand exact routine signatures and inspect saved inputs/revision. Open the live Pages host to choose targets and explicitly Refresh. Definitions are shared by default with admin publication; each viewer retains private results. Incomplete reads cannot establish absence.
@@ -2505,6 +2535,16 @@ Which modeled paths were checked or sampled? Select a state or retained countere
 
 </details>
 
+#### task-run
+
+What is this autonomous worker doing, and where can I steer it? Read the retained state, counters and failed evidence. Open the authenticated live task desk for memory, exact model context, controls and publication. This snapshot makes no network/model requests and never resumes work.
+
+<details><summary>View labeled presentation example</summary>
+
+![Built-in task-run presentation sample](../screenshots/sample-task-run.png)
+
+</details>
+
 ### Standalone workbenches
 
 Passports combine service boundary graphs and detected/manual evidence; API explorer prepares and sends reviewed requests; Services map explores bounded relationships and editable tool inspections; architecture/dossiers add C4/environment/requirement views and exports. Logs/trace, PR, files, dashboard and showcase have their own explorers. Use the selected inspector before exporting or summarizing a large graph.
@@ -2539,7 +2579,7 @@ Search a task term, tool name or group. Select a tool to read its contract, requ
 
 The portable repository reference records built-in tools at generation time. The running registry remains authoritative for extensions and permissions. A required field can still need a real returned ID; blank values or an invented analysis/lease/workspace ID are not useful arguments.
 
-The [complete built-in reference](tools.md) contains 308 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
+The [complete built-in reference](tools.md) contains 327 tools with exact schemas. In the app, the reference uses the current authorized registry and includes configured extensions.
 
 ### When a tool is missing
 
@@ -2935,3 +2975,67 @@ Run node demo/mapping-debugger.js and open the printed URL. The mapper returns a
 Tool flow: mapping_debug save with expected_revision=null and a version:1 definition; run with explicit steps [api, registry]; get with include_data=true for bounded raw evidence; open for an inline view; list/get/save/delete manage durable records with revision checks. PG uses existing read-only pg_query, ES uses es_search and Kafka uses kafka_last with normal grants, rate limits, tracing and cancellation. No background model calls or implicit retries.
 
 Limits: 30 probes, 100 comparisons, 100 records per probe, 1 MiB per result and 6 MiB per recording; 200 notebooks and 200 recordings per user with a 256 MiB retained budget. Discovery reports bounded source candidates; missing dynamic SQL, generated mappers or internal-library analysis remain gaps. Delete old recordings explicitly when the budget is full.
+
+<a id="task-harness"></a>
+
+## Leave a task working overnight
+
+Gather cited Confluence, repository and environment evidence into persistent task and global knowledge.
+
+**Outcome:** A reopenable task with saved findings, visible model/tool activity and explicit publication/recovery permissions.
+
+**Before you start:** Open Admin → Task desk. Configure llm.baseUrl/model and source connections in Admin.
+
+### Start and leave the browser closed
+
+Choose New task, enter a ticket/title and an evidence-focused goal, select repositories or Confluence spaces, then set the deadline and model/tool budget. Research can run without a Git repository. Start autonomous task admits work durably on the server; closing a tab does not cancel it.
+
+An admin may select a global context name and authorize automatic publication. Saved notes produce in-progress shared checkpoints; completion publishes a final report and cited evidence. Shared prose, graphs and immutable history are preserved. Other users keep private task findings and can read published knowledge.
+
+Memory & files contains notes, scripts, queries, source receipts, exact outgoing requests and transcripts. Filter the nested tree, preview a file and pause before editing. Continue task prepares a new run on the same stable memory; it does not execute until Start. Opening a new chat never silently selects unrelated private notes.
+
+**Inspect task harness readiness** · `task_run_catalog`
+
+```json
+{}
+```
+
+Expected: Configured model, publication permission and available source tools. No model call.
+
+**Find persistent task runs** · `task_run_list`
+
+```json
+{}
+```
+
+Expected: Only this principal’s runs across chats, with state, budgets and next actions.
+
+![Synthetic Confluence/repository/model demo, using the real task desk, tool registry and durable publication.](../screenshots/task-desk.png)
+
+Synthetic Confluence/repository/model demo, using the real task desk, tool registry and durable publication.
+
+### Inspect and steer without hidden work
+
+Activity shows admitted work, errors and retained evidence. Pause applies at a safe boundary; Steer is saved and acknowledged before the next step. Stop cancels owned execution/jobs, while remote Jenkins builds remain remote. Unchanged CI/review polling and UI refreshes do not call the model.
+
+Model context includes the exact last outgoing request without authentication headers. Compaction is explicit: pause, supply a checkpoint, and keep the previous transcript as an artifact. An uncertain interrupted write requires verified reconciliation rather than an automatic retry.
+
+Research starts with a short source-tool catalog and discovers other allowed PG/ES/Kafka/Consul, semantic and CI reads as needed. Progress and raw evidence stay outside the prompt. Saved scripts are not automatically executed.
+
+### Prepare a checked change and draft PR
+
+Change mode can open scoped task workspaces and run real tests. Open Editor & terminal from the task; concrete tool grants still apply, including story-bound credentials. Pause the worker before editing so human and model writes do not race.
+
+Authorized publication targets a dedicated codex/ branch. Passing tests must match its exact Git tree; changed production code requires complete changed-line/branch coverage. Current measurement is JVM-focused. Unsupported or stale coverage blocks publication. Checked pushes retain separate receipts, exclude .dt and never replay onto a moved branch behind the test gate.
+
+The worker creates/reuses a native draft PR, waits for current-SHA CI/review evidence and iterates on changed failures/comments. Required checks and approvals cannot come from an old SHA or an empty result. Merging remains manual. Review pagination gaps remain visible.
+
+### Recover and reproduce
+
+Persist the whole configured home. task-harness stores fsynced atomic run/control records; continuations and contexts retain memory; project-contexts retains shared revisions; workspace-publications retains effect receipts. Existing Compose mounts preserve these through ordinary container replacement. This is one coordinator with local durable storage, not a distributed queue.
+
+Only runs admitted for auto-resume recover at startup. Original deadlines/budgets and current credentials still apply. Revocation/rotation suspends work. Budget exhaustion leaves evidence intact; Continue task prepares a newly authorized run. The current editor terminal is the bounded inspection/build runner, not an arbitrary PTY.
+
+Run node demo/task-harness.js for the explicitly synthetic model/Confluence/repository showcase. Backend tests exercise real REST, a SIGKILL recovery, no-model unchanged Jenkins polling and local Git publication. DT_TEST_BROWSER=1 node --test test/task-harness-ui.test.js verifies the web journey. Deployment-specific Qwen and JVM coverage still need actual configured infrastructure.
+
+**Related chapters:** [Your first investigation](#start) · [Developer studio: continue, coordinate and verify](#developer-studio)

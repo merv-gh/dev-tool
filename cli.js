@@ -40,7 +40,7 @@ Serve
 Global: --env <name> (default: first env), --pretty.  Config folder: DT_HOME (default: this folder)
 `.trim();
 
-const BOOL_FLAGS = new Set(['pretty', 'compact', 'lan', 'help', 'uses', 'dry-run', 'update', 'deep']);
+const BOOL_FLAGS = new Set(['pretty', 'compact', 'all', 'diff', 'lan', 'help', 'uses', 'dry-run', 'update', 'deep']);
 
 function parseArgs(argv) {
   const opts = { _: [] };
@@ -190,7 +190,7 @@ const commands = {
   async tool(opts) {
     const [name, json] = opts._;
     if (!name) return (await require('./lib/tools').schemas()).map(t => `${t.name}: ${t.description}`);
-    try { return await require('./lib/tools').call(name, json ? JSON.parse(json) : {}, { source: 'cli' }); }
+    try { const args=json && json!=='-diff'?JSON.parse(json):{};if(opts.all)args.all=true;if(opts.diff || json==='-diff')args.scope='diff';return await require('./lib/tools').call(name, args, { source: 'cli' }); }
     finally { await require('./lib/pg').closeAll(); }
   },
 

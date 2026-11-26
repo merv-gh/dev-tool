@@ -28,7 +28,7 @@ test('openapi lists every tool as an operation', async () => {
 test('oapi: plain results are JSON, table results embed the viewer and give the model context', async () => {
   const plain = await post('/oapi/find', { q: 'x' });
   assert.equal(plain.headers.get('content-disposition'), null);
-  assert.match((await plain.json())[0], /catalog_sync/);
+  const plainValue=await plain.json();assert.match(plainValue.result[0], /catalog_sync/);assert.equal(plainValue.modelContext.output.status,'all');
 
   fs.mkdirSync(path.join(process.env.DT_PASSPORTS_DIR, 'svc-a'), { recursive: true });
   const r = await post('/oapi/passports', {});

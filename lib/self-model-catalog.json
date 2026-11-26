@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "20b15223f9e22925449fa2703193ce13c9af7301dbfb459b94074b42fde236d9",
+  "sourceDigest": "234d6cc086a6f737db7b5625d2d4239c09f686dfe244c96bb88ffa19933da12e",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -1475,7 +1475,7 @@
       "consumers": [
         {
           "file": "lib/tools.js",
-          "line": 1013,
+          "line": 1024,
           "snippet": "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
         }
       ],
@@ -2766,7 +2766,7 @@
       "consumers": [
         {
           "file": "lib/testrun.js",
-          "line": 522,
+          "line": 528,
           "snippet": "const lifecycle = require('./state-machine').create(require('./lifecycles').testInvocation);"
         }
       ],
@@ -2806,7 +2806,7 @@
       "consumers": [
         {
           "file": "lib/testrun.js",
-          "line": 487,
+          "line": 493,
           "snippet": "const evidence = require('./state-machine').create(require('./lifecycles').testProof);"
         }
       ],
