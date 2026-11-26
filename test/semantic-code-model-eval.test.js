@@ -25,5 +25,10 @@ test('candidate adapters call the production semantic tools and preserve raw evi
  assert.equal(result.sides[0].data.paths[0].assumptionEvaluation.status,'unresolved');assert.equal(result.sides[0].control.paths[0].assumptionEvaluation.status,'matches-assumptions');
  assert.equal(result.proof.behaviorVerified,false);assert.deepEqual(result.gaps,raw.gaps);assert.equal(result.view,raw.view);assert.equal(result.output.status,'part');
  assert.equal(await C.call(T,'value_trace',{...args,all:true}),raw);
+ const brief=await C.call(T,'where_value_flows',args,true);
+ assert.deepEqual(brief.declaredAssumptions,raw.assumptions);
+ assert.equal(brief.assumptionChecks.data[0].evaluation,'unresolved');assert.equal(brief.assumptionChecks.control[0].evaluation,'matches-assumptions');
+ assert.equal(brief.sinks[0].code,'payable');assert.equal(brief.proof.behaviorVerified,false);
+ assert.match(C.schemas(true,true)[2].inputSchema.properties.assumptions.description,/Omitted or \[\] means none/);
  await assert.rejects(C.call(T,'value_trace',{...args,unexpected:true}),/Invalid argument/);
 });
