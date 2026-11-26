@@ -41,3 +41,13 @@ test('entry summaries exclude reached callees that are not selected entries',asy
  const r=await C.call({call:async()=>raw},'what_happens_from',{analysis:'id',entry:'submit'});
  assert.deepEqual(r.entries.map(m=>m.name),['submit']);
 });
+test('typed summaries separate returns, call boundaries and selected sink arguments',async()=>{
+ const C=require('../dev/semantic-question-candidates.cjs');
+ const map={flowMap:{complete:false,entries:['submit'],methods:[{name:'submit',entry:'submit'}],nodes:[{kind:'return',code:'return payable;'}, {kind:'throw',code:'throw invalid;'}, {kind:'call',code:'isBlank()',exit:'external-or-unexpanded-call'}],assumptions:[]},proof:{behaviorVerified:false},gaps:[{kind:'unresolved',detail:'external effect'},{kind:'unresolved',detail:'external effect'}],view:'/show/map'};
+ const m=await C.call({call:async()=>map},'what_happens_from',{analysis:'id',entry:'submit'},true,true);
+ assert.deepEqual(m.methodExits.map(n=>n.kind),['return','throw']);assert.equal(m.externalCallBoundaries[0].code,'isBlank()');assert.equal(m.coverage.gaps[0].occurrences,2);
+ const path={assumptionEvaluation:{status:'matches-assumptions',unresolved:[],conflicts:[]},conditions:[{expression:'x < 0',polarity:'false'}]},trace={proof:{behaviorVerified:false},sides:[{side:'current',data:{paths:[],selectedValues:{to:[{name:'save',argument:2,value:'payable'}]}},control:{paths:[path,path]}}],view:'/show/trace'};
+ const t=await C.call({call:async()=>trace},'where_value_flows',{analysis:'id',entry:'submit',parameter:'rebate',sink:'save',argument:2},true,true);
+ assert.equal(t.selectedSinks[0].name,'save');assert.equal(t.selectedSinks[0].argument,2);assert.equal(t.assumptionChecks.control.length,1);assert.deepEqual(t.assumptionChecks.control[0].retainedPaths,[0,1]);
+ assert.match(C.schemas(true,true,true)[1].description,/Keep both map and trace view links/);
+});
