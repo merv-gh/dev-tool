@@ -36,7 +36,10 @@ test('script discovery searches saved scripts without execution; alias uses cano
   const found=await T.call('script_search',{query:'unpaid',limit:1});assert.equal(found.total,4);assert.equal(found.scripts.length,1);
   assert.equal((await T.call('script_search',{query:'unpaid',limit:1,all:true})).scripts.length,4);
   assert.equal((await T.call('tool_search',{query:'search saved scripts'})).tools[0].name,'script_search');
+  assert.ok((await T.call('tool_search',{query:'unpaid orders',group:'scripts'})).searches.some(t=>t.name==='script_search'));
   assert.equal((await T.call('search_tools',{query:'script_search'})).tools[0].name,'script_search');
+  const exact=await T.call('tool_search',{query:'script_search',all:true});assert.equal(exact.total,1);assert.equal(exact.tools.length,1);
+  assert.equal((await T.call('tool_search',{query:'search_tools',all:true})).tools[0].name,'tool_search');
   assert.equal((await T.call('tool_describe',{name:'search_tools'})).name,'tool_search');
   await assert.rejects(A.run({principalId:'limited',storyId:'one',tools:['script_search']},()=>T.call('search_tools',{query:'script_search'})),/available/);
   const all=await T.call('tool_search',{query:'search',limit:1,all:true});assert.equal(all.tools.length,all.total);assert.ok(all.tools.some(t=>t.name==='script_search'));

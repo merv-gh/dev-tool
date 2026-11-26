@@ -42,6 +42,8 @@ Use **`tool_search`** to discover capabilities and specialized searches. It sear
 
 `script_search` matches all query words against script ID, description and parameter names, optionally within a collection. It returns exact IDs usable by `script_get`/`script_run` and never executes a script. Script search is included in the everyday/testing profiles and discoverable from the smaller profiles.
 
+For non-exact capability queries, `tool_search` also returns a `searches` directory of authorized content-search tools, filtered by group when supplied. This remains useful when a model searches for business terms rather than a capability name.
+
 ## Forgiving `test_run` inputs
 
 | Input | Behavior |
@@ -57,6 +59,8 @@ Use **`tool_search`** to discover capabilities and specialized searches. It sear
 
 `mode` continues to mean execution engine (`auto`, `fast`, `build`). Misplaced selection aliases such as `mode:"diff"` are normalized, but canonical examples use `scope`. Conflicting scope/named tests, null/numeric/blank selectors, unknown fields and poll calls mixed with start/edit options are rejected. Never guess a live target or fixture override. `env` is source provenance; reviewed `target` configuration selects execution/dependencies.
 
+JSON-encoded selector arrays such as `tests:'["test/a.test.cjs"]'` are accepted for clients/models that encode a list inside a string. Invalid JSON and non-string array entries receive correction errors. A short Node test filename such as `a.test.cjs` resolves within the reviewed discovered suite only when unique; ambiguous names require an exact path. Arbitrary source/helper basenames and fixture/symlink trees do not participate in this fallback.
+
 Node suite discovery finds `.test`/`.spec.js/.cjs/.mjs` files and excludes symlinks, hidden/generated/vendor directories and fixture trees. Explicit paths continue to use the reviewed Node runner. Maven/Gradle all-suite execution runs the root project build without class filters and collects fresh reports across discovered modules. Mixed Node/JVM suites require explicit tests. Unsupported profiles return an error.
 
 Diff selection directly runs changed Node test files when all relevant changes are to those runnable tests. Production/build changes, deletions, and any case without proven dependency coverage conservatively run the full supported suite. The `selection` receipt records the resolved base, changed count, profile/modules, completeness and `fallback:"all"` with its reason. JVM source-file counts are reported separately; runnable test counts come from the build's fresh reports. An empty/docs-only diff returns `outcome:"not-run", reason:"no-affected-tests"`, never a passing test proof. Invalid bases fail before applying `files` edits.
@@ -69,3 +73,5 @@ node cli.js tool test_run -diff
 node cli.js tool test_run '{"workspace":"w1"}' --diff --all
 node cli.js tool result_read '{"id":"RESULT_ID"}' --all
 ```
+
+Exact tool names in `tool_search` return only that capability, including with `all:true`; non-exact requests include the specialized content-search directory.

@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "234d6cc086a6f737db7b5625d2d4239c09f686dfe244c96bb88ffa19933da12e",
+  "sourceDigest": "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -261,7 +261,7 @@
       "consumers": [
         {
           "file": "lib/node-test.js",
-          "line": 36,
+          "line": 41,
           "snippet": "const fileState = fileStates.get(d.file) || require('./state-machine').create(require('./lifecycles').reportFile); fileStates.set(d.file, fileState);"
         }
       ],

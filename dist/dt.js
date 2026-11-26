@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "234d6cc086a6f737db7b5625d2d4239c09f686dfe244c96bb88ffa19933da12e",
+      sourceDigest: "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6",
       machines: [
         {
           id: "IO.atomic-file",
@@ -18508,7 +18508,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/node-test.js",
-              line: 36,
+              line: 41,
               snippet: "const fileState = fileStates.get(d.file) || require('./state-machine').create(require('./lifecycles').reportFile); fileStates.set(d.file, fileState);"
             }
           ],
@@ -66306,6 +66306,13 @@ var require_test_selection = __commonJS({
         setScope(a.mode === "all" ? "all" : "diff");
         a.mode = "auto";
       }
+      if (typeof a.tests === "string" && a.tests.trim().startsWith("[") && a.tests.trim().endsWith("]")) {
+        try {
+          a.tests = JSON.parse(a.tests);
+        } catch {
+          throw invalid('tests looks like a JSON array but is invalid; pass ["FooTest"] or a test name');
+        }
+      }
       if (typeof a.tests === "string") a.tests = a.tests.split(",").map((t) => t.trim());
       if (a.tests !== void 0 && (!Array.isArray(a.tests) || a.tests.some((t) => typeof t !== "string" || !t.trim()))) throw invalid('tests must be a test name or array of nonempty names; omit for all, or use scope="diff"');
       if (a.tests) a.tests = a.tests.map((t) => t.trim());
@@ -66388,7 +66395,12 @@ var require_node_test = __commonJS({
     var path3 = require("path");
     function find(root, selector) {
       if (typeof selector !== "string" || selector.startsWith("-") || !/\.(?:[cm]?js)$/.test(selector) || selector.includes("#")) return null;
-      const full = path3.resolve(root, selector);
+      let full = path3.resolve(root, selector);
+      if (!fs3.existsSync(full) && !selector.includes("/") && /\.(?:test|spec)\.[cm]?js$/.test(selector)) {
+        const matches = require_test_selection().discover(root).node.filter((f) => path3.basename(f) === selector);
+        if (matches.length > 1) throw Object.assign(new Error(`ambiguous Node test ${selector}; use an exact path: ${matches.slice(0, 10).join(", ")}`), { code: "DT_ARGUMENT_INVALID" });
+        if (matches.length === 1) full = path3.resolve(root, matches[0]);
+      }
       if (!full.startsWith(path3.resolve(root) + path3.sep) || !fs3.existsSync(full) || !fs3.statSync(full).isFile()) return null;
       const real = fs3.realpathSync(full), base = fs3.realpathSync(root);
       if (!real.startsWith(base + path3.sep)) throw new Error(`Node test escapes workspace: ${selector}`);
@@ -83320,7 +83332,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "234d6cc086a6f737db7b5625d2d4239c09f686dfe244c96bb88ffa19933da12e";
+      if (true) return "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -92526,9 +92538,13 @@ var require_tools_discovery = __commonJS({
         run: async (a) => {
           const tools = await registry(), W = require_workflows();
           if (a.group && !tools.some((t) => t.group === a.group)) return { error: { code: "DT_TOOL_GROUP_UNKNOWN", message: "Unknown tool category. Omit group; tickets and service names belong in task arguments." }, groups: [...new Set(tools.map((t) => t.group))].sort(), retry: { tool: "tool_search", arguments: { query: a.query } }, hint: "Retry once without group, then describe an exact capability and call tool_execute." };
-          const S = require_tool_search(), ranker = require_config().getTools().discoveryRanker, { matches, lexical } = S.search(tools, a.query, a.group, ranker);
+          const S = require_tool_search(), ranker = require_config().getTools().discoveryRanker, { matches: ranked, lexical } = S.search(tools, a.query, a.group, ranker);
+          const exactName = require_tool_output().canonicalName(a.query.trim().toLowerCase()), exact = tools.find((t) => t.name === exactName && (!a.group || t.group === a.group));
+          const matches = exact ? ranked.filter((m) => m.t.name === exact.name) : ranked;
+          const searches = tools.filter((t) => (t.name === "find" || t.name.endsWith("_search")) && t.name !== "tool_search" && (!a.group || t.group === a.group)).map((t) => ({ name: t.name, group: t.group }));
+          const directory = !exact && searches.length ? { searchHint: "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.", searches } : {};
           const broader = a.group ? S.rank(tools, a.query, void 0, ranker)[0]?.t : null, groupHint = broader && broader.group !== a.group ? { message: "This group excludes the leading capability for the requested action. The filtered results below still use your group.", candidate: { name: broader.name, group: broader.group }, retry: { tool: "tool_search", arguments: { query: a.query } }, next: { tool: "tool_describe", arguments: { name: broader.name } } } : null;
-          const result = { ...groupHint ? { groupHint } : {}, total: matches.length, tools: (a.all ? matches : matches.slice(0, a.limit)).map(({ t }) => ({ name: t.name, group: t.group, description: a.all ? t.description : t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", arguments: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" };
+          const result = { ...groupHint ? { groupHint } : {}, ...directory, total: matches.length, tools: (a.all ? matches : matches.slice(0, a.limit)).map(({ t }) => ({ name: t.name, group: t.group, description: a.all ? t.description : t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", arguments: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" };
           return a.all ? result : W.bounded(result, a.max_bytes);
         }
       },
