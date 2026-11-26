@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "9dfcdf4f691c667cfd51aa3a73a18ab1256ca238a5ec952262cf4dba4145f3ec",
+      sourceDigest: "766402f22ff330dcbeb95bb853a99ab175e2cb7246165b1e6533dd467d04d2fe",
       machines: [
         {
           id: "IO.atomic-file",
@@ -79896,7 +79896,7 @@ var require_chat_context = __commonJS({
       while (end < b.length && end > 0 && (b[end] & 192) === 128) end--;
       return b.subarray(0, end).toString("utf8");
     }
-    var PRIORITY = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "selection", "filterMismatch", "retry", "insideCodeRetry", "read", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "views", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "sourceComplete", "retainedComplete", "completeScope", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where"];
+    var PRIORITY = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "evidenceCheck", "diagnostic", "toolErrors", "requiredParams", "selection", "filterMismatch", "retry", "insideCodeRetry", "read", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "views", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "sourceComplete", "retainedComplete", "completeScope", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where"];
     var PRIORITY_SET = new Set(PRIORITY);
     var orderedEntries = (value) => [...PRIORITY.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !PRIORITY_SET.has(k))];
     function short(value, depth = 0, budget = { left: 5e3 }, omissions = [], pointer = "") {
@@ -84066,7 +84066,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "9dfcdf4f691c667cfd51aa3a73a18ab1256ca238a5ec952262cf4dba4145f3ec";
+      if (true) return "766402f22ff330dcbeb95bb853a99ab175e2cb7246165b1e6533dd467d04d2fe";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -85003,6 +85003,7 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
+      "semantic-read": { description: "Four read-only Joern question tools: discover retained analyses, map entry behavior, trace a value, and inspect or aggregate retained evidence. Reuse supplied analysis ids. Prefer ready summaries; copy evidence URLs and literal predicates exactly. Static evidence does not verify runtime behavior. Normal grants apply.", includeCore: false, names: ["which_analyses_exist", "what_happens_from", "where_value_flows", "result_read"] },
       "code-semantic": { description: "Question-shaped retained Joern tools plus code for composition and calculation. Native discovery is available; normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe", "result_read", "which_analyses_exist", "what_happens_from", "where_value_flows"] },
       "code-discovery": { description: "Native capability search and schema discovery; execute queries and calculations inside code. Normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe"] },
       code: { description: "One outer code tool; discover and invoke enabled tools inside JavaScript. Profiles never grant extra permissions.", includeCore: false, names: ["code"] },

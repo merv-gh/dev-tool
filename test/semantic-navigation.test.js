@@ -140,6 +140,7 @@ test('canonical schemas stay simple while encoded assumptions and explicit scala
  const profile=await T.schemas({profile:'code-semantic'}),schema=profile.find(t=>t.name==='where_value_flows').inputSchema;
  assert.equal(schema.properties.assumptions.type,'array');assert.equal(schema.properties.argument.type,'integer');
  assert.equal(profile.length,7);
+ const narrow=await T.schemas({profile:'semantic-read'});assert.deepEqual(narrow.map(t=>t.name).sort(),['result_read','what_happens_from','where_value_flows','which_analyses_exist']);
  let received;S.query=async a=>{received=a;return raw();};
  const input={analysis:'pin',entry:'charge',parameter:'discount',sink:'store',argument:'02',assumptions:JSON.stringify({expression:'discount < 0',holds:'FALSE'})};
  await T.call('where_value_flows',input);

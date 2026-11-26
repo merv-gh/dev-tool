@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "9dfcdf4f691c667cfd51aa3a73a18ab1256ca238a5ec952262cf4dba4145f3ec",
+  "sourceDigest": "766402f22ff330dcbeb95bb853a99ab175e2cb7246165b1e6533dd467d04d2fe",
   "tools": [
     {
       "name": "find",
@@ -1385,6 +1385,7 @@
         "test/code.test.js",
         "test/global-context.test.js",
         "test/result-operations.test.js",
+        "test/semantic-navigation.test.js",
         "test/tool-io-model-eval.test.js",
         "test/tool-output.test.js",
         "test/webui-context.test.js"

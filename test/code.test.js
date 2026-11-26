@@ -364,6 +364,11 @@ test('filtered aggregate metadata cannot replace total retained input rows with 
  assert.deepEqual(r.evidenceCheck.fields,[{field:'retainedRows',reported:2,observed:[3]}]);
  assert.equal(r.diagnostic.availableResult.summary.retainedRows,3);
  assert.equal(r.diagnostic.availableResult.summary.matchedRows,2);
+ const preview=require('../lib/chat-context').prepare('code',{...r,returned:{...r.returned,details:Array.from({length:200},()=>({text:'x'.repeat(1000)}))}});
+ assert.equal(preview.evidenceCheck.status,'contradictory-retained-coverage');
+ assert.equal(preview.diagnostic.availableResult.summary.retainedRows,3);
+ assert.equal(preview.diagnostic.availableResult.read.arguments.id,r.diagnostic.availableResult.read.arguments.id);
+ assert.equal(preview.diagnostic.availableResult.read.arguments.all,true);
  const recovered=await T().call('code',r.evidenceCheck.retry.arguments);
  assert.equal(recovered.returned.retainedRows,3);
  assert.equal(recovered.returned.sourceComplete,false);

@@ -6,7 +6,7 @@ function main(){
  const o={state:'',variants:'',transfer:'',output:'',endpoint:'http://127.0.0.1:11435',model:'qwen3.5:4b',profile:'direct',surface:'code',suite:'joint',label:'matrix',max_failures:'0',dry_run:'false'};
  for(let i=2;i<process.argv.length;i+=2){const k=process.argv[i].replace(/^--/,'');if(!(k in o)||process.argv[i+1]===undefined)throw Error('Unknown/missing argument');o[k]=process.argv[i+1];}
  if(!o.state||!o.variants||!o.output||o.suite==='joint'&&!o.transfer)throw Error('--state, --variants, --output and (joint suite) --transfer required');
- if(!['joint','matched'].includes(o.suite)||!['code','hybrid','semantic'].includes(o.surface)||!/^[-a-z0-9]+$/i.test(o.label)||!/^\d+$/.test(o.max_failures)||!['true','false'].includes(o.dry_run))throw Error('Invalid suite/surface/label/max_failures/dry_run');
+ if(!['joint','matched'].includes(o.suite)||!['code','hybrid','semantic','questions'].includes(o.surface)||!/^[-a-z0-9]+$/i.test(o.label)||!/^\d+$/.test(o.max_failures)||!['true','false'].includes(o.dry_run))throw Error('Invalid suite/surface/label/max_failures/dry_run');
  const jobs=[];
  if(o.suite==='joint'){
   for(const fixture of ['allocation','drain','billing'])for(const seed of [7,42])jobs.push([fixture,'cycle',seed]);
