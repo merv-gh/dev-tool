@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "7976ce7e1c67c0f52c60dc27a12c341a037b0c175e7c0544ace5a84675b0a98a",
+  "sourceDigest": "a378b7fd4d482e244ceaff86094b27cecdfd50eca08e087c0ac47cd5ee311faa",
   "tools": [
     {
       "name": "find",

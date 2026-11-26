@@ -80,3 +80,15 @@ test('all expands raw counts while retaining additional selected count names',()
  const r=require('../lib/tool-output').full({view,counts:{exits:3,methodExits:6,externalCallBoundaries:3}});
  assert.deepEqual(r.counts,{states:8,exits:9,methodExits:6,externalCallBoundaries:3});
 });
+
+test('all retained graph evidence is not relabelled as missing result rows',()=>{
+ const O=require('../lib/tool-output'),full={output:{status:'all',scope:'retained-evidence'},results:[],total:2,truncated:true,flowMap:{complete:false,nodes:[{id:'a'},{id:'b'}]}};
+ const shown=O.annotate(full,full,{all:true});
+ assert.equal(shown.modelContext.output.status,'all');
+ assert.equal(shown.modelContext.output.source,'partial');
+ assert.equal(shown.modelContext.output.omitted,undefined);
+ const clipped=O.annotate(full,{...full,modelContext:{compacted:true}},{all:true});
+ assert.equal(clipped.modelContext.output.status,'truncated');
+ const ordinary=O.annotate({rows:[{id:1}],total:2},{rows:[{id:1}],total:2});
+ assert.equal(ordinary.modelContext.output.status,'part','ordinary paginated rows retain omission detection');
+});

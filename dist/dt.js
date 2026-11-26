@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "7976ce7e1c67c0f52c60dc27a12c341a037b0c175e7c0544ace5a84675b0a98a",
+      sourceDigest: "a378b7fd4d482e244ceaff86094b27cecdfd50eca08e087c0ac47cd5ee311faa",
       machines: [
         {
           id: "IO.atomic-file",
@@ -79820,11 +79820,13 @@ var require_tool_output = __commonJS({
       return { reasons: [...reasons], omissions: [...omissions] };
     }
     function annotate(original, delivered, { all = false } = {}) {
-      const { reasons, omissions } = facts(original);
+      const facts_ = facts(original), reasons = facts_.reasons;
+      const retainedEvidenceAll = original?.output?.status === "all" && original.output.scope === "retained-evidence";
+      const omissions = retainedEvidenceAll ? [] : facts_.omissions;
       const compacted = !!delivered?.modelContext?.compacted;
       const retainedReceipt = original?.retainedComplete === true || !!original?.completeScope || original?.output?.status === "all" && original.output.scope === "retained-evidence";
       const output = {
-        status: compacted || !retainedReceipt && reasons.includes("source-or-tool-limit") ? "truncated" : omissions.length || reasons.includes("more-pages") ? "part" : "all",
+        status: compacted || !retainedReceipt && reasons.includes("source-or-tool-limit") ? "truncated" : omissions.length || !retainedEvidenceAll && reasons.includes("more-pages") ? "part" : "all",
         source: reasons.length ? "partial" : "unknown",
         ...reasons.length ? { limits: reasons } : {},
         ...omissions.length ? { omitted: omissions } : {},
@@ -84049,7 +84051,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "7976ce7e1c67c0f52c60dc27a12c341a037b0c175e7c0544ace5a84675b0a98a";
+      if (true) return "a378b7fd4d482e244ceaff86094b27cecdfd50eca08e087c0ac47cd5ee311faa";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
