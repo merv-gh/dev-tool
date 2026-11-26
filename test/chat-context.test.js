@@ -144,3 +144,15 @@ test('preview omission paths report actual delivered arrays and UTF-8 bytes',()=
  const array=root.modelContext.previewOmissions.find(x=>x.path==='');assert.ok(array);assert.equal(array.total,300);assert.equal(array.shown,root.preview?.length||0);
  }finally{fs.writeFileSync(file,saved);cfg.reload();}
 });
+
+test('a structured all response cannot consume most of a 32k model prompt',()=>{
+ const P=require('../lib/chat-pressure');
+ const rows=Array.from({length:1800},(_,id)=>({group:id%7?'other':'target',cents:id*7919%100003-45000}));
+ const original={rows},bytes=Buffer.byteLength(JSON.stringify(original));
+ assert.ok(bytes>32768&&bytes<65536);
+ const delivered=P.response('structured-rows',original,{all:true,session:'structured-all',usage:{usedTokens:4000,contextWindow:32768}}).value;
+ assert.equal(delivered.modelContext.output.status,'truncated');
+ assert.equal(delivered.modelContext.output.requestedAll,true);
+ assert.ok(Buffer.byteLength(JSON.stringify(delivered))<=32768);
+ assert.deepEqual(C.read({id:delivered.modelContext.resultId,all:true}).value.rows,rows);
+});

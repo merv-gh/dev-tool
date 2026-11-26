@@ -4954,7 +4954,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 ### code
 
-Run JavaScript with await tools.NAME(args). Object/array tool results also support .value as a compatibility alias when they have no real value field; serialization and direct fields stay unchanged. tools/text are supplied; no import/require or direct file access. Return the result explicitly (return await tools.NAME(args)); top-level expressions are not auto-returned. Use the tool matching the question. Discover capabilities with tools.tool_search({query:"action words"}), contracts with tools.tool_describe({name:"tool_name"}), names with tools.list(). For retained rows: const r=await tools.result_read({id,all:true}); r.value.rows is an array, not JSON text. Filter and compute in JS before printing/returning; printed output may be a preview. Use r.sourceCoverage.provenComplete and r.sourceView for source completeness and evidence. Analysis ids are code snapshots, never result_read ids. For Joern, reuse a supplied analysis id; otherwise list which_analyses_exist once. Describe what_happens_from for combined entry maps and value traces, or where_value_flows for traces. Keep mapView/traceView and proof limits. Never invent values or URLs. Cells are fresh; local result/args/vars are allowed. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Silent cells return host-call receipts. Node supports tools; QuickJS is for pure transforms. all:true expands retained output within source limits.
+Run JavaScript with await tools.NAME(args). Object/array tool results also support .value as a compatibility alias when they have no real value field; serialization and direct fields stay unchanged. tools/text are supplied; no import/require or direct file access. Return the result explicitly (return await tools.NAME(args)); top-level expressions are not auto-returned. Use the tool matching the question. Discover capabilities with tools.tool_search({query:"action words"}), contracts with tools.tool_describe({name:"tool_name"}), names with tools.list() (tool metadata, never analysis records). When a retrieved summary contains the requested facts and evidence links, answer the user directly; do not call code again just to format the answer. For retained rows: const r=await tools.result_read({id,all:true}); r.value.rows is an array, not JSON text. Filter and compute in JS before printing/returning; printed output may be a preview. Use r.sourceCoverage.provenComplete and r.sourceView for source completeness and evidence. Analysis ids are code snapshots, never result_read ids. For Joern, reuse a supplied analysis id; otherwise list which_analyses_exist once. Describe what_happens_from for combined entry maps and value traces, or where_value_flows for traces. Keep mapView/traceView and proof limits. Never invent values or URLs. Cells are fresh; local result/args/vars are allowed. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Silent cells return host-call receipts. Node supports tools; QuickJS is for pure transforms. all:true expands retained output within source limits.
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -17550,7 +17550,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
         ],
         "additionalProperties": false
       },
-      "description": "Literal predicate text and explicit truth values: [{expression:\"input < 0\",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Never replace an expression with a descriptive label. Omitted or [] declares none."
+      "description": "Literal predicate text and explicit truth values: [{expression:\"input < 0\",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Copy the user expression verbatim and its truth value separately. Never negate, simplify or paraphrase it, or replace it with a descriptive label. Omitted or [] declares none."
     },
     "job": {
       "type": "string",
@@ -17666,7 +17666,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
         ],
         "additionalProperties": false
       },
-      "description": "Literal predicate text and explicit truth values: [{expression:\"input < 0\",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Never replace an expression with a descriptive label. Omitted or [] declares none."
+      "description": "Literal predicate text and explicit truth values: [{expression:\"input < 0\",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Copy the user expression verbatim and its truth value separately. Never negate, simplify or paraphrase it, or replace it with a descriptive label. Omitted or [] declares none."
     },
     "job": {
       "type": "string",
