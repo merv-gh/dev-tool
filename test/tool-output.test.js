@@ -74,3 +74,9 @@ test('JVM all-suite execution uses the root build without selectors and collects
   const result=await T.call('test_run',{workspace:jvm.id});assert.equal(result.outcome,'passed');assert.equal(result.counts.tests,2);assert.deepEqual(result.selection.modules,['.','one','two']);assert.equal(result.selection.selected,null);
   const args=JSON.parse(fs.readFileSync(path.join(W.checkId(jvm.id).path,'invoked.json')));assert.ok(args.includes('test'));assert.ok(!args.some(a=>a.startsWith('-Dtest=')));assert.ok(!args.includes('-pl'));
 });
+
+test('all expands raw counts while retaining additional selected count names',()=>{
+ const view=R.saveView('json',{counts:{states:8,exits:9},payload:'full'});
+ const r=require('../lib/tool-output').full({view,counts:{exits:3,methodExits:6,externalCallBoundaries:3}});
+ assert.deepEqual(r.counts,{states:8,exits:9,methodExits:6,externalCallBoundaries:3});
+});

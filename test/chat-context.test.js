@@ -87,3 +87,60 @@ test('high pressure hints respect a small model response budget and retain origi
  const cfg=require('../lib/config'),P=require('../lib/chat-pressure');fs.writeFileSync(path.join(home,'config.json'),JSON.stringify({...config,tools:{modelResultBytes:4096}}));cfg.reload();
  try{const value=P.response('big',{ok:true,job:'submitted-once',rows:['😀'.repeat(10000)]},{session:'small-pressure',usage:{usedTokens:4000,contextWindow:4096}}).value;assert.ok(Buffer.byteLength(JSON.stringify(value))<=4096);assert.equal(value.ok,true);assert.equal(value.job,'submitted-once');assert.equal(value.modelContext.pressure.pressure,'high');assert.equal(R.load(value.modelContext.resultId).data.rows.length,1);}finally{fs.writeFileSync(path.join(home,'config.json'),JSON.stringify(config));cfg.reload();}
 });
+
+test('typed reads retain the original evidence link and distinguish retained from source completeness',()=>{
+ const rows=Array.from({length:23},(_,i)=>({amount:i-4}));
+ const view=R.save('pg',rows,{truncated:true}),id=view.split('/').pop();
+ const read=C.read({id,all:true});
+ assert.equal(read.sourceView,view);assert.equal(read.complete,true);
+ assert.deepEqual(read.value.rows,rows);assert.equal(read.sourceCoverage.provenComplete,false);
+ assert.equal(read.sourceCoverage.status,'partial');
+ const aggregate=C.read({id,aggregate:'sum',field:'amount'});
+ assert.equal(aggregate.sourceView,view);assert.equal(aggregate.retainedComplete,true);
+ assert.equal(aggregate.value,rows.reduce((n,r)=>n+r.amount,0));
+});
+
+test('semantic analysis ids produce an actionable wrong-kind error',()=>{assert.throws(()=>C.read({id:'a'.repeat(64)+'-'+'b'.repeat(32),all:true}),/semantic analysis id.*what_happens_from/);});
+
+test('oversized all requests stay bounded in model transport while full data remains usable in code',async()=>{
+ const P=require('../lib/chat-pressure'),original=await T.call('context_payload',{}),before=await T.call('context_payload_count',{});
+ const delivered=P.response('context_payload',original,{all:true,session:'bounded-all',usage:{usedTokens:512,contextWindow:4096}}).value;
+ assert.equal(delivered.modelContext.output.requestedAll,true);
+ assert.equal(delivered.modelContext.output.status,'truncated');
+ assert.equal(delivered.modelContext.requestedAllLimited.reason,'model-context-budget');
+ assert.ok(Buffer.byteLength(JSON.stringify(delivered))<=delivered.modelContext.requestedAllLimited.maxBytes);
+ assert.equal(await T.call('context_payload_count',{}),before,'presentation never repeats the original call');
+ const id=delivered.modelContext.resultId,full=C.read({id,all:true});
+ assert.deepEqual(full.value.rows,original.rows);
+ const cell=await T.call('code',{code:'const r=await tools.result_read({id:'+JSON.stringify(id)+',all:true}); return r.value.rows.length;'});
+ assert.equal(cell.returned,original.rows.length);
+ const file=path.join(home,'config.json'),saved=fs.readFileSync(file,'utf8'),cfg=require('../lib/config');
+ try{const c=JSON.parse(saved);c.tools={...c.tools,modelResultBytes:0};fs.writeFileSync(file,JSON.stringify(c));cfg.reload();
+  const unbounded=P.response('context_payload',original,{all:true,session:'explicit-unbounded'}).value;
+  assert.deepEqual(unbounded.rows,original.rows);assert.equal(unbounded.modelContext.compacted,undefined);
+ }finally{fs.writeFileSync(file,saved);cfg.reload();}
+});
+
+test('model previews keep selected semantic facts ahead of bulky graphs',()=>{
+ const P=require('../lib/chat-pressure'),mapView='http://localhost/show/pinned-map',summary={entry:'submit',decisionCount:5,methodExitCount:6,externalCallBoundaryCount:3,behaviorVerified:false,mapComplete:false,mapView};
+ const original={flowMap:{nodes:Array.from({length:300},(_,id)=>({id,code:'x'.repeat(1000)}))},summary,mapView};
+ const r=P.response('what_happens_from',original,{all:true,session:'semantic-priority'}).value;
+ assert.deepEqual(r.summary,summary);assert.equal(r.mapView,mapView);assert.equal(r.modelContext.output.status,'truncated');
+ assert.equal(R.load(r.modelContext.resultId).data.flowMap.nodes.length,300);
+});
+
+test('preview omission paths report actual delivered arrays and UTF-8 bytes',()=>{
+ const file=path.join(home,'config.json'),saved=fs.readFileSync(file,'utf8'),cfg=require('../lib/config');
+ try{const c=JSON.parse(saved);c.tools={...c.tools,modelResultBytes:4096};fs.writeFileSync(file,JSON.stringify(c));cfg.reload();
+ const message='😀'.repeat(700),original={rows:Array.from({length:300},(_,id)=>({id})),message};
+ const r=C.prepare('omission-counts',original),stats=r.modelContext.previewOmissions;
+ const rows=stats.find(x=>x.path==='/rows');assert.ok(rows);assert.equal(rows.total,300);assert.equal(rows.shown,r.rows?.length||0);
+ const text=stats.find(x=>x.path==='/message');assert.ok(text);assert.equal(text.totalBytes,Buffer.byteLength(message));
+ const suffix='… [preview]',shown=r.message?.endsWith(suffix)?r.message.slice(0,-suffix.length):r.message;
+ assert.equal(text.shownBytes,shown?Buffer.byteLength(shown):0);
+ const full=C.read({id:r.modelContext.resultId,all:true});assert.deepEqual(full.value,original);
+ assert.ok(Buffer.byteLength(JSON.stringify(r))<=4096);
+ const root=C.prepare('array-omissions',Array.from({length:300},(_,id)=>({id,text:'x'.repeat(200)})));
+ const array=root.modelContext.previewOmissions.find(x=>x.path==='');assert.ok(array);assert.equal(array.total,300);assert.equal(array.shown,root.preview?.length||0);
+ }finally{fs.writeFileSync(file,saved);cfg.reload();}
+});

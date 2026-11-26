@@ -1,0 +1,16 @@
+{
+  "protocol": "dt.context-truncation-evidence/v1",
+  "trial": "native-v3-discover-99.json.gz",
+  "startedAt": "2026-11-26T17:33:41.246Z",
+  "completedAt": "2026-11-26T17:33:56.406Z",
+  "source": "Scoped Docker logs from the existing Ollama service; only event type and numeric counters retained.",
+  "events": [
+    {
+      "kind": "input-prompt-truncated",
+      "limit": 16386,
+      "promptTokens": 214596,
+      "keptTokens": 4,
+      "newTokens": 16386
+    }
+  ]
+}

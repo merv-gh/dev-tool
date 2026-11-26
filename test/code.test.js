@@ -68,8 +68,154 @@ test('script hooks and js steps can call tools too', async () => {
   assert.ok(require('../lib/calls').history({ source: 'script:code/hooks' }).some(c => c.tool === 'files_list'));
 });
 
+test('silent code cells expose tool receipts without claiming a computed return', async () => {
+  const r = await T().call('code', { code: "const r = await tools.files_read({store:'data',path:'a.txt'}); const n = r.text.length;" });
+  assert.equal(r.ok, true);
+  assert.equal(Object.hasOwn(r, 'returned'), false);
+  assert.equal(r.toolResults.length, 1);
+  assert.equal(r.toolResults[0].tool, 'files_read');
+  assert.equal(r.toolResults[0].result.text, '3\n1\n2\n');
+  assert.equal(r.toolResults[0].read.arguments.all, true);
+  assert.match(r.guidance, /not a computed answer/);
+});
+
+test('caught internal failures remain visible even when the cell finishes successfully', async () => {
+  const r = await T().call('code', { code: "try { await tools.files_read({store:'data',path:'missing.txt'}); } catch {}" });
+  assert.equal(r.ok, true, 'JavaScript caught the error');
+  assert.equal(r.toolErrors[0].tool, 'files_read');
+  assert.match(r.toolErrors[0].error, /ENOENT|not found/);
+  assert.match(r.guidance, /Internal tool calls failed/);
+});
+
+test('unreturned tool previews are bounded and retain a complete raw read bridge', () => {
+  const value = { rows: Array.from({length: 40}, (_, id) => ({id, text:'large'.repeat(1000)})) };
+  const receipt = require('../lib/code-result').receipt('example_rows', value);
+  assert.equal(receipt.output.status, 'part');
+  assert.ok(Buffer.byteLength(JSON.stringify(receipt.result)) <= 4096);
+  assert.deepEqual(require('../lib/results').load(receipt.read.arguments.id).data, value);
+});
+
+test('an unawaited async helper finishes chained host calls before the cell receipt', async () => {
+  const r = await T().call('code', { code: "async function read(){await tools.files_read({store:'data',path:'a.txt'}); await tools.files_read({store:'data',path:'b.txt'});} read();" });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.toolResults.length, 2);
+  assert.equal(r.toolResults[1].result.text, '2\n3\n4\n');
+  const failed = await T().call('code', { code: "async function read(){await tools.files_read({store:'data',path:'missing.txt'});} read();" });
+  assert.equal(failed.ok, false);
+  assert.match(failed.error, /Unawaited asynchronous work failed/);
+  assert.equal(failed.toolErrors[0].tool, 'files_read');
+});
+
+test('code discovery recommends direct calls and flat dispatch still validates target inputs',async()=>{
+  const r=await T().call('code',{code:"return await tools.tool_describe({name:'files_read'});"});
+  assert.equal(r.returned.next.insideCodeCall,'tools.files_read');
+  assert.match(r.returned.next.guidance,/directly inside code/);
+  const searched=await T().call('code',{code:"return await tools.tool_search({query:'script_search hooks'});"});
+  assert.equal(searched.returned.next.insideCodeCall,'tools.script_search');
+  assert.deepEqual(searched.returned.next.arguments,{query:'hooks'});
+  const read=await T().call('tool_execute',{name:'files_read',store:'data',path:'a.txt'});
+  assert.equal(read.text,'3\n1\n2\n');
+  await assert.rejects(T().call('tool_execute',{name:'files_read',store:'data'}),/path/);
+  await assert.rejects(T().call('tool_execute',{name:'no_such_tool',ignored:true}),/Unknown tool/);
+});
+
+test('a mistaken analysis id as code context fails without executing or silently changing scope',async()=>{
+  const code="throw new Error('should not run');";
+  const r=await T().call('code',{code,context:'a'.repeat(64)+'-'+'b'.repeat(32)});
+  assert.equal(r.ok,false);
+  assert.match(r.error,/not semantic analysis ids/);
+  assert.deepEqual(r.calls,[]);
+  assert.deepEqual(r.diagnostic.retry.arguments,{code,engine:'node'});
+});
+
 test('the code view renders the code, output and calls', () => {
   const html = require('../lib/views').render('code', { code: 'text(1)', output: '1', calls: [{ tool: 'pg_query', ms: 3, ok: true }], ms: 5 });
   assert.match(html, /"code":"text\(1\)"/);
   assert.ok(require('../lib/views').list().some(v => v.name === 'code' && v.builtin));
+});
+
+test('standalone code permits idiomatic result, args and vars locals',async()=>{const r=await T().call('code',{code:"const result=await tools.files_read({store:'data',path:'a.txt'}); const args={n:result.text.length}; const vars=[args.n]; return vars[0];"});assert.equal(r.ok,true,JSON.stringify(r));assert.equal(r.returned,6);});
+
+test('the code-only profile exposes one outer tool and marks discovery-only cells',async()=>{assert.deepEqual((await T().schemas({profile:'code'})).map(t=>t.name),['code']);const r=await T().call('code',{code:"return await tools.tool_describe({name:'files_read'});"});assert.equal(r.discoveryOnly,true);const read=await T().call('code',{code:"return await tools.files_read({store:'data',path:'a.txt'});"});assert.notEqual(read.discoveryOnly,true);});
+
+test('constructed evidence is labelled as code input and fake map references stay unbacked',async()=>{
+  const r=await T().call('code',{code:'const result={entry:"submit",mapView:"https://invented.invalid/show/notretained",traceView:"https://invented.invalid/show/notretained"}; return JSON.stringify(result);'});
+  assert.equal(r.ok,true);
+  assert.equal(r.provenance.kind,'code-inputs');
+  assert.equal(r.evidenceCheck.status,'unbacked-references');
+  assert.deepEqual(r.evidenceCheck.fields,['mapView','traceView']);
+  assert.match(r.evidenceCheck.retry.arguments.code,/tool_describe/);
+  const listing=require('../lib/results').saveView('json',{analyses:[]});
+  const wrongKind=await T().call('code',{code:'return {mapView:'+JSON.stringify(listing)+'};'});
+  assert.equal(wrongKind.evidenceCheck.status,'unbacked-references','a listing URL is not map evidence');
+});
+
+test('tool result errors remain distinct from a JavaScript execution failure',async()=>{
+  const r=await T().call('code',{code:"const result=await tools.js_run({code:'throw new Error(\\\"inner failure\\\")'}); return result.error;"});
+  assert.equal(r.ok,true);
+  assert.match(r.toolErrors[0].error,/inner failure/);
+  assert.equal(r.toolErrors[0].kind,'tool-result');
+});
+
+test('unknown code tools return a concrete discovery retry',async()=>{
+ const r=await T().call('code',{code:'return await tools.missing_reader({});'});
+ assert.equal(r.ok,false);assert.match(r.toolErrors[0].retry.arguments.code,/tool_search/);
+ assert.match(r.toolErrors[0].retry.arguments.code,/missing_reader/);
+});
+test('host receipts retain full JSON when business data contains an external view',()=>{
+ const R=require('../lib/results'),value={view:'https://example.test/order/42',rows:[1,2,3]};
+ const receipt=require('../lib/code-result').receipt('business',value);
+ assert.notEqual(receipt.view,value.view);
+ assert.deepEqual(R.load(receipt.read.arguments.id).data,value);
+});
+
+test('console aggregates are output, not silent cells needing raw host receipts',async()=>{
+ const r=await T().call('code',{code:"const r=await tools.files_read({store:'data',path:'a.txt'}); console.log(JSON.stringify({n:r.text.trim().split('\\n').length}));"});
+ assert.equal(r.ok,true);assert.deepEqual(r.logs,['{"n":3}']);
+ assert.equal(r.toolResults,undefined);assert.equal(r.guidance,undefined);
+});
+
+test('large host receipts keep selected summary facts and real evidence bridges',()=>{
+ const C=require('../lib/code-result'),value={evidenceType:'entry-map-and-value-trace',mapView:'http://localhost/show/map',traceView:'http://localhost/show/trace',summary:{entry:'calculate',argumentExpression:'net',behaviorVerified:false},entryMap:{states:Array.from({length:12},(_,i)=>({id:i,code:'x'.repeat(2000),a:'a'.repeat(2000),b:'b'.repeat(2000)}))}};
+ const receipt=C.receipt('what_happens_from',value);
+ assert.equal(receipt.output.status,'part');
+ assert.ok(receipt.result.keys);assert.equal(receipt.result.summary.argumentExpression,'net');
+ assert.equal(receipt.result.summary.behaviorVerified,false);
+ assert.equal(receipt.result.mapView,value.mapView);
+ assert.ok(Buffer.byteLength(JSON.stringify(receipt.result))<=4096);
+ assert.deepEqual(require('../lib/results').load(receipt.read.arguments.id).data,value);
+});
+
+test('code accepts unambiguous name spelling variants without bypassing grants or self-call protection',async()=>{
+ const r=await T().call('code',{code:"return await tools.FilesRead({store:'data',path:'a.txt'});"});
+ assert.equal(r.ok,true);assert.equal(r.returned.text,fs.readFileSync(path.join(home,'files/data/a.txt'),'utf8'));
+ const recursive=await T().call('code',{code:'return await tools.Code({code:"return 1"});'});
+ assert.equal(recursive.ok,false);assert.match(recursive.error,/cannot call itself/);
+ const denied=await require('../lib/access').run({principalId:'limited',storyId:'alias',multiUser:true,role:'user',tools:['code']},()=>T().call('code',{code:"return await tools.FilesRead({store:'data',path:'a.txt'});"}));
+ assert.equal(denied.ok,false);assert.match(denied.error,/not available to this principal/);
+ const C=require('../lib/code-result'),defs=[{name:'one_name'},{name:'on_ename'}];
+ assert.equal(C.resolveName('oneName',defs),'oneName','ambiguous normalized names are never chosen');
+ assert.equal(C.resolveName('one_name',defs),'one_name','exact names retain precedence');
+});
+
+test('standalone value compatibility preserves native fields, real values and serialization',async()=>{
+ const JS=require('../lib/js'),payload={rows:[{n:3}],complete:false};
+ const r=await JS.run("const r=await tools.example(); return {direct:r.rows,alias:r.value.rows,keys:Object.keys(r),json:JSON.stringify(r)};",{}, {standalone:true,onTool:()=>payload});
+ assert.deepEqual(r.returned,{direct:payload.rows,alias:payload.rows,keys:Object.keys(payload),json:JSON.stringify(payload)});
+ const actual=await JS.run("return (await tools.example()).value;",{}, {standalone:true,onTool:()=>({value:0,extra:1})});
+ assert.equal(actual.returned,0);
+ const legacy=await JS.run("return (await tools.example()).value;",{}, {onTool:()=>payload});
+ assert.equal(legacy.returned,undefined,'script hooks retain raw result semantics');
+});
+test('calculation views link to the retained source independently of tool-result hydration',async()=>{
+ const R=require('../lib/results'),view=R.save('pg',[{amount:2},{amount:5}],{truncated:true}),id=view.split('/').pop();
+ const r=await T().call('code',{code:'const r=await tools.result_read({id:'+JSON.stringify(id)+',all:true}); return {sum:r.value.rows.reduce((n,x)=>n+x.amount,0),view:r.sourceView};'});
+ assert.equal(r.returned.sum,7);assert.equal(r.returned.view,view);assert.ok(r.views.includes(view));
+ const shown=R.load(r.view.split('/').pop()).data;
+ assert.ok(shown.views.some(v=>v.tool==='result_read'&&v.view===view));
+});
+
+test('dispatching code from code does not bypass the self-call boundary',async()=>{
+ const r=await T().call('code',{code:'return await tools.tool_execute({name:"code",arguments:{code:"return 1"}});'});
+ assert.equal(r.ok,false);assert.match(r.error,/cannot call itself/);
 });

@@ -66,3 +66,29 @@ test('preview totals omit unsafe or incomplete columns and scoped JSON pages rep
  const id=retain({rows:[{n:1},{n:2}],payload:'x'.repeat(1000)}),page=await T.call('result_read',{id,max_bytes:128}),chat=P.response('result_read',page).value;assert.equal(page.complete,false);assert.equal(chat.modelContext.output.status,'part');assert.equal(chat.modelContext.output.source,'unknown');
  const limited=retain({truncated:true,rows:[{n:1}],payload:'x'.repeat(1000)}),part=await T.call('result_read',{id:limited,path:'/payload',max_bytes:128}),limitedChat=P.response('result_read',part).value;assert.equal(limitedChat.modelContext.output.status,'part');assert.equal(limitedChat.modelContext.output.source,'partial');
 });
+
+test('filtered summaries process every retained row and preserve source scope, precision and raw reads',async()=>{
+ const rows=Array.from({length:1703},(_,i)=>({kind:i%7===0?'wanted':'other',amount:(i*37)%211-103,payload:'x'.repeat(50)}));
+ const id=retain({truncated:true,rows}),selected=rows.filter(r=>r.kind==='wanted');
+ const r=await T.call('result_read',{id,aggregate:'summary',field:'amount',where:JSON.stringify({kind:'wanted'}),all:true});
+ assert.equal(r.value.count,selected.length);assert.equal(r.value.sum,selected.reduce((n,x)=>n+x.amount,0));
+ assert.equal(r.value.min,Math.min(...selected.map(x=>x.amount)));assert.equal(r.value.max,Math.max(...selected.map(x=>x.amount)));
+ assert.equal(r.value.avg,r.value.sum/r.value.count);assert.equal(r.retainedRows,rows.length);assert.equal(r.matchedRows,selected.length);
+ assert.equal(r.retainedComplete,true);assert.equal(r.sourceCoverage.provenComplete,false);assert.equal(r.sourceCoverage.status,'partial');
+ assert.deepEqual((await T.call(r.read.tool,r.read.arguments)).value,rows,'raw bridge remains unfiltered source evidence');
+ assert.ok(Buffer.byteLength(JSON.stringify(r))<1500);
+ const projected=await T.call('result_read',{id,fields:['amount'],where:{kind:'wanted'}});
+ assert.equal((await T.call(projected.next.tool,projected.next.arguments)).value,r.value.sum,'projection next-action keeps its filter');
+ const empty=await T.call('result_read',{id,aggregate:'summary',field:'amount',where:{kind:'absent'}});
+ assert.deepEqual(empty.value,{count:0,sum:0,avg:null,min:null,max:null});assert.equal(empty.retainedRows,rows.length);
+ for(const where of [{typo:'wanted'},{kind:['wanted']},'not-json']){
+  await assert.rejects(T.call('result_read',{id,aggregate:'summary',field:'amount',where}),/field|where/);
+ }
+ const typed=retain({rows:[{flag:false,n:2},{flag:'false',n:7},{flag:null,n:11}]});
+ assert.equal((await T.call('result_read',{id:typed,aggregate:'sum',field:'n',where:{flag:false}})).value,2);
+ assert.equal((await T.call('result_read',{id:typed,aggregate:'sum',field:'n',where:{flag:'false'}})).value,7);
+ const precision=retain({rows:[{kind:'other',n:null},{kind:'wanted',n:5}]});
+ assert.equal((await T.call('result_read',{id:precision,aggregate:'sum',field:'n',where:{kind:'wanted'}})).value,5);
+ const primitive=retain({rows:[1,2,3]});
+ assert.equal((await T.call('result_read',{id:primitive,aggregate:'count',where:{}})).value,3);
+});

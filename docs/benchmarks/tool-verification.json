@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "sourceDigest": "543e91c58653cf834ce7a0880e596fc324c119d57d89b402a572d3f4464b85f6",
   "tools": [
     {
       "name": "find",
@@ -727,6 +727,7 @@
       "referenceTests": [
         "test/access.test.js",
         "test/admin-runtime.test.js",
+        "test/chat-context.test.js",
         "test/code.test.js",
         "test/confluence.test.js",
         "test/context.test.js",
@@ -1380,6 +1381,8 @@
       "resultContract": false,
       "referenceTests": [
         "test/chat-context.test.js",
+        "test/code.test.js",
+        "test/global-context.test.js",
         "test/result-operations.test.js",
         "test/tool-io-model-eval.test.js",
         "test/tool-output.test.js",
@@ -2799,6 +2802,44 @@
       ]
     },
     {
+      "name": "which_analyses_exist",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/semantic-code-model-eval.test.js",
+        "test/semantic-navigation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "what_happens_from",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/chat-context.test.js",
+        "test/code.test.js",
+        "test/semantic-code-model-eval.test.js",
+        "test/semantic-navigation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "where_value_flows",
+      "group": "semantic",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/semantic-code-model-eval.test.js",
+        "test/semantic-navigation.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "data_index",
       "group": "pg",
       "origin": "built-in",
@@ -3294,6 +3335,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/call-outcome.test.js",
+        "test/code.test.js",
         "test/context.test.js",
         "test/fixture-runtime-bridge.test.js",
         "test/model-discovery-eval.test.js",

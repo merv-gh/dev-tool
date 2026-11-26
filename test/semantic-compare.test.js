@@ -106,5 +106,5 @@ test('compact tool previews preserve proof and source evidence with a hard respo
   assert.deepEqual(preview.proof, value.proof); assert.deepEqual(preview.analyses, value.analyses); assert.deepEqual(preview.gaps, value.gaps);
   assert.equal(preview.truncated, false); assert.equal(preview.previewTruncated, true); assert.ok(preview.omitted.results > 0);
   assert.ok(preview.results[0].nodes.some(n => n.file === 'src/Payments.java')); assert.ok(preview.view);
-  assert.match(preview.detail, /format.*full/);
+  assert.match(preview.detail, /all:true/);
 });

@@ -80,11 +80,11 @@ test('parallel spans retain independent ancestry, and nested calls link to their
   const nested=T.tail({tool:'nested_span_probe'}).find(e=>e.event==='start'); assert.equal(nested.parentId,end.id); assert.equal(nested.parentSpanId,by['left child'].id);
 });
 
-for (const ending of ['return 4;', 'throw Error("guest failed");', 'await new Promise(()=>{});']) test(`code drains forgotten host calls on ${ending}`, async () => {
+for (const standalone of [false,true]) for (const ending of ['return 4;', 'throw Error("guest failed");', 'await new Promise(()=>{});']) test(`code drains forgotten host calls on ${ending} (standalone=${standalone})`, async () => {
   let started=0, stopped=0, lateWrites=0;
   const onTool = name => { if (name !== 'slow') return true; started++; const signal=E.signal(); return new Promise((resolve,reject)=>{ const timer=setTimeout(()=>{lateWrites++;resolve();},30000); signal.addEventListener('abort',()=>{clearTimeout(timer);stopped++;reject(E.abortError(signal.reason));},{once:true}); }); };
   let result;
-  try { result=await JS.run(`await tools.ready(); void tools.slow(); await tools.barrier(); ${ending}`,{}, {onTool,timeoutMs:3000}); }
+  try { result=await JS.run(`await tools.ready(); void tools.slow(); await tools.barrier(); ${ending}`,{}, {onTool,standalone,timeoutMs:3000}); }
   catch(e){ assert.match(ending,/new Promise/); assert.match(e.message,/stopped after/); }
   assert.equal(started,1); assert.equal(stopped,1); assert.equal(lateWrites,0);
   if(ending.startsWith('return'))assert.equal(result.returned,4);

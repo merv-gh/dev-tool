@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "sourceDigest": "543e91c58653cf834ce7a0880e596fc324c119d57d89b402a572d3f4464b85f6",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -1024,7 +1024,7 @@
       "consumers": [
         {
           "file": "lib/js.js",
-          "line": 172,
+          "line": 196,
           "snippet": "this.sandbox = require('./state-machine').create(require('./lifecycles').sandbox);"
         }
       ],
@@ -1060,7 +1060,7 @@
       "consumers": [
         {
           "file": "lib/js.js",
-          "line": 171,
+          "line": 195,
           "snippet": "this.lifecycle = require('./state-machine').create(require('./lifecycles').session);"
         }
       ],
@@ -1096,7 +1096,7 @@
       "consumers": [
         {
           "file": "lib/js.js",
-          "line": 289,
+          "line": 313,
           "snippet": "require('./state-machine').bind(cell, require('./lifecycles').cell);"
         }
       ],
@@ -1475,7 +1475,7 @@
       "consumers": [
         {
           "file": "lib/tools.js",
-          "line": 1024,
+          "line": 1051,
           "snippet": "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
         }
       ],

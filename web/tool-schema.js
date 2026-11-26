@@ -110,7 +110,7 @@
           ["exclusiveMinimum", (n) => v <= n],
           ["exclusiveMaximum", (n) => v >= n],
         ])
-          if (s[key] !== undefined && fails(s[key])) bad(p, `violates ${key}`);
+          if (s[key] !== undefined && fails(s[key])) bad(p, `violates ${key} ${s[key]} (received ${v})`);
         if (
           s.multipleOf !== undefined &&
           (!(s.multipleOf > 0) ||

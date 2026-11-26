@@ -52,7 +52,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -104,7 +104,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -162,7 +162,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -217,7 +217,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -282,7 +282,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -339,7 +339,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -386,7 +386,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -411,7 +411,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -440,7 +440,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -470,7 +470,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -495,7 +495,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -508,7 +508,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_search
 
-Discover capabilities, not data. Exact names return inputSchema; next call tool_execute. Saved scripts: script_search.
+Discover capabilities, not data. Exact names return inputSchema; execute via tool_execute or the returned insideCodeCall in code. Saved scripts: script_search.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -543,7 +543,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -574,7 +574,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -610,7 +610,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -661,7 +661,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -705,7 +705,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -752,7 +752,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -799,7 +799,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -858,7 +858,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -969,7 +969,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -1080,7 +1080,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1193,7 +1193,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1247,7 +1247,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1282,7 +1282,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -1328,7 +1328,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1372,7 +1372,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1412,7 +1412,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -1453,7 +1453,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1526,7 +1526,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1592,7 +1592,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1640,7 +1640,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -1673,7 +1673,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -1720,7 +1720,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1764,7 +1764,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -1805,7 +1805,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1848,7 +1848,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1894,7 +1894,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1933,7 +1933,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -1980,7 +1980,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -2022,7 +2022,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2091,7 +2091,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2184,7 +2184,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2257,7 +2257,7 @@ Workflow: [Case: the bug hides in a shared library version](README.md#case-libra
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2324,7 +2324,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2367,7 +2367,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2421,7 +2421,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2474,7 +2474,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2522,7 +2522,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2557,7 +2557,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2588,7 +2588,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2653,7 +2653,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -2694,7 +2694,7 @@ Workflow: [Logs, SQL, Kafka and Elasticsearch](README.md#live-evidence) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2765,7 +2765,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2792,7 +2792,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -2829,7 +2829,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2907,7 +2907,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -2969,7 +2969,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3426,7 +3426,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3473,7 +3473,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -3511,7 +3511,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3555,7 +3555,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -3598,7 +3598,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3633,7 +3633,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3664,7 +3664,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3707,7 +3707,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3750,7 +3750,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -3792,7 +3792,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -3865,7 +3865,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -3920,7 +3920,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -3953,7 +3953,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4002,7 +4002,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4041,7 +4041,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4088,7 +4088,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4146,7 +4146,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4175,7 +4175,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4207,7 +4207,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4243,7 +4243,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4272,7 +4272,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4326,7 +4326,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4394,7 +4394,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4480,7 +4480,7 @@ Workflow: [From a browser action to an API check](README.md#api-browser) · Orig
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4588,7 +4588,7 @@ Workflow: [Debug service response mappings](README.md#mapping-debugger) · Origi
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4644,7 +4644,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -4682,7 +4682,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4742,7 +4742,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4773,7 +4773,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4864,7 +4864,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4902,7 +4902,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4939,7 +4939,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -4954,7 +4954,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 ### code
 
-Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: "dev", sql: "select status, total from sales.orders", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));
+Run JavaScript with await tools.NAME(args). Object/array tool results also support .value as a compatibility alias when they have no real value field; serialization and direct fields stay unchanged. tools/text are supplied; no import/require or direct file access. Return the result explicitly (return await tools.NAME(args)); top-level expressions are not auto-returned. Use the tool matching the question. Discover capabilities with tools.tool_search({query:"action words"}), contracts with tools.tool_describe({name:"tool_name"}), names with tools.list(). For retained rows: const r=await tools.result_read({id,all:true}); r.value.rows is an array, not JSON text. Filter and compute in JS before printing/returning; printed output may be a preview. Use r.sourceCoverage.provenComplete and r.sourceView for source completeness and evidence. Analysis ids are code snapshots, never result_read ids. For Joern, reuse a supplied analysis id; otherwise list which_analyses_exist once. Describe what_happens_from for combined entry maps and value traces, or where_value_flows for traces. Keep mapView/traceView and proof limits. Never invent values or URLs. Cells are fresh; local result/args/vars are allowed. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Silent cells return host-call receipts. Node supports tools; QuickJS is for pure transforms. all:true expands retained output within source limits.
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -4991,7 +4991,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5035,7 +5035,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5098,7 +5098,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5141,7 +5141,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5174,7 +5174,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5238,7 +5238,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5279,7 +5279,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5355,7 +5355,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5430,7 +5430,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5532,7 +5532,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -5565,7 +5565,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5596,7 +5596,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5636,7 +5636,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -5674,7 +5674,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5725,7 +5725,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5792,7 +5792,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5820,7 +5820,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -5849,7 +5849,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5891,7 +5891,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -5949,7 +5949,7 @@ Workflow: [Your first investigation](README.md#start) · Origin: built-in
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -6034,7 +6034,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6091,7 +6091,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6163,7 +6163,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6211,7 +6211,7 @@ Workflow: [Every visualization: what to read and do](README.md#visualizations) �
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6270,7 +6270,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6305,7 +6305,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6333,7 +6333,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -6383,7 +6383,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6435,7 +6435,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6470,7 +6470,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6518,7 +6518,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6567,7 +6567,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6609,7 +6609,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6659,7 +6659,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6736,7 +6736,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -6779,7 +6779,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -6813,7 +6813,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -6842,7 +6842,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -6879,7 +6879,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -6915,7 +6915,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -6974,7 +6974,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -7109,7 +7109,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -7175,7 +7175,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7225,7 +7225,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7273,7 +7273,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7350,7 +7350,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7415,7 +7415,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7476,7 +7476,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -7501,7 +7501,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -7548,7 +7548,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7624,7 +7624,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7664,7 +7664,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7698,7 +7698,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7729,7 +7729,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7789,7 +7789,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7829,7 +7829,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7879,7 +7879,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -7906,7 +7906,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -7979,7 +7979,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8017,7 +8017,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8056,7 +8056,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8236,7 +8236,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -8270,7 +8270,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8306,7 +8306,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8382,7 +8382,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -8434,7 +8434,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8510,7 +8510,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -8564,7 +8564,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -8689,7 +8689,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8734,7 +8734,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8831,7 +8831,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -8871,7 +8871,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -8901,7 +8901,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8949,7 +8949,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -8990,7 +8990,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9031,7 +9031,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9077,7 +9077,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -9107,7 +9107,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9144,7 +9144,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9191,7 +9191,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9233,7 +9233,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9288,7 +9288,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9322,7 +9322,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9350,7 +9350,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -9400,7 +9400,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9446,7 +9446,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9477,7 +9477,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -9514,7 +9514,7 @@ Workflow: [Workspaces, regressions, patches and push](README.md#verify-changes) 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9562,7 +9562,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -9597,7 +9597,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9634,7 +9634,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9688,7 +9688,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9725,7 +9725,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9762,7 +9762,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9797,7 +9797,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9857,7 +9857,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9928,7 +9928,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -9958,7 +9958,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10023,7 +10023,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10055,7 +10055,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10090,7 +10090,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10164,7 +10164,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10199,7 +10199,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10228,7 +10228,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10264,7 +10264,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10299,7 +10299,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10336,7 +10336,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10390,7 +10390,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10419,7 +10419,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10455,7 +10455,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10491,7 +10491,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10522,7 +10522,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10567,7 +10567,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10642,7 +10642,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10694,7 +10694,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10739,7 +10739,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10777,7 +10777,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10822,7 +10822,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10860,7 +10860,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10911,7 +10911,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -10949,7 +10949,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -10996,7 +10996,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11032,7 +11032,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11068,7 +11068,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -11097,7 +11097,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11124,7 +11124,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -11176,7 +11176,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -11230,7 +11230,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 
 ### result_read
 
-Read, project or aggregate retained data without rerunning its action. For arithmetic use aggregate (sum/count/avg/min/max) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation; sourceCoverage.provenComplete separately states whether source completeness is proven. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.
+Read, project or aggregate retained data without rerunning its action. For a filtered count and total, use aggregate:"summary", field and optional where:{status:"open"}; value contains count/sum/avg/min/max, retainedRows is the full input count. Equality filters use exact types and inspect every retained row. For arithmetic use aggregate (sum/count/avg/min/max/summary) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation. Full reads/aggregates return sourceCoverage.provenComplete and sourceView as response metadata, not stored row fields; use those fields directly for completeness and citations. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. sourceView links the original retained evidence; cite it rather than the code cell view. Semantic analysis ids are not result ids. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.
 
 Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
 
@@ -11246,7 +11246,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "path": {
       "type": "string",
-      "description": "RFC 6901 JSON pointer; empty reads the root, or /rows for projection/aggregation"
+      "description": "Pointer into original retained data, not response metadata. Empty=root; /rows for projection/aggregation"
     },
     "fields": {
       "type": "array",
@@ -11267,13 +11267,20 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
         "sum",
         "avg",
         "min",
-        "max"
+        "max",
+        "summary"
       ],
-      "description": "Compute over the full retained array, never its preview. Numeric operations require field; count counts rows."
+      "description": "Compute over the full retained array, never its preview. Numeric operations and summary require field; summary returns count/sum/avg/min/max together. count counts selected rows."
     },
     "field": {
       "type": "string",
-      "description": "Exact numeric row field for sum/avg/min/max; omit for count"
+      "description": "Exact numeric row field for sum/avg/min/max/summary; omit for count"
+    },
+    "where": {
+      "type": "object",
+      "maxProperties": 32,
+      "additionalProperties": true,
+      "description": "Exact top-level equality filters combined with AND, e.g. {status:\"open\"}. Primitive values only, without coercion. JSON-encoded objects are accepted."
     },
     "cursor": {
       "type": "string",
@@ -11288,7 +11295,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11386,7 +11393,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -11492,7 +11499,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -11522,7 +11529,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11572,7 +11579,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11625,7 +11632,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11693,7 +11700,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11808,7 +11815,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11860,7 +11867,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11924,7 +11931,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -11966,7 +11973,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12011,7 +12018,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12054,7 +12061,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12083,7 +12090,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12120,7 +12127,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12195,7 +12202,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12228,7 +12235,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12288,7 +12295,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12415,7 +12422,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12459,7 +12466,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12493,7 +12500,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12523,7 +12530,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12657,7 +12664,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12709,7 +12716,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12771,7 +12778,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12823,7 +12830,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -12863,7 +12870,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12909,7 +12916,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -12983,7 +12990,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13096,7 +13103,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13130,7 +13137,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13170,7 +13177,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13234,7 +13241,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13283,7 +13290,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13320,7 +13327,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13350,7 +13357,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13388,7 +13395,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13430,7 +13437,7 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13481,7 +13488,7 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13540,7 +13547,7 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13608,7 +13615,7 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13659,7 +13666,7 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13739,7 +13746,7 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13795,7 +13802,7 @@ Workflow: [Build and review a draft change](README.md#ci-review) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13859,7 +13866,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13893,7 +13900,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -13921,7 +13928,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -13968,7 +13975,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14005,7 +14012,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14046,7 +14053,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14099,7 +14106,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14138,7 +14145,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14182,7 +14189,7 @@ Workflow: [Developer studio: continue, coordinate and verify](README.md#develope
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14230,7 +14237,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14259,7 +14266,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -14378,7 +14385,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14408,7 +14415,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -14452,7 +14459,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14502,7 +14509,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14553,7 +14560,7 @@ Workflow: [Leave a task working overnight](README.md#task-harness) · Origin: bu
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14682,7 +14689,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14767,7 +14774,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -14797,7 +14804,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -14848,7 +14855,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14890,7 +14897,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14926,7 +14933,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -14959,7 +14966,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -14989,7 +14996,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15025,7 +15032,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15071,7 +15078,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -15109,7 +15116,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15175,7 +15182,7 @@ Workflow: [Monitor work and effectiveness](README.md#operations) · Origin: buil
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15219,7 +15226,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -15260,7 +15267,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15301,7 +15308,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15338,7 +15345,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -15391,7 +15398,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15432,7 +15439,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15483,7 +15490,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15584,7 +15591,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15659,7 +15666,7 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -15681,6 +15688,9 @@ Workflow: [Run a branch in a persistent service environment](README.md#service-e
 - [`semantic_search`](#tool-semantic_search)
 - [`semantic_trace`](#tool-semantic_trace)
 - [`semantic_query`](#tool-semantic_query)
+- [`which_analyses_exist`](#tool-which_analyses_exist)
+- [`what_happens_from`](#tool-what_happens_from)
+- [`where_value_flows`](#tool-where_value_flows)
 
 <a id="tool-repo_model"></a>
 
@@ -15796,7 +15806,7 @@ Workflow: [Explore dev-tool from its own sources](README.md#self-reflection) · 
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -15838,7 +15848,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -15948,7 +15958,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -16081,7 +16091,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -16808,7 +16818,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -17364,7 +17374,315 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-which_analyses_exist"></a>
+
+### which_analyses_exist
+
+List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "versions": {
+      "type": "boolean",
+      "default": false
+    },
+    "workspace": {
+      "type": "string",
+      "description": "Exact workspace id; filter retained records only",
+      "minLength": 1
+    },
+    "repo": {
+      "type": "string",
+      "description": "Exact repository identity; filter retained records only",
+      "minLength": 1
+    },
+    "sha": {
+      "type": "string",
+      "description": "Exact source revision; filter retained records only",
+      "minLength": 1
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full available output; source and model context limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-what_happens_from"></a>
+
+### what_happens_from
+
+Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Copy summary as the answer projection, keeping its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "if": {
+    "required": [
+      "job"
+    ]
+  },
+  "then": {
+    "properties": {
+      "job": {
+        "minLength": 1
+      }
+    }
+  },
+  "else": {
+    "required": [
+      "analysis",
+      "entry"
+    ],
+    "if": {
+      "anyOf": [
+        {
+          "required": [
+            "parameter"
+          ]
+        },
+        {
+          "required": [
+            "sink"
+          ]
+        },
+        {
+          "required": [
+            "argument"
+          ]
+        }
+      ]
+    },
+    "then": {
+      "required": [
+        "parameter",
+        "sink",
+        "argument"
+      ]
+    }
+  },
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact retained id from which_analyses_exist; never a repository name",
+      "minLength": 1
+    },
+    "entry": {
+      "type": "string",
+      "description": "Whole entry method name",
+      "minLength": 1
+    },
+    "parameter": {
+      "type": "string",
+      "description": "Source parameter name",
+      "minLength": 1
+    },
+    "sink": {
+      "type": "string",
+      "description": "Target call name",
+      "minLength": 1
+    },
+    "argument": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "description": "Required one-based sink argument position, e.g. 2 selects the second argument"
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "holds": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expression",
+          "holds"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Literal predicate text and explicit truth values: [{expression:\"input < 0\",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Never replace an expression with a descriptive label. Omitted or [] declares none."
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe the returned owned job; omit other selectors when polling",
+      "minLength": 1
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Wait for this job, at most 30000 ms",
+      "default": 30000,
+      "minimum": 0,
+      "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full available output; source and model context limits apply."
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
+```
+
+</details>
+
+<a id="tool-where_value_flows"></a>
+
+### where_value_flows
+
+Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns selectedSinks.argumentExpression and separate scalar controlAssumptionStatus/dataAssumptionStatus; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.
+
+Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
+
+<details><summary>Exact input schema</summary>
+
+```json
+{
+  "if": {
+    "required": [
+      "job"
+    ]
+  },
+  "then": {
+    "properties": {
+      "job": {
+        "minLength": 1
+      }
+    }
+  },
+  "else": {
+    "required": [
+      "analysis",
+      "entry",
+      "parameter",
+      "sink",
+      "argument"
+    ]
+  },
+  "type": "object",
+  "properties": {
+    "env": {
+      "type": "string",
+      "enum": [
+        "dev"
+      ],
+      "default": "dev",
+      "description": "Environment"
+    },
+    "analysis": {
+      "type": "string",
+      "description": "Exact retained id from which_analyses_exist; never a repository name",
+      "minLength": 1
+    },
+    "entry": {
+      "type": "string",
+      "description": "Source method name",
+      "minLength": 1
+    },
+    "parameter": {
+      "type": "string",
+      "description": "Source parameter name",
+      "minLength": 1
+    },
+    "sink": {
+      "type": "string",
+      "description": "Target call name",
+      "minLength": 1
+    },
+    "argument": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 64,
+      "description": "Required one-based sink argument position, e.g. 2 selects the second argument"
+    },
+    "assumptions": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "expression": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "holds": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expression",
+          "holds"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Literal predicate text and explicit truth values: [{expression:\"input < 0\",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Never replace an expression with a descriptive label. Omitted or [] declares none."
+    },
+    "job": {
+      "type": "string",
+      "description": "Observe the returned owned job; omit other selectors when polling",
+      "minLength": 1
+    },
+    "waitMs": {
+      "type": "integer",
+      "description": "Wait for this job, at most 30000 ms",
+      "default": 30000,
+      "minimum": 0,
+      "maximum": 30000
+    },
+    "all": {
+      "type": "boolean",
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -17441,7 +17759,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -17500,7 +17818,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -17555,7 +17873,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -17630,7 +17948,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -17671,7 +17989,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -17711,7 +18029,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -17751,7 +18069,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -17885,7 +18203,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -17923,7 +18241,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -18012,7 +18330,7 @@ Workflow: [Explore a service and its surroundings](README.md#services) · Origin
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -18150,7 +18468,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -18194,7 +18512,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -18245,7 +18563,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -18620,7 +18938,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -18718,7 +19036,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -18849,7 +19167,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -18896,7 +19214,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -19003,7 +19321,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [],
@@ -19038,7 +19356,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
   "properties": {
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -19067,7 +19385,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -19116,7 +19434,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -19185,7 +19503,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [
@@ -19254,7 +19572,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": []
@@ -19296,7 +19614,7 @@ Workflow: [Discover requirements and publish explanations](README.md#requirement
     },
     "all": {
       "type": "boolean",
-      "description": "Full output; source limits apply."
+      "description": "Full available output; source and model context limits apply."
     }
   },
   "required": [

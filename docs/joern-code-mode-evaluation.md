@@ -1,5 +1,7 @@
 # Joern navigation through code mode and question-shaped tools
 
+Historical prototype evaluation. For the registered implementation, actual Joern 4.0.564 tests and later Qwen 4B results, see [code-mode reliability research](code-joern-reliability.md).
+
 Code mode can call the existing semantic tools and return a small, useful projection of their evidence. The Qwen 3.5 2B pilot could not reliably assemble that workflow from a general code description. Clearer assumption inputs and outputs made two synthetic scenarios pass. On fresh real graphs, the question tools retrieved the right evidence and preserved proof limits, but both final answers still failed endpoint-label and citation requirements. These prototypes are not ready to register for reliable 2B use.
 
 There are two phases. The initial small-model comparison uses **synthetic CPG worker records** with the production Node sandbox, registry, retained-projection navigation, map construction, trace evaluation and compact adapters. Docker was initially unresponsive, so the first live-test invocation skipped. After recovering Docker Desktop, fresh real Joern Java/JavaScript tests exercised actual CPGs and an independently compiled behavioral oracle. The cached image contains Joern **4.0.533**; this does not verify the newer pinned image. Historical evidence in [semantic-code-e2e.json](benchmarks/semantic-code-e2e.json) remains a separate run.

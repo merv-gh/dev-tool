@@ -1,0 +1,72 @@
+#!/usr/bin/env node
+// Production code-only navigation over retained real Joern evidence. No fixture
+// answer, candidate adapter, query override or automatic job polling is supplied.
+const fs=require('node:fs'),crypto=require('node:crypto'),zlib=require('node:zlib');
+const gitMetadata=()=>{try{const cp=require('node:child_process'),cwd=require('node:path').join(__dirname,'..'),run=args=>cp.execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim();return {commit:run(['rev-parse','HEAD']),dirty:!!run(['status','--porcelain'])};}catch{return {commit:null,dirty:null};}};
+const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
+async function main(){
+  const o={state:'/tmp/dt-joern-code-live-session.json',endpoint:process.env.OLLAMA_HOST||'http://127.0.0.1:11434',model:'qwen3.5:4b',seed:'42',output:'',case:'aggregate',profile:'greedy',scenario:'',surface:'code'};
+  for(let i=2;i<process.argv.length;i+=2){const k=process.argv[i].replace(/^--/,'');if(!(k in o)||process.argv[i+1]===undefined)throw Error('Unknown/missing argument');o[k]=process.argv[i+1];}
+  if(!o.output||o.case!=='aggregate')throw Error('--output required; --case aggregate');
+  if(!['code','hybrid','semantic'].includes(o.surface))throw Error('--surface code|hybrid|semantic');
+  const state=JSON.parse(fs.readFileSync(o.state));
+  for(const k of Object.keys(process.env))if(/^DT_(HOME|CONFIG_DIR|CACHE_DIR|REPOS_DIR|PASSPORTS_DIR|PLUGINS_DIR|SCRIPTS_DIR|VIEWS_DIR|WORK_DIR|TOOLS|TOOL_PROFILE|SECURITY_PROFILE)$/.test(k))delete process.env[k];
+  Object.assign(process.env,{DT_HOME:state.traceHome,DT_LOG:'quiet',DT_NO_DOCTOR:'1',DT_SEMANTIC_URL:state.url,DT_SEMANTIC_TOKEN:state.token,DT_TOOLS:'code,tool_search,tool_describe,tool_execute,tool_profiles,result_read,which_analyses_exist,what_happens_from,where_value_flows,semantic_search,semantic_query,semantic_trace'});
+  // Bare code is also a group token. Deny every other registered name before registry creation.
+  const allowed=new Set(process.env.DT_TOOLS.split(',')),inventory=require('../docs/benchmarks/tool-verification.json');
+  process.env.DT_TOOLS=[...allowed,...inventory.tools.filter(t=>!allowed.has(t.name)).map(t=>'-'+t.name)].join(',');
+  const T=require('../lib/tools'),R=require('../lib/results'),S=require('../lib/semantic-code');
+  const enabledToolNames=(await T.ready()).active.map(t=>t.name).sort();if(enabledToolNames.length!==allowed.size||enabledToolNames.some(n=>!allowed.has(n)))throw Error('Enabled tools differ from evaluation allowlist: '+JSON.stringify({allowed:[...allowed],actual:enabledToolNames}));
+  const sanity=await T.call('code',{code:'return {preflight:true};'});if(!sanity.ok||sanity.returned?.preflight!==true)throw Error('Code runtime preflight failed: '+JSON.stringify(sanity));
+  const profiles={'thinking-general':{think:true,temperature:1,top_p:0.95,top_k:20,min_p:0,presence_penalty:1.5,repeat_penalty:1,num_predict:4096,timeoutMs:180000},greedy:{think:false,temperature:0,num_predict:1024,timeoutMs:90000},sampled:{think:false,temperature:0.7,top_p:0.8,top_k:20,min_p:0,presence_penalty:1.5,repeat_penalty:1,num_predict:1024,timeoutMs:90000},thinking:{think:true,temperature:0.6,top_p:0.95,top_k:20,min_p:0,presence_penalty:0,repeat_penalty:1,num_predict:4096,timeoutMs:180000}};
+  if(!profiles[o.profile])throw Error('Unknown inference profile');const settings={...profiles[o.profile],seed:Number(o.seed),num_ctx:32768,maxTurns:10,maxCalls:16};const {think,timeoutMs,maxTurns,maxCalls,...inferenceOptions}=settings;const session=crypto.randomUUID();
+  const rows=Array.from({length:1700+Number(o.seed)},(_,i)=>({id:i+1,group:i%7===0?'target':'other',cents:((i*7919+Number(o.seed)*37)%100003)-43001}));
+  const view=R.save('pg',rows,{query:'disposable aggregation fixture',truncated:true}),id=view.split('/').pop();
+  const expected={count:rows.filter(r=>r.group==='target').length,sumCents:rows.filter(r=>r.group==='target').reduce((n,r)=>n+r.cents,0),retainedRows:rows.length,sourceComplete:false};
+  const scenario={kind:'retained-row-aggregation',rows:rows.length},analysis={id:null},entry=null,parameter=null,sink=null,argument=null,predicate=null,holds=false,expectedExpression=null;
+  const prompt=`Read retained result ${id}. Filter the full retained dataset to group === "target". For that filtered subset, compute both its row count and its sum of cents. Also report the total number of retained rows before filtering. Return JSON {count:number,sumCents:number,retainedRows:number,sourceComplete:boolean,view:string}. view may be the original retained source view or a calculation view linking back to that source. The source query was truncated; distinguish full retained data from complete upstream data. Use the retained evidence and return its real view URL.`;
+  const codeInstruction=fs.readFileSync(require('path').join(__dirname,'../lib/agent-prompt.md'),'utf8').match(/^6a[.] (.+)$/m)?.[1];if(!codeInstruction)throw Error('Production code-mode instructions missing');
+  const system=(o.surface==='semantic'?'Prefer the offered question-shaped Joern tools for retained analyses, maps and value traces. Use native tool_search/tool_describe for discovery as needed, and code for composition and calculations. Reuse a supplied analysis id; list analyses only if one is missing.':o.surface==='hybrid'?'Use native tool_search and tool_describe for capability discovery and schemas. Execute all source/data queries and calculations inside the offered code tool using tools.NAME(args).':'Use the offered code tool to investigate retained evidence. All dt tool calls must execute inside code JavaScript. Discover enabled tool contracts as needed.')+' Await running jobs using their existing ids. No writes or direct network fetches from code. Answer from retrieved evidence; do not guess missing results. '+codeInstruction;
+  const schemas=await T.schemas({profile:o.surface==='semantic'?'code-semantic':o.surface==='hybrid'?'code-discovery':'code'}),tools=schemas.map(schema=>({type:'function',function:{name:schema.name,description:schema.description,parameters:schema.inputSchema}}));
+  const report={protocol:'dt.code-navigation-evaluation/v3',grader:'retained-aggregate-and-explicit-final-facts/v2',profile:o.profile,surface:o.surface,transport:'production chat-pressure response with Ollama usage counters',engine:{actualJoernVersion:state.actualJoernVersion,image:state.image},scenario,scope:'Production code-only interface; deterministic retained rows with independently computed aggregate and explicit truncated source.',case:o.case,model:o.model,endpoint:o.endpoint,seed:Number(o.seed),analysis:analysis.id,workspace:analysis.workspace,sha:analysis.sha,git:gitMetadata(),sourceDigest:require('../lib/source-version').digest(),harnessDigest:hash(fs.readFileSync(__filename)),graderDigest:hash(fs.readFileSync(require.resolve('./eval-answer.cjs'))),enabledToolNames,schemas:tools,prompt,instructionDigest:hash(system),startedAt:new Date().toISOString(),settings,events:[],evidence:[],usage:{input:0,output:0},finish:'turn-budget'};
+  const messages=[{role:'system',content:system},{role:'user',content:prompt}];
+  const save=()=>{const data=JSON.stringify({...report,transcript:messages},null,2)+'\n';require('../lib/atomic-file').atomicFile(o.output,o.output.endsWith('.gz')?zlib.gzipSync(data):data);};
+  save();
+  try{
+    for(let turn=0;turn<10;turn++){
+      console.error(JSON.stringify({case:o.case,seed:o.seed,turn:turn+1}));
+      let response;try{
+        const r=await fetch(o.endpoint.replace(/\/$/,'')+'/api/chat',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({model:o.model,stream:false,think,messages,tools,options:inferenceOptions}),signal:AbortSignal.timeout(timeoutMs)});
+        if(!r.ok)throw Error('Ollama HTTP '+r.status+': '+(await r.text()).slice(0,500));response=await r.json();
+      }catch(e){report.error=e.message;report.finish='endpoint-error';break;}
+      (report.providerTurns??=[]).push({turn:turn+1,promptTokens:response.prompt_eval_count||0,generatedTokens:response.eval_count||0,doneReason:response.done_reason});report.usage.input+=response.prompt_eval_count||0;report.usage.output+=response.eval_count||0;messages.push(response.message);
+      if(!response.message.tool_calls?.length){report.final=response.message.content;report.finish=response.done_reason==='length'?'output-budget':'assistant-finished';break;}
+      if(report.events.length+response.message.tool_calls.length>16){report.finish='call-budget';break;}
+      let deliveredBytesThisTurn=0;
+      for(const call of response.message.tool_calls){
+        let args,result;try{
+          const target=call.function.name;if(target!=='code'&&!(['hybrid','semantic'].includes(o.surface)&&['tool_search','tool_describe'].includes(target)||o.surface==='semantic'&&['which_analyses_exist','what_happens_from','where_value_flows','result_read'].includes(target)))throw Error('Only offered native tools may be called directly; use code for other enabled queries.');
+          args=typeof call.function.arguments==='string'?JSON.parse(call.function.arguments):call.function.arguments;
+          if(target==='code'&&/\bfetch\s*\(/.test(args.code))throw Error('Direct network fetch is outside this evaluation');
+          const native=await T.call(target,args);result=require('../lib/chat-pressure').response(target,native,{session,all:args.all===true,usage:{usedTokens:(response.prompt_eval_count||0)+(response.eval_count||0)+Math.ceil(deliveredBytesThisTurn/3),contextWindow:settings.num_ctx,model:o.model}}).value;
+          if(target==='code'&&native.view){const shown=R.load(native.view.split('/').pop())?.data;for(const v of shown?.views||[]){const value=R.load(v.view.split('/').pop())?.data;if(value?.flowMap||value?.sides)report.evidence.push({tool:v.tool,view:v.view,value});if(value?.entryMap?.flowMap)report.evidence.push({tool:v.tool,view:value.mapView,value:value.entryMap});if(value?.valueTrace?.sides)report.evidence.push({tool:v.tool,view:value.traceView,value:value.valueTrace});}report.events.push({tool:'code',arguments:args,result,calls:shown?.calls});}
+          else {if(native.view){const value=R.load(native.view.split('/').pop())?.data;if(value?.flowMap||value?.sides)report.evidence.push({tool:target,view:native.view,value});if(value?.entryMap?.flowMap)report.evidence.push({tool:target,view:value.mapView,value:value.entryMap});if(value?.valueTrace?.sides)report.evidence.push({tool:target,view:value.traceView,value:value.valueTrace});}report.events.push({tool:target,arguments:args,result});}
+        }catch(e){result={error:e.message};report.events.push({tool:call.function.name,arguments:args,result});}
+        deliveredBytesThisTurn+=Buffer.byteLength(JSON.stringify(result));
+        messages.push({role:'tool',tool_name:call.function.name,content:JSON.stringify(result)});save();
+      }
+    }
+    const answerParse=require('./eval-answer.cjs').parse(report.final,{"count":"number","sumCents":"number","retainedRows":"number","sourceComplete":"boolean","view":"string"});
+    const answer=answerParse.answer;report.formatCompliant=answerParse.formatCompliant;report.parsedJSON=answerParse.json;report.answerParsing={normalized:answerParse.normalized,supplemented:answerParse.supplemented,conflicts:answerParse.conflicts};
+    report.parsed=answer;
+    report.expected=expected;report.fixtureView=view;
+    const answerId=R.referenceId(answer?.view),record=answerId&&R.load(answerId);
+    const backedCalculation=record?.view==='code'&&record.data?.views?.some(v=>v.tool==='result_read'&&v.view===view)&&record.data?.calls?.some(c=>c.tool==='result_read'&&c.ok&&c.args?.id===id);
+    report.answerViewKind=answer?.view===view?'source-result':backedCalculation?'calculation-bridge':'unbacked';
+    report.checks={count:answer?.count===expected.count,sum:answer?.sumCents===expected.sumCents,retainedRows:answer?.retainedRows===expected.retainedRows,sourceCompleteness:answer?.sourceComplete===false,view:answer?.view===view||!!backedCalculation,read:report.events.some(e=>e.tool==='result_read'&&!e.result.error||e.calls?.some(c=>c.tool==='result_read'&&!c.error))};
+    report.checks.consistentFinal=answerParse.conflicts.length===0;
+    report.passed=Object.values(report.checks).every(Boolean);report.strictPassed=report.passed&&report.formatCompliant;report.completedAt=new Date().toISOString();save();
+    console.log(JSON.stringify({output:o.output,passed:report.passed,calls:report.events.length,finish:report.finish,checks:report.checks,answer:report.parsed}));
+  }finally{const J=require('../lib/jobs'),owned=J.list(1000).map(x=>J.find(x.id)).filter(j=>j?.promise&&['queued','running','cancelling','draining'].includes(j.state));for(const job of owned)try{J.cancel(job.id,'evaluation ended');}catch{}await Promise.allSettled(owned.map(j=>j.promise));report.cleanup={cancelledOwnedJobs:owned.map(j=>j.id)};save();await require('../lib/isolate').stop();await require('../lib/state-store').close();}
+}
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});

@@ -65,3 +65,26 @@ test('new local repositories are retained even when clean and older than checkou
  meta.usedAt=new Date(Date.now()-90*86400000).toISOString();fs.writeFileSync(file,JSON.stringify(meta));
  await W.sweep();assert.equal(fs.existsSync(W.checkId(repo.id).path),true);
 })));
+
+test('project exports preserve typed map/trace aliases and raw-read scope across chats',async()=>{
+  await A.run(actor(),async()=>{
+    G.open({id:'semantic-links'});
+    const requesting=A.owner(),R=require('../lib/results');
+    const exposed=await G.within('semantic-links',()=>{
+      const map=R.saveView('semantic-flow-map',{flowMap:{nodes:[{code:'actual'}]}}),trace=R.saveView('semantic-path-trace',{operation:'trace',sides:[]});
+      const body={returned:{mapView:map,traceView:trace},views:[map,trace],value:{view:'https://external.example/object'},entryMap:{view:map,mapView:map,read:{tool:'result_read',arguments:{id:map.split('/').pop(),all:true}}},valueTrace:{view:trace,traceView:trace}};
+      const view=R.saveView('json',body);
+      return G.expose({...body,view,mapView:map,traceView:trace,summary:{mapView:map,traceView:trace}},requesting);
+    });
+    const id=url=>url.split('/').pop();
+    assert.ok(R.load(id(exposed.mapView)).data.flowMap);
+    assert.equal(R.load(id(exposed.traceView)).data.operation,'trace');
+    assert.equal(exposed.summary.mapView,exposed.mapView);
+    assert.equal(exposed.returned.mapView,exposed.mapView);
+    assert.equal(exposed.views[0],exposed.mapView);
+    assert.equal(exposed.value.view,'https://external.example/object');
+    assert.equal(exposed.entryMap.read.arguments.id,id(exposed.mapView));
+    assert.equal(R.load(id(exposed.view)).data.entryMap.view,exposed.mapView);
+    await A.run(actor('bob'),()=>assert.equal(R.load(id(exposed.mapView)),null));
+  });
+});

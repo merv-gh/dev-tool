@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+      sourceDigest: "543e91c58653cf834ce7a0880e596fc324c119d57d89b402a572d3f4464b85f6",
       machines: [
         {
           id: "IO.atomic-file",
@@ -19271,7 +19271,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/js.js",
-              line: 172,
+              line: 196,
               snippet: "this.sandbox = require('./state-machine').create(require('./lifecycles').sandbox);"
             }
           ],
@@ -19307,7 +19307,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/js.js",
-              line: 171,
+              line: 195,
               snippet: "this.lifecycle = require('./state-machine').create(require('./lifecycles').session);"
             }
           ],
@@ -19343,7 +19343,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/js.js",
-              line: 289,
+              line: 313,
               snippet: "require('./state-machine').bind(cell, require('./lifecycles').cell);"
             }
           ],
@@ -19722,7 +19722,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/tools.js",
-              line: 1024,
+              line: 1051,
               snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
             }
           ],
@@ -24603,7 +24603,17 @@ var require_results = __commonJS({
       return crypto.createHmac("sha256", secret).update(String(value)).digest("hex").slice(0, 32);
     }
     var verify = (value, token) => typeof token === "string" && token.length === 32 && crypto.timingSafeEqual(Buffer.from(sign(value)), Buffer.from(token));
-    module2.exports = { save, saveView, saveTool, toolMeta, load, raw, list, retain, publicUrl, sign, verify };
+    function referenceId(url) {
+      if (typeof url !== "string") return null;
+      try {
+        const base = new URL(publicUrl(), "http://dt.local"), resolved = new URL(url, base);
+        if (resolved.origin !== base.origin) return null;
+        return /\/(?:show|view|logs|pr|files|map|map-preview)\/([a-z0-9]+)$/.exec(resolved.pathname)?.[1] || null;
+      } catch {
+        return null;
+      }
+    }
+    module2.exports = { referenceId, save, saveView, saveTool, toolMeta, load, raw, list, retain, publicUrl, sign, verify };
   }
 });
 
@@ -51849,7 +51859,7 @@ var require_tool_schema = __commonJS({
               ["exclusiveMinimum", (n) => v <= n],
               ["exclusiveMaximum", (n) => v >= n]
             ])
-              if (s[key] !== void 0 && fails(s[key])) bad(p, `violates ${key}`);
+              if (s[key] !== void 0 && fails(s[key])) bad(p, `violates ${key} ${s[key]} (received ${v})`);
             if (s.multipleOf !== void 0 && (!(s.multipleOf > 0) || Math.abs(v / s.multipleOf - Math.round(v / s.multipleOf)) > 1e-10))
               bad(p, "violates multipleOf");
           }
@@ -62410,12 +62420,23 @@ function emit(kind, values) {
 // tool calls go to dt over stdout; answers come back on stdin
 let rpcSeq = 0;
 const rpcWait = new Map();
-const rpc = (tool, args) => new Promise((resolve, reject) => {
+const inFlight = new Set(), detachedErrors = [];
+let standaloneResults = false;
+const toolValue = (value, alias) => alias && value && typeof value === 'object' && !Object.hasOwn(value, 'value')
+  ? new Proxy(value, {get:(target,key,receiver)=>key==='value'?target:Reflect.get(target,key,receiver)}) : value;
+process.on('unhandledRejection', error => detachedErrors.push(error?.message || String(error)));
+const rpc = (tool, args) => {
+ const alias = standaloneResults;
+ const promise = new Promise((resolve, reject) => {
   if (rpcWait.size >= 32) return reject(new Error('at most 32 host tool calls may be outstanding'));
   const id = ++rpcSeq;
-  rpcWait.set(id, { resolve, reject });
+  rpcWait.set(id, { resolve:value=>resolve(toolValue(value,alias)), reject });
   process.stdout.write(JSON.stringify({ rpc: id, tool, args: args === undefined ? {} : args }) + '\n');
-});
+ });
+ inFlight.add(promise);
+ promise.then(() => inFlight.delete(promise), () => inFlight.delete(promise));
+ return promise;
+};
 const tools = new Proxy({}, { get: (_, name) => {
   if (typeof name !== 'string' || name === 'then') return undefined;
   if (name === 'call') return (tool, args) => rpc(tool, args);
@@ -62471,7 +62492,8 @@ process.stdin.on('data', (c) => {
   }
 });
 async function handle(input) {
-  logs.length = 0; tests.length = 0; pending.length = 0; output.length = 0; outputBytes = 0;
+  standaloneResults = !!input.standalone;
+  logs.length = 0; tests.length = 0; pending.length = 0; output.length = 0; outputBytes = 0; detachedErrors.length = 0;
   const out = { vars: input.vars, args: input.args, result: input.result, logs, tests, output };
   try {
     const AsyncFunction = (async () => {}).constructor;
@@ -62514,11 +62536,23 @@ async function handle(input) {
       },
     });
     globalThis.files = files; // A global can be shadowed by existing local variables.
-    const fn = new AsyncFunction('vars', 'args', 'result', ...Object.keys(helpers), input.code);
-    const r = await fn(out.vars, out.args, out.result, ...Object.values(helpers));
+    if(input.standalone)for(const key of ['vars','args','result'])Object.defineProperty(globalThis,key,{configurable:true,get:()=>out[key],set:value=>{out[key]=value;}});
+    const names=input.standalone?[]:['vars','args','result'], values=input.standalone?[]:[out.vars,out.args,out.result];
+    const fn = new AsyncFunction(...names, ...Object.keys(helpers), input.code);
+    const r = await fn(...values, ...Object.values(helpers));
     await Promise.all(pending);
     if (r !== undefined) { out.returned = r; out.hasReturn = true; }
   } catch (e) { out.error = (e && e.message) || String(e); }
+  // Standalone cells with an omitted return finish their implicit async helper.
+  // Explicit returns/errors and script hooks retain prompt cancellation of
+  // forgotten work; they must not wait for a background side effect.
+  if(input.standalone&&!out.hasReturn&&!out.error){
+    do {
+      await Promise.allSettled([...inFlight]);
+      await new Promise(resolve => setImmediate(resolve));
+    } while (inFlight.size);
+    if(detachedErrors.length)out.error='Unawaited asynchronous work failed: '+detachedErrors.join('; ');
+  }
   let text;
   try { text = JSON.stringify(out); } catch (e) { text = JSON.stringify({ logs, tests, output, error: 'result is not JSON: ' + e.message }); }
   process.stdout.write(text + '\n');
@@ -62613,7 +62647,7 @@ async function handle(input) {
       }
       // -> { vars, args, result, returned, hasReturn, logs, tests, output, error }
       // onTool(name, args): lets the code call dt tools; timeoutMs: instead of scripts.jsTimeoutMs
-      async run(code, { vars = {}, args, result, context: context2 } = {}, { onTool, timeoutMs, onOutput, engine = "node" } = {}) {
+      async run(code, { vars = {}, args, result, context: context2 } = {}, { onTool, timeoutMs, onOutput, engine = "node", standalone = false } = {}) {
         if (this.busy) throw new Error("js: this session already has a running cell");
         const settings = enabled();
         this.lifecycle.to("running");
@@ -62640,7 +62674,7 @@ async function handle(input) {
             const release = E.resource(() => this.kill("cancelled"));
             let line;
             try {
-              line = JSON.stringify({ code: String(code), vars, args, result, context: context2 });
+              line = JSON.stringify({ code: String(code), vars, args, result, context: context2, standalone });
             } catch (e) {
               release();
               this.close();
@@ -71942,24 +71976,199 @@ var require_global_context = __commonJS({
     }
     function expose(result, actor) {
       if (!result || typeof result !== "object" || typeof result.view !== "string") return result;
+      const R = require_results(), memo = /* @__PURE__ */ new Map(), active = /* @__PURE__ */ new Set(), errors = [];
+      const idOf = (url) => R.referenceId(url);
+      function copy(url) {
+        const id = idOf(url);
+        if (!id) return url;
+        if (memo.has(id)) return memo.get(id);
+        if (active.has(id) || memo.size >= 32) {
+          errors.push("A cyclic or oversized presentation reference was omitted");
+          return void 0;
+        }
+        if (A.run(actor, () => R.load(id))) {
+          memo.set(id, url);
+          return url;
+        }
+        const saved = R.load(id);
+        if (!saved) {
+          errors.push("A retained presentation is unavailable in this project");
+          memo.set(id, url);
+          return url;
+        }
+        active.add(id);
+        try {
+          const data = saved.kind === "view" ? rewrite(saved.data) : null;
+          const view = A.run(actor, () => {
+            if (saved.kind === "view") return R.saveView(saved.view, data, { title: saved.title || toolTitle(result) });
+            if (Array.isArray(saved.rows)) {
+              const meta = Object.fromEntries(Object.entries(saved).filter(([key]) => !["id", "owner", "rows", "kind", "at"].includes(key)));
+              return R.save(saved.kind, saved.rows, { ...meta, retainedAt: saved.at });
+            }
+            return R.saveView("json", saved, { title: toolTitle(result) });
+          });
+          memo.set(id, view);
+          memo.set(idOf(view), view);
+          return view;
+        } finally {
+          active.delete(id);
+        }
+      }
+      function rewrite(value) {
+        if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+        const out2 = { ...value };
+        for (const key of ["summary", "entryMap", "valueTrace", "returned", "result", "value"]) if (out2[key] && typeof out2[key] === "object" && !Array.isArray(out2[key])) out2[key] = rewrite(out2[key]);
+        for (const key of ["views", "evidenceViews", "toolResults"]) if (Array.isArray(out2[key])) out2[key] = out2[key].map((v) => typeof v === "string" ? copy(v) : rewrite(v));
+        for (const key of ["view", "mapView", "traceView", "analysisView", "sourceView"]) if (typeof out2[key] === "string") out2[key] = copy(out2[key]);
+        if (out2.read?.tool === "result_read" && typeof out2.read.arguments?.id === "string") {
+          const next = memo.get(out2.read.arguments.id) || copy(require_config().getServer().publicUrl + "/show/" + out2.read.arguments.id);
+          out2.read = next ? { ...out2.read, arguments: { ...out2.read.arguments, id: idOf(next) } } : void 0;
+        }
+        return out2;
+      }
       try {
-        const R = require_results(), id = new URL(result.view, "http://dt.local").pathname.split("/").pop(), saved = R.load(id);
-        if (!saved) return { ...result, view: void 0, viewError: "No retained presentation is available in this project" };
-        const view = A.run(actor, () => {
-          if (saved.kind === "view") return R.saveView(saved.view, saved.data, { title: saved.title || toolTitle(result) });
-          if (Array.isArray(saved.rows)) {
-            const meta = Object.fromEntries(Object.entries(saved).filter(([key]) => !["id", "owner", "rows", "kind", "at"].includes(key)));
-            return R.save(saved.kind, saved.rows, { ...meta, retainedAt: saved.at });
-          }
-          return R.saveView("json", saved, { title: toolTitle(result) });
-        });
-        return { ...result, view };
+        const exposed = rewrite(result);
+        return { ...exposed, ...errors.length ? { viewError: [...new Set(errors)].join("; ") } : {} };
       } catch (error) {
         return { ...result, view: void 0, viewError: require_redact().clean(error.message) };
       }
     }
     var toolTitle = (result) => result.title || "Persistent project result";
     module2.exports = { open, get, find, within, call, expose };
+  }
+});
+
+// lib/code-result.js
+var require_code_result = __commonJS({
+  "lib/code-result.js"(exports2, module2) {
+    function receipt(tool, value) {
+      const omitted = [];
+      function preview(v, path3 = "$", depth = 0) {
+        if (typeof v === "string" && v.length > 500) {
+          omitted.push(path3);
+          return v.slice(0, 500);
+        }
+        if (!v || typeof v !== "object") return v;
+        if (depth >= 7) {
+          omitted.push(path3);
+          return Array.isArray(v) ? [] : {};
+        }
+        if (Array.isArray(v)) {
+          if (v.length > 5) omitted.push(path3);
+          return v.slice(0, 5).map((x, i) => preview(x, `${path3}[${i}]`, depth + 1));
+        }
+        const entries = Object.entries(v);
+        if (entries.length > 16) omitted.push(path3);
+        return Object.fromEntries(entries.slice(0, 16).map(([k, x]) => [k, preview(x, `${path3}.${k}`, depth + 1)]));
+      }
+      let selected = preview(value);
+      if (Buffer.byteLength(JSON.stringify(selected) || "null") > 4096) {
+        selected = { keys: Object.keys(value || {}).slice(0, 30).map((k) => k.slice(0, 100)) };
+        for (const key of ["evidenceType", "state", "job", "mapView", "traceView", "analysisView"]) if (typeof value?.[key] === "string" && value[key].length <= 500) selected[key] = value[key];
+        if (value?.summary && typeof value.summary === "object" && !Array.isArray(value.summary)) {
+          selected.summary = Object.fromEntries(Object.entries(value.summary).slice(0, 16).map(([k, v]) => [k, v === null || ["boolean", "number"].includes(typeof v) ? v : typeof v === "string" ? v.slice(0, 256) : { keys: Object.keys(v || {}).slice(0, 8) }]));
+          while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && Object.keys(selected.summary).length) delete selected.summary[Object.keys(selected.summary).at(-1)];
+        }
+        while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && selected.keys.length) selected.keys.pop();
+        omitted.push("$");
+      }
+      const results = require_results(), existing = typeof value?.view === "string" && results.referenceId(value.view);
+      const view = existing && results.load(existing) ? value.view : results.saveTool(tool, JSON.stringify(value ?? null));
+      return { tool, result: selected, output: { status: omitted.length ? "part" : "all", scope: "tool-response", ...omitted.length ? { omitted: [...new Set(omitted)].slice(0, 20) } : {} }, view, read: { tool: "result_read", arguments: { id: view.split("/").pop(), all: true } } };
+    }
+    module2.exports = { receipt };
+    module2.exports.discovery = (name, value) => {
+      if (!value || typeof value !== "object") return value;
+      const direct = (target, args) => ({ insideCodeCall: `tools.${target}`, ...args ? { arguments: args } : {}, guidance: `Call await tools.${target}(args) directly inside code, using inputSchema. Do not wrap this in tool_execute.` });
+      const action = (next) => next?.tool === "tool_execute" ? direct(next.arguments?.name || next.name, next.arguments?.arguments) : next?.tool === "tool_describe" ? direct("tool_describe", next.arguments) : next;
+      if (name === "tool_describe" && value.name) return { ...value, next: direct(value.name) };
+      if (name === "tool_search") return { ...value, ...value.next ? { next: action(value.next) } : {}, tools: value.tools?.map((t) => ({ ...t, next: action(t.next) })) };
+      return value;
+    };
+    module2.exports.diagnostic = (error) => {
+      if (/Cannot use import statement|require is not defined/.test(error || "")) return { message: 'tools is already supplied. Remove import/require; call tools.NAME(args) directly inside code. For discovery: return await tools.tool_search({query:"action words"});' };
+      const reserved = /Identifier '([^']+)' has already been declared/.exec(error || "")?.[1];
+      if (reserved) return {
+        message: `${reserved} was declared twice or shadows a supplied helper. Use a different local variable name. Each code cell is fresh.`,
+        ...reserved === "tools" ? { retry: { tool: "code", arguments: { code: "return await tools.list();" } } } : {}
+      };
+    };
+    module2.exports.provenance = (returned, calls) => {
+      const metadata = /* @__PURE__ */ new Set(["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"]);
+      const names = [...new Set(calls.filter((c) => c.ok && !c.resultError).map((c) => c.tool === "tool_execute" ? c.args?.name || c.tool : c.tool))];
+      const provenance = { kind: names.length ? names.every((n) => metadata.has(n)) ? "discovery" : "tool-results" : "code-inputs", successfulTools: names };
+      let value = returned;
+      if (typeof value === "string" && value.length <= 65536) try {
+        value = JSON.parse(value);
+      } catch {
+      }
+      const missing = [];
+      for (const object of [value, value?.summary]) if (object && typeof object === "object") for (const [field, kind] of [["mapView", "map"], ["traceView", "trace"]]) {
+        const url = object[field];
+        if (typeof url !== "string") continue;
+        const id = require_results().referenceId(url), data = id && require_results().load(id)?.data;
+        if (!(kind === "map" ? data?.flowMap : data?.sides && data?.operation === "trace")) missing.push(field);
+      }
+      return { provenance, ...missing.length ? { evidenceCheck: { status: "unbacked-references", fields: [...new Set(missing)], meaning: "These returned map/trace references do not identify the corresponding retained evidence. A constructed value is not a source-query result.", retry: { tool: "code", arguments: { code: 'return await tools.tool_describe({name:"what_happens_from"});' } } } } : {} };
+    };
+    module2.exports.resolveName = (name, definitions) => {
+      if (typeof name !== "string") return name;
+      if (definitions.some((t) => t.name === name)) return name;
+      const key = (s) => s.replace(/[_-]/g, "").toLowerCase();
+      const matches = definitions.filter((t) => key(t.name) === key(name));
+      return matches.length === 1 ? matches[0].name : name;
+    };
+  }
+});
+
+// lib/call-evidence.js
+var require_call_evidence = __commonJS({
+  "lib/call-evidence.js"(exports2, module2) {
+    var FAILED = /* @__PURE__ */ new Set(["failed", "error", "cancelled", "interrupted", "timeout", "compile-error", "no-tests-ran", "skipped-only", "all-tests-skipped", "cleanup-failed", "invalid", "different"]);
+    var TESTS = /* @__PURE__ */ new Set(["test_run", "test_compare"]);
+    var ASSERTIONS = /* @__PURE__ */ new Set(["scenario_check", "scenario_preflight", "scenario_emulate", "scenario_assert", "scenario_observe", "scenario_run", "scenario_verify", "collection_check", "collection_validate", "collection_run", "collection_report", "script_run", "fixture_validate", "fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_arm", "fixture_runtime_check", "fixture_runtime_cleanup"]);
+    function classify(tool, value, { invocation = "succeeded", job, traceId } = {}) {
+      const r = value && typeof value === "object" ? value : {};
+      const out2 = { version: 1, invocation, ...traceId ? { traceId } : {} };
+      const id = !tool.startsWith("jenkins_") && typeof r.job === "string" ? r.job : job?.id;
+      if (id) out2.job = { id, state: job?.state || r.state || r.status || "unknown", ...job?.traceId ? { traceId: job.traceId } : {} };
+      const payload = job?.result || job?.resultSummary || r;
+      if (/^jenkins_(build|wait|tests)$/.test(tool) && payload.state) out2.execution = { kind: "ci", status: ["failed", "unstable", "aborted"].includes(payload.state) ? "failed" : payload.state };
+      else if (/^bitbucket_pr_(status|wait)$/.test(tool) && payload.state) out2.execution = { kind: "review", status: payload.state === "build_failed" ? "failed" : payload.state };
+      else if (tool === "files_archive" && payload.archived === true) out2.execution = { kind: "files", status: payload.sourceRemoved === true ? "archived" : "cleanup-failed" };
+      else if (["files_delete", "workspace_delete"].includes(tool) && typeof payload.deleted === "boolean") out2.execution = { kind: "files", status: payload.deleted ? "deleted" : "cleanup-failed" };
+      else if (tool === "testdb_template_verify" && typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
+      else if (tool === "testdb_gc" && Array.isArray(payload.failures)) out2.execution = { kind: "cleanup", status: payload.failures.length ? "cleanup-failed" : "done" };
+      else if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out2.execution = { kind: "assertions", status: payload.outcome };
+      else if (TESTS.has(tool) && typeof payload.outcome === "string") out2.execution = { kind: "tests", status: payload.outcome, ...payload.counts ? { counts: payload.counts } : {} };
+      else if (ASSERTIONS.has(tool)) {
+        if (typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
+        else if (typeof payload.status === "string") out2.execution = { kind: "assertions", status: payload.status };
+      }
+      if (tool.startsWith("service_env_") && payload.state) out2.execution = { kind: "service-environment", status: payload.outcome === "failed" ? "failed" : payload.state };
+      if (tool === "service_env_request") out2.execution = { kind: "runtime-observation", status: payload.ok === false ? "failed" : "observed" };
+      if (!out2.execution && out2.job) out2.execution = { kind: "job", status: out2.job.state };
+      out2.failed = invocation === "failed" || FAILED.has(out2.execution?.status) || FAILED.has(out2.job?.state);
+      return out2;
+    }
+    module2.exports = { classify, FAILED };
+  }
+});
+
+// lib/call-outcome.js
+var require_call_outcome = __commonJS({
+  "lib/call-outcome.js"(exports2, module2) {
+    var { classify } = require_call_evidence();
+    function refresh(call) {
+      if (!call.evidence?.job) return call;
+      const job = require_jobs().get(call.evidence.job.id);
+      if (!job) return { ...call, evidence: { ...call.evidence, job: { ...call.evidence.job, retained: false } } };
+      return { ...call, evidence: classify(call.target || call.tool, null, { invocation: call.evidence.invocation, traceId: call.evidence.traceId, job }) };
+    }
+    function failed(call) {
+      return call.evidence ? call.evidence.failed : call.ok === false;
+    }
+    module2.exports = { classify, refresh, failed };
   }
 });
 
@@ -72082,57 +72291,6 @@ dt.diffLines = ${diffLines.toString()};
 <body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
     }
     module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
-  }
-});
-
-// lib/call-evidence.js
-var require_call_evidence = __commonJS({
-  "lib/call-evidence.js"(exports2, module2) {
-    var FAILED = /* @__PURE__ */ new Set(["failed", "error", "cancelled", "interrupted", "timeout", "compile-error", "no-tests-ran", "skipped-only", "all-tests-skipped", "cleanup-failed", "invalid", "different"]);
-    var TESTS = /* @__PURE__ */ new Set(["test_run", "test_compare"]);
-    var ASSERTIONS = /* @__PURE__ */ new Set(["scenario_check", "scenario_preflight", "scenario_emulate", "scenario_assert", "scenario_observe", "scenario_run", "scenario_verify", "collection_check", "collection_validate", "collection_run", "collection_report", "script_run", "fixture_validate", "fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_arm", "fixture_runtime_check", "fixture_runtime_cleanup"]);
-    function classify(tool, value, { invocation = "succeeded", job, traceId } = {}) {
-      const r = value && typeof value === "object" ? value : {};
-      const out2 = { version: 1, invocation, ...traceId ? { traceId } : {} };
-      const id = !tool.startsWith("jenkins_") && typeof r.job === "string" ? r.job : job?.id;
-      if (id) out2.job = { id, state: job?.state || r.state || r.status || "unknown", ...job?.traceId ? { traceId: job.traceId } : {} };
-      const payload = job?.result || job?.resultSummary || r;
-      if (/^jenkins_(build|wait|tests)$/.test(tool) && payload.state) out2.execution = { kind: "ci", status: ["failed", "unstable", "aborted"].includes(payload.state) ? "failed" : payload.state };
-      else if (/^bitbucket_pr_(status|wait)$/.test(tool) && payload.state) out2.execution = { kind: "review", status: payload.state === "build_failed" ? "failed" : payload.state };
-      else if (tool === "files_archive" && payload.archived === true) out2.execution = { kind: "files", status: payload.sourceRemoved === true ? "archived" : "cleanup-failed" };
-      else if (["files_delete", "workspace_delete"].includes(tool) && typeof payload.deleted === "boolean") out2.execution = { kind: "files", status: payload.deleted ? "deleted" : "cleanup-failed" };
-      else if (tool === "testdb_template_verify" && typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
-      else if (tool === "testdb_gc" && Array.isArray(payload.failures)) out2.execution = { kind: "cleanup", status: payload.failures.length ? "cleanup-failed" : "done" };
-      else if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out2.execution = { kind: "assertions", status: payload.outcome };
-      else if (TESTS.has(tool) && typeof payload.outcome === "string") out2.execution = { kind: "tests", status: payload.outcome, ...payload.counts ? { counts: payload.counts } : {} };
-      else if (ASSERTIONS.has(tool)) {
-        if (typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
-        else if (typeof payload.status === "string") out2.execution = { kind: "assertions", status: payload.status };
-      }
-      if (tool.startsWith("service_env_") && payload.state) out2.execution = { kind: "service-environment", status: payload.outcome === "failed" ? "failed" : payload.state };
-      if (tool === "service_env_request") out2.execution = { kind: "runtime-observation", status: payload.ok === false ? "failed" : "observed" };
-      if (!out2.execution && out2.job) out2.execution = { kind: "job", status: out2.job.state };
-      out2.failed = invocation === "failed" || FAILED.has(out2.execution?.status) || FAILED.has(out2.job?.state);
-      return out2;
-    }
-    module2.exports = { classify, FAILED };
-  }
-});
-
-// lib/call-outcome.js
-var require_call_outcome = __commonJS({
-  "lib/call-outcome.js"(exports2, module2) {
-    var { classify } = require_call_evidence();
-    function refresh(call) {
-      if (!call.evidence?.job) return call;
-      const job = require_jobs().get(call.evidence.job.id);
-      if (!job) return { ...call, evidence: { ...call.evidence, job: { ...call.evidence.job, retained: false } } };
-      return { ...call, evidence: classify(call.target || call.tool, null, { invocation: call.evidence.invocation, traceId: call.evidence.traceId, job }) };
-    }
-    function failed(call) {
-      return call.evidence ? call.evidence.failed : call.ok === false;
-    }
-    module2.exports = { classify, refresh, failed };
   }
 });
 
@@ -72926,7 +73084,7 @@ var require_semantic_response = __commonJS({
   "lib/semantic-response.js"(exports2, module2) {
     var pick = (value, keys) => Object.fromEntries(keys.filter((k) => value?.[k] !== void 0).map((k) => [k, value[k]]));
     function compact(value, budget = 16384) {
-      const out2 = { ...value, format: "compact", detail: 'Full evidence is retained at view. Use format:"full" or narrow limit/maxPaths for original JSON.', omitted: {} };
+      const out2 = { ...value, format: "compact", detail: "Full evidence is retained at view. Use all:true for full retained JSON, or narrow the query; source limits still apply.", omitted: {} };
       for (const key of ["gaps", "dependencies", "ambiguity"]) if (Array.isArray(out2[key])) out2[key] = out2[key].slice();
       const shortCode = (node) => {
         const n = pick(node, ["name", "signature", "file", "line", "label", "code", "inCondition", "repo", "sha"]);
@@ -79154,6 +79312,7 @@ var require_result_operations = __commonJS({
   "lib/result-operations.js"(exports2, module2) {
     var invalid = (message) => Object.assign(Error(message), { code: "DT_CONTEXT_ARGUMENT", statusCode: 400 });
     function calculate(rows, aggregate, field) {
+      if (aggregate === "summary") return Object.fromEntries(["count", "sum", "avg", "min", "max"].map((op) => [op, calculate(rows, op, field)]));
       let answer = aggregate === "count" ? rows.length : aggregate === "sum" ? 0 : null;
       for (let i = 0; aggregate !== "count" && i < rows.length; i++) {
         const row = rows[i], n = row && typeof row === "object" && Object.hasOwn(row, field) ? row[field] : void 0;
@@ -79179,14 +79338,37 @@ var require_result_operations = __commonJS({
       }
       if (fields.length) return { scope: "all-retained-rows", rows: rows.length, sourceCompleteProven: false, fields: Object.fromEntries(fields) };
     }
-    module2.exports = { calculate, numericSummary };
+    function normalize(args) {
+      const out2 = { ...args };
+      if (typeof out2.where === "string") {
+        if (out2.where.length > 32768) throw invalid("where JSON exceeds 32768 characters");
+        try {
+          out2.where = JSON.parse(out2.where);
+        } catch {
+          throw invalid("where must be an object of exact field/value pairs; a JSON-encoded object is accepted");
+        }
+      }
+      return out2;
+    }
+    function filter(rows, where) {
+      if (where === void 0) return rows;
+      if (!where || typeof where !== "object" || Array.isArray(where) || Object.keys(where).length > 32) throw invalid("where must be an object with at most 32 equality filters");
+      const entries = Object.entries(where);
+      if (!entries.length) return rows;
+      for (const [key, v] of entries) {
+        if (!key || key.length > 200 || v !== null && !["string", "number", "boolean"].includes(typeof v) || typeof v === "number" && (!Number.isFinite(v) || Number.isInteger(v) && !Number.isSafeInteger(v))) throw invalid("where accepts nonempty top-level field names and finite safe primitive values only; values are not coerced");
+        if (rows.length && !rows.some((row) => row && typeof row === "object" && Object.hasOwn(row, key))) throw invalid("Filter field " + key + " is absent from the retained rows; inspect the exact field names");
+      }
+      return rows.filter((row) => row && typeof row === "object" && entries.every(([k, v]) => Object.hasOwn(row, k) && row[k] === v));
+    }
+    module2.exports = { calculate, numericSummary, filter, normalize };
   }
 });
 
 // lib/tool-output.js
 var require_tool_output = __commonJS({
   "lib/tool-output.js"(exports2, module2) {
-    var ALL = { type: "boolean", description: "Full output; source limits apply." };
+    var ALL = { type: "boolean", description: "Full available output; source and model context limits apply." };
     var canonicalName = (name) => name === "search_tools" ? "tool_search" : name;
     function full(value, depth = 0) {
       if (depth < 3 && value && typeof value === "object" && !Array.isArray(value)) {
@@ -79203,6 +79385,7 @@ var require_tool_output = __commonJS({
       if (record.kind === "view" && record.data && typeof record.data === "object") {
         if (Array.isArray(record.data)) return { ...value, data: record.data };
         const result = { ...value, ...record.data, view: value.view };
+        if (value.counts && record.data.counts && typeof value.counts === "object" && typeof record.data.counts === "object" && !Array.isArray(value.counts) && !Array.isArray(record.data.counts)) result.counts = { ...value.counts, ...record.data.counts };
         for (const key of ["omitted", "previewTruncated", "summaryTruncated", "moreFailures", "moreParts", "shown"]) if (!Object.hasOwn(record.data, key)) delete result[key];
         if (value.outputBudgetBytes && !Object.hasOwn(record.data, "truncated")) delete result.truncated;
         return result;
@@ -79306,40 +79489,47 @@ var require_chat_context = __commonJS({
       while (end < b.length && end > 0 && (b[end] & 192) === 128) end--;
       return b.subarray(0, end).toString("utf8");
     }
-    function short(value, depth = 0, budget = { left: 5e3 }) {
-      if (budget.left < 30 || depth > 4) return "[details in result_read]";
+    function short(value, depth = 0, budget = { left: 5e3 }, omissions = [], pointer = "") {
+      const omit = (info) => omissions.push({ path: pointer, ...info }), child = (k) => pointer + "/" + String(k).replace(/~/g, "~0").replace(/\//g, "~1");
+      if (budget.left < 30 || depth > 4) {
+        omit({ reason: depth > 4 ? "depth-limit" : "preview-budget" });
+        return "[details in result_read]";
+      }
       if (typeof value === "string") {
         const text = prefix(value, Math.min(700, budget.left - 20));
         budget.left -= Buffer.byteLength(text) + 20;
+        if (text !== value) omit({ reason: "string-preview", shownBytes: Buffer.byteLength(text), totalBytes: Buffer.byteLength(value) });
         return text === value ? value : text + "\u2026 [preview]";
       }
       if (Array.isArray(value)) {
         const out2 = [];
-        for (const v of value.slice(0, depth < 2 ? 3 : 1)) {
+        for (const [i, v] of value.slice(0, depth < 2 ? 3 : 1).entries()) {
           if (budget.left < 30) break;
           budget.left -= 4;
-          out2.push(short(v, depth + 1, budget));
+          out2.push(short(v, depth + 1, budget, omissions, child(i)));
         }
+        if (out2.length < value.length) omit({ reason: "array-preview", shown: out2.length, total: value.length });
         return out2;
       }
       if (value && typeof value === "object") {
-        const out2 = {};
-        for (const [k, v] of Object.entries(value).slice(0, 35)) {
+        const out2 = {}, entries = Object.entries(value);
+        for (const [k, v] of entries.slice(0, 35)) {
           if (budget.left < 30) break;
           if (k.length > 200) continue;
           budget.left -= Buffer.byteLength(k) + 8;
-          Object.defineProperty(out2, k, { value: short(v, depth + 1, budget), enumerable: true });
+          Object.defineProperty(out2, k, { value: short(v, depth + 1, budget, omissions, child(k)), enumerable: true });
         }
+        if (Object.keys(out2).length < entries.length) omit({ reason: "object-preview", shownKeys: Object.keys(out2).length, totalKeys: entries.length });
         return out2;
       }
       budget.left -= 20;
       return value;
     }
-    function prepare(tool, value, { reserveBytes = 0 } = {}) {
+    function prepare(tool, value, { reserveBytes = 0, maxBytes } = {}) {
       if (value === void 0) return value;
       const configured = require_config().getTools().modelResultBytes;
       if (!configured) return value;
-      const limit = Math.max(1024, configured - Math.min(1024, reserveBytes));
+      const limit = Math.max(1024, Math.min(configured, maxBytes ?? configured) - Math.min(1024, reserveBytes));
       const serialized = JSON.stringify(value), originalBytes = Buffer.byteLength(serialized);
       if (originalBytes <= limit) return value;
       let stored, saveError;
@@ -79349,10 +79539,11 @@ var require_chat_context = __commonJS({
         saveError = require_redact().clean(error.message);
       }
       const id = stored?.split("/").pop();
-      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "gaps", "proof", "cleanupErrors", "total", "view"];
+      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where", "retainedComplete", "completeScope"];
       const ordered = value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries([...priority.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !priority.includes(k))]) : null;
+      const omissions = [];
       const out2 = {
-        ...ordered ? short(ordered) : { preview: short(value) },
+        ...ordered ? short(ordered, 0, { left: 5e3 }, omissions) : { preview: short(value, 0, { left: 5e3 }, omissions) },
         modelContext: {
           compacted: true,
           originalBytes,
@@ -79362,6 +79553,37 @@ var require_chat_context = __commonJS({
           guidance: "Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output."
         }
       };
+      const omissionBudget = Math.min(1024, Math.floor(limit / 8));
+      const previewAt = (pointer) => {
+        let v = ordered ? out2 : out2.preview;
+        if (!pointer) return v;
+        for (const raw of pointer.slice(1).split("/")) {
+          const k = raw.replace(/~1/g, "/").replace(/~0/g, "~");
+          if (!v || typeof v !== "object" || !Object.hasOwn(v, k)) return void 0;
+          v = v[k];
+        }
+        return v;
+      };
+      const attachOmissions = () => {
+        const byPath = /* @__PURE__ */ new Map();
+        for (const e of omissions) byPath.set(e.path, { ...byPath.get(e.path), ...e });
+        const ranks = { "response-budget": 0, "array-preview": 1, "object-preview": 2, "string-preview": 3, "depth-limit": 4, "preview-budget": 5 }, selected = [];
+        for (const entry of [...byPath.values()].sort((a, b) => ranks[a.reason] - ranks[b.reason] || a.path.length - b.path.length)) {
+          const shown = previewAt(entry.path), e = { ...entry };
+          if (e.total !== void 0) e.shown = Array.isArray(shown) ? shown.length : 0;
+          if (e.totalKeys !== void 0) e.shownKeys = shown && typeof shown === "object" ? Object.keys(shown).filter((k) => entry.path || !ordered || Object.hasOwn(ordered, k) && k !== "modelContext").length : 0;
+          if (e.totalBytes !== void 0) {
+            const suffix = "\u2026 [preview]", text = typeof shown === "string" && shown.endsWith(suffix) ? shown.slice(0, -suffix.length) : shown;
+            e.shownBytes = typeof text === "string" ? Buffer.byteLength(text) : 0;
+          }
+          if (Buffer.byteLength(JSON.stringify([...selected, e])) <= omissionBudget) selected.push(e);
+        }
+        if (selected.length) out2.modelContext.previewOmissions = selected;
+        else delete out2.modelContext.previewOmissions;
+        if (selected.length < byPath.size) out2.modelContext.previewOmissionsTruncated = true;
+        else delete out2.modelContext.previewOmissionsTruncated;
+      };
+      attachOmissions();
       const numericSummary = require_result_operations().numericSummary(value?.rows);
       if (numericSummary) {
         out2.modelContext.numericSummary = numericSummary;
@@ -79371,23 +79593,27 @@ var require_chat_context = __commonJS({
       for (const key of Object.keys(out2).filter((k) => !["modelContext", "view", "id", "job", "state", "status", "ok", "outcome", "workspace", "executionId"].includes(k)).reverse()) {
         if (bytes(out2) <= limit) break;
         delete out2[key];
+        omissions.push({ path: ordered ? "/" + key.replace(/~/g, "~0").replace(/\//g, "~1") : "", reason: "response-budget" });
+        attachOmissions();
       }
       for (const key of ["job", "id", "workspace", "executionId", "view"]) if (bytes(out2) > limit && typeof out2[key] !== "string") delete out2[key];
       if (bytes(out2) > limit) return { modelContext: out2.modelContext, ...stored ? { view: stored } : {} };
       return out2;
     }
-    function read({ id, path: path3 = "", cursor, max_bytes, all = false, fields, aggregate, field }) {
+    function read({ id, path: path3 = "", cursor, max_bytes, all = false, fields, aggregate, field, where }) {
+      if (typeof id === "string" && /^[a-f0-9]{64}-[a-f0-9]{32}$/.test(id)) throw invalid("This has a semantic analysis id format, not a retained result id. Use it in tools.what_happens_from({analysis:id,...}) or tools.where_value_flows({analysis:id,...}); inspect their contracts with tools.tool_describe. result_read accepts ids from a tool result view/modelContext, not analysis ids.");
       const requestedPath = path3;
-      const transform = fields !== void 0 || aggregate !== void 0;
+      const transform = fields !== void 0 || aggregate !== void 0 || where !== void 0;
       if (transform && cursor) throw invalid("Projection/aggregation reads all retained rows; omit cursor");
       if (fields !== void 0 && aggregate !== void 0) throw invalid("Choose fields or aggregate, not both");
       if (field !== void 0 && aggregate === void 0) throw invalid("field requires aggregate");
       if (typeof path3 !== "string" || path3.length > 2e3 || path3 && !path3.startsWith("/")) throw invalid("path must be an RFC 6901 JSON pointer, such as /rows/0");
       const meta = require_results().toolMeta(id);
-      let value, backing;
+      let value, backing, view = meta ? require_results().publicUrl() + "/show/" + id : void 0;
       if (!meta) {
         const record = require_results().load(id);
         if (!record || record.toolResponse) throw missing();
+        view = require_results().publicUrl() + "/" + (record.kind === "view" ? "show" : { map: "map", "map-preview": "map-preview", logs: "logs", trace: "logs", pr: "pr" }[record.kind] || "view") + "/" + id;
         backing = record.kind === "view" ? record.data : { rows: record.rows, total: record.total, truncated: record.truncated };
         value = backing;
       } else if (path3 || all || transform) {
@@ -79404,29 +79630,35 @@ var require_chat_context = __commonJS({
           path3 = path3.slice(0, path3.lastIndexOf("/"));
           break;
         }
-        if (!value || typeof value !== "object" || !Object.hasOwn(value, key)) throw invalid('JSON pointer does not exist in the retained response; use path=/rows with fields=["column"] for an array column, or aggregate and field for arithmetic');
+        if (!value || typeof value !== "object" || !Object.hasOwn(value, key)) {
+          if (["sourceCoverage", "sourceView", "sourceComplete"].includes(key)) throw invalid("That field is not stored here. Full reads and aggregates return sourceCoverage.provenComplete and sourceView as response metadata; use those returned fields directly, not path/fields into stored rows.");
+          throw invalid('JSON pointer does not exist in the retained response; use path=/rows with fields=["column"] for an array column, or aggregate and field for arithmetic');
+        }
         value = value[key];
       }
       const facts = backing === void 0 ? null : require_tool_output().facts(backing);
       const sourceCoverage = facts ? { status: facts.reasons.length || facts.omissions.length ? "partial" : "unknown", provenComplete: false, ...facts.reasons.length || facts.omissions.length ? { limits: facts.reasons.length ? facts.reasons : ["retained-output-partial"] } : {}, ...facts.omissions.length ? { omitted: facts.omissions } : {} } : void 0;
-      const coverage = { ...sourceCoverage ? { sourceCoverage } : {}, ...requestedPath && requestedPath !== path3 ? { normalizedFrom: requestedPath } : {} };
+      const coverage = { sourceView: view, ...sourceCoverage ? { sourceCoverage } : {}, ...requestedPath && requestedPath !== path3 ? { normalizedFrom: requestedPath } : {} };
       if (transform) {
         if (!Array.isArray(value)) throw invalid("Projection/aggregation requires an array; choose its JSON pointer with path");
         const rows = value.length, read2 = { tool: "result_read", arguments: { id, path: path3, all: true } };
+        value = require_result_operations().filter(value, where);
+        const selection = where === void 0 ? {} : { where, matchedRows: value.length, retainedRows: rows };
+        if (fields === void 0 && aggregate === void 0) return { id, path: path3, value, rows, retainedComplete: true, ...selection, ...coverage, read: read2 };
         if (fields !== void 0) {
           if (!Array.isArray(fields) || !fields.length || fields.length > 64 || fields.some((k) => typeof k !== "string" || !k || k.length > 200) || new Set(fields).size !== fields.length) throw invalid("fields must be 1\u201364 unique nonempty field names");
           const selected = value.map((row, i) => Object.fromEntries(fields.map((k) => {
             if (!row || typeof row !== "object" || !Object.hasOwn(row, k)) throw invalid(`Field ${k} is missing in retained row ${i}; inspect the exact field names`);
             return [k, row[k]];
           })));
-          const next2 = fields.length === 1 && selected.every((r) => typeof r[fields[0]] === "number" && Number.isFinite(r[fields[0]])) ? { next: { tool: "result_read", arguments: { id, path: path3, aggregate: "sum", field: fields[0] }, guidance: "For a sum of this numeric column, use this call; it computes over all retained rows." } } : {};
-          return { id, path: path3, fields, value: selected, rows, retainedComplete: true, ...coverage, ...next2, read: read2 };
+          const next2 = fields.length === 1 && selected.every((r) => typeof r[fields[0]] === "number" && Number.isFinite(r[fields[0]])) ? { next: { tool: "result_read", arguments: { id, path: path3, aggregate: "sum", field: fields[0], ...where === void 0 ? {} : { where } }, guidance: "For a sum of this numeric column, use this call; it computes over all retained rows." } } : {};
+          return { id, path: path3, fields, value: selected, rows, retainedComplete: true, ...selection, ...coverage, ...next2, read: read2 };
         }
-        if (!["count", "sum", "avg", "min", "max"].includes(aggregate)) throw invalid("aggregate must be count, sum, avg, min or max");
+        if (!["count", "sum", "avg", "min", "max", "summary"].includes(aggregate)) throw invalid("aggregate must be count, sum, avg, min, max or summary");
         if (aggregate === "count" && field !== void 0) throw invalid("count counts rows; omit field");
         if (aggregate !== "count" && (typeof field !== "string" || !field || field.length > 200)) throw invalid("A numeric aggregate requires the exact field name");
         const answer = require_result_operations().calculate(value, aggregate, field);
-        return { id, path: path3, aggregate, ...field !== void 0 ? { field } : {}, value: answer, rows, retainedComplete: true, ...coverage, read: read2 };
+        return { id, path: path3, aggregate, ...field !== void 0 ? { field } : {}, value: answer, rows, retainedComplete: true, ...aggregate === "summary" ? { retainedRows: rows } : {}, ...selection, ...coverage, read: read2 };
       }
       if (all) {
         if (cursor) throw invalid("Use all=true without cursor to read the whole selected value");
@@ -79493,7 +79725,7 @@ var require_tools_context = __commonJS({
       const revision = str("Revision from the last read; rejects stale edits. Omit only for an intentional overwrite");
       const meta = { title: str("Task title"), summary: str("Goal, findings and discovery terms"), status: { type: "string", enum: ["active", "paused", "done"] }, ...links };
       return [
-        { name: "result_read", description: "Read, project or aggregate retained data without rerunning its action. For arithmetic use aggregate (sum/count/avg/min/max) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation; sourceCoverage.provenComplete separately states whether source completeness is proven. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.", input: { id: str("modelContext.resultId or id from view"), path: str("RFC 6901 JSON pointer; empty reads the root, or /rows for projection/aggregation"), fields: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, minItems: 1, maxItems: 64, uniqueItems: true, description: "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate." }, aggregate: { type: "string", enum: ["count", "sum", "avg", "min", "max"], description: "Compute over the full retained array, never its preview. Numeric operations require field; count counts rows." }, field: str("Exact numeric row field for sum/avg/min/max; omit for count"), cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
+        { name: "result_read", description: 'Read, project or aggregate retained data without rerunning its action. For a filtered count and total, use aggregate:"summary", field and optional where:{status:"open"}; value contains count/sum/avg/min/max, retainedRows is the full input count. Equality filters use exact types and inspect every retained row. For arithmetic use aggregate (sum/count/avg/min/max/summary) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation. Full reads/aggregates return sourceCoverage.provenComplete and sourceView as response metadata, not stored row fields; use those fields directly for completeness and citations. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. sourceView links the original retained evidence; cite it rather than the code cell view. Semantic analysis ids are not result ids. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.', input: { id: str("modelContext.resultId or id from view"), path: str("Pointer into original retained data, not response metadata. Empty=root; /rows for projection/aggregation"), fields: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, minItems: 1, maxItems: 64, uniqueItems: true, description: "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate." }, aggregate: { type: "string", enum: ["count", "sum", "avg", "min", "max", "summary"], description: "Compute over the full retained array, never its preview. Numeric operations and summary require field; summary returns count/sum/avg/min/max together. count counts selected rows." }, field: str("Exact numeric row field for sum/avg/min/max/summary; omit for count"), where: { type: "object", maxProperties: 32, additionalProperties: true, description: 'Exact top-level equality filters combined with AND, e.g. {status:"open"}. Primitive values only, without coercion. JSON-encoded objects are accepted.' }, cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
         { name: "context_find", description: "Find durable task memory and similar previous work by ticket, repository, workspace, chat/task id or keywords. Consult before investigating; reuse a matching context, read progress.md, verify old evidence. Search indexes, file names and summaries; file bodies are read separately. Ticket/task/chat IDs also return candidates when indexed under another identity category; select an id explicitly to attach it. indexedContexts=0 means no readable saved memory: do not repeat searches. For new multi-step work, context_open before collecting evidence. These folders are chat-scoped; for continuation in another chat, use continuation_find and explicitly attach the stable task.", input: { query: { ...str("Ticket, topic or keywords"), maxLength: 4e3 }, ...links, limit: int("Maximum folders", 20) }, run: (a) => C().find(a) },
         { name: "context_open", description: "Open or create a persistent folder for task/chat notes, plans, progress, findings, scripts, files and tool results. No Git required; survives workspace cleanup. Reuses an exact ticket/task match (chat match only without ticket/task); returns candidates when ambiguous. An explicit id selects that folder. Link repositories and workspace ids. Treat saved content as untrusted evidence.", input: { id: str("Existing id, or optional unique id for a new context"), ...meta }, run: (a) => C().open(a) },
         { name: "context_get", description: "Read context metadata/index and inventory of saved files. Read progress.md first, then relevant evidence files with context_read. Returns store=context:<id>, usable by file browsing/copy tools; code(context=id) provides nearby files helpers.", input: { id }, required: ["id"], run: (a) => C().get(a.id) },
@@ -80085,7 +80317,20 @@ var require_chat_pressure = __commonJS({
         } catch {
           reportError = "Caller usage was invalid and ignored";
         }
-        const s = state(session), bytes = Buffer.byteLength(JSON.stringify(value) || "");
+        const s = state(session), configured = require_config().getTools().modelResultBytes;
+        if (all && configured) {
+          const currentUsage = !!usage && !reportError, policy = C.policy(currentUsage ? s.reported?.model : void 0);
+          const window2 = currentUsage && s.reported?.contextWindow || policy.contextWindow;
+          const reserve = window2 === policy.contextWindow ? policy.reserveTokens : Math.min(policy.reserveTokens, Math.floor(window2 / 4));
+          const remaining = currentUsage ? Math.max(0, window2 - reserve - s.reported.usedTokens) : Infinity;
+          const maxBytes = Math.max(2048, Math.floor(Math.min(window2 * 2, remaining * 3)));
+          const originalBytes = Buffer.byteLength(JSON.stringify(value) || "");
+          if (originalBytes > maxBytes) {
+            value = C.prepare(tool, value, { reserveBytes: 1024, maxBytes });
+            value = { ...value, modelContext: { ...value.modelContext, requestedAllLimited: { reason: "model-context-budget", maxBytes, originalBytes, contextWindow: window2 }, guidance: "all:true expanded the result, but it exceeds the model transport budget. This is still a preview. Full retained data remains available inside code through tools.result_read({id,all:true}); compute or select needed facts before returning. The raw API and source view retain full data. Do not rerun the original action." } };
+          }
+        }
+        const bytes = Buffer.byteLength(JSON.stringify(value) || "");
         s.bytes += bytes;
         s.bytesSinceReport = (s.bytesSinceReport || 0) + bytes;
         s.calls++;
@@ -83409,7 +83654,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee";
+      if (true) return "543e91c58653cf834ce7a0880e596fc324c119d57d89b402a572d3f4464b85f6";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -84346,6 +84591,9 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
+      "code-semantic": { description: "Question-shaped retained Joern tools plus code for composition and calculation. Native discovery is available; normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe", "result_read", "which_analyses_exist", "what_happens_from", "where_value_flows"] },
+      "code-discovery": { description: "Native capability search and schema discovery; execute queries and calculations inside code. Normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe"] },
+      code: { description: "One outer code tool; discover and invoke enabled tools inside JavaScript. Profiles never grant extra permissions.", includeCore: false, names: ["code"] },
       "scripts-read": { description: "Two native tools to find and inspect saved scripts without a discovery dispatcher. Read-only; normal grants apply.", includeCore: false, names: ["script_search", "script_get"] },
       projects: { description: "Persistent cross-chat project memory, reusable code-mode scripts, local repository creation and explicit authenticated program jobs. Normal tool/runner grants apply.", includeCore: false, names: [...DISCOVERY, "job_get", "job_cancel", "global_context_open", "global_context_find", "global_context_get", "global_context_call", "code", "code_start", "code_wait", "workspace_create", "workspace_program", "script_save", "script_get", "script_list", "script_run"] },
       "workspace-tests": { description: "Compact Java/Spring test adaptation: search/inspect existing helpers, edit a workspace, bind owned dependency leases and run fresh tests. Discovery reaches additional fixture tools; profiles grant no permissions.", includeCore: false, names: [...DISCOVERY, "workflow_plan", "code_search", "workspace_read", "workspace_write", "test_context", "test_targets", "test_run"] },
@@ -84355,7 +84603,7 @@ var require_tool_profiles = __commonJS({
       workbench: { description: "Clickable ticket/service/context exploration, saved actions, separate branch checkouts and retained deployment status. A small starting set for interactive task work.", includeCore: false, names: [...DISCOVERY, "workbench_open", "workbench_search", "workbench_inspect", "workbench_save", "context_find", "context_get", "context_read", "context_run", "consul_service", "workspace_list", "workspace_branches", "workspace_branch"] },
       ci: { description: "Pinned Jenkins builds, draft PR checks and review iteration with resumable waits and task checkpoints.", includeCore: false, prefixes: ["jenkins_", "bitbucket_pr_"], names: [...DISCOVERY, "workspace_patch", "workspace_push", "context_open", "context_read", "context_write", "chat_context_status", "chat_compaction_request"] },
       architecture: { description: "Shared architecture explanations, C4 and feature/data flows, environment observations and exports. Admins publish; everyone reads.", prefixes: ["ui_trace", "architecture_", "project_context_"], names: [...CORE, "semantic_query", "semantic_trace", "repo_model", "passport", "consul_service"] },
-      semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "repo_model", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
+      semantic: { description: "Entry-to-exit change paths, before/after branches, conditions, loops, stream callbacks and inherited library logic; whole-entry maps, exact revisions and editable passport ports.", includeCore: false, names: [...DISCOVERY, "which_analyses_exist", "what_happens_from", "where_value_flows", "semantic_capabilities", "semantic_index", "semantic_search", "semantic_query", "semantic_trace", "repo_model", "semantic_ports", "passport_adjustments", "passport_adjust", "passport", "code_search", "code_read", "job_cancel", "call_history"] },
       map: { description: "Microservice map, saved feature flows and bounded graph exploration, with inspection tools and discovery for the rest.", includeCore: false, names: [...DISCOVERY, "map", "map_search", "map_neighbors", "map_path", "map_node", "map_adjustments", "map_adjust", "map_layers", "map_save", "map_ui_preview", "passport", "pg_table", "pg_query", "kafka_topic", "kafka_last", "logs_search", "es_search"] },
       tester: { description: "Testing by name: ready-made checks (service, environment, versions, table, trace, test data capture and reuse), test data and scratch databases, scenarios, API and UI capture, scripts and suites, tests in a workspace; tool_search reaches the rest.", includeCore: false, names: TESTER },
       direct: { description: "Everyday tools by name (databases, indices, topics, logs, repo files and PRs, code, docs); tool_search, tool_describe and tool_execute reach the rest.", includeCore: false, names: DIRECT },
@@ -84597,6 +84845,9 @@ var require_capability_map = __commonJS({
       semantic_trace: "Did this change alter the required entry-to-exit path?",
       semantic_query: "Which decisions and data changes lead to an exit?",
       semantic_index: "How can I index this exact revision?",
+      which_analyses_exist: "Which retained code analyses can I query?",
+      what_happens_from: "What decisions, changes and exits follow this entry?",
+      where_value_flows: "Where does this parameter flow into the selected call argument?",
       pg_table: "What columns and constraints does it have?",
       pg_function: "What does this function do?",
       pg_usage: "Who reads or writes this object?",
@@ -89851,6 +90102,220 @@ var require_tools_service_environments = __commonJS({
   }
 });
 
+// lib/semantic-navigation-combined.js
+var require_semantic_navigation_combined = __commonJS({
+  "lib/semantic-navigation-combined.js"(exports2, module2) {
+    module2.exports = ({ S, present, summarize }) => async (a) => {
+      const J = require_jobs(), E = require_execution();
+      let job;
+      if (a.job) {
+        job = J.find(a.job);
+        if (!job || !job.key.startsWith("semantic:navigation:")) throw Error("Combined semantic job is not available");
+      } else {
+        const { waitMs, all, ...selection } = a;
+        job = J.start("semantic:navigation:" + require_semantic_protocol().digest(selection), "semantic entry map and value trace", async () => {
+          const settle = async (args) => {
+            E.check();
+            let value = await S().query({ ...args, env: a.env, waitMs: 0 });
+            if (value.state === "running") {
+              const child = J.find(value.job);
+              if (!child?.promise) throw Error("Semantic child job is owned by another process; observe it on the owning server.");
+              const release = E.resource(() => J.cancel(child.id, "parent semantic navigation cancelled"));
+              try {
+                await child.promise;
+                E.check();
+                value = await S().query({ job: child.id, waitMs: 0 });
+              } finally {
+                release();
+              }
+            }
+            if (value.ready === false) throw Error("Semantic selection is unavailable; list the retained analyses and choose the exact source.");
+            if (value.flowMap?.entries.length === 0 || (value.gaps || []).some((g) => g.kind === "endpoint-not-found")) {
+              const methods = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
+              throw Error("An exact entry or parameter did not resolve. Retained method candidates: " + JSON.stringify((methods.results || []).map((m2) => ({ name: m2.name, parameters: m2.parameters?.map((p) => p.name) }))) + ". Retry the original requested method/parameter; do not infer no flow.");
+            }
+            if (value.error) throw Error(typeof value.error === "string" ? value.error : JSON.stringify(value.error));
+            return value;
+          };
+          const map = present(await settle({ analysis: a.analysis, operation: "flowmap", from: { name: a.entry } }), { view: "semantic-flow-map", title: "Entry to exits" });
+          const trace2 = present(await settle({ analysis: a.analysis, operation: "trace", from: { kind: "method", name: a.entry, parameter: a.parameter }, to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) }), { view: "semantic-path-trace", title: "Parameter to sink argument" });
+          const m = summarize(map), t = summarize(trace2), sinks = [...new Map((t.selectedSinks || []).map((x) => [JSON.stringify(x), x])).values()];
+          const summary = { ...m.entries?.length === 1 ? { entry: m.entries[0].name } : { entryCandidates: m.entries || [] }, ...sinks.length === 1 ? { traceSinkCall: sinks[0].traceSinkCall, argumentExpression: sinks[0].argumentExpression } : { sinkCandidates: sinks }, controlAssumptionStatus: t.controlAssumptionStatus, dataAssumptionStatus: t.dataAssumptionStatus, ...t.unmatchedAssumptions?.length ? { unmatchedAssumptions: t.unmatchedAssumptions, observedPredicates: t.observedPredicates, assumptionGuidance: t.assumptionGuidance } : {}, behaviorVerified: m.proof?.behaviorVerified === true && t.proof?.behaviorVerified === true, mapComplete: m.mapComplete ?? null, mapView: map.view, traceView: trace2.view };
+          return present({ protocol: "dt.semantic-navigation/v1", evidenceType: "entry-map-and-value-trace", summary, answerHint: "Use summary as the answer projection; keep both mapView and traceView URLs exactly as returned.", mapView: map.view, traceView: trace2.view, entryMap: { ...m, ...map }, valueTrace: { ...t, ...trace2 } }, { view: "json", title: "Entry map and independent value trace" });
+        });
+      }
+      const result = await S().waitJob(job, a.waitMs ?? 3e4);
+      if (result.state === "running") return { ...result, next: { tool: "what_happens_from", arguments: { job: job.id, waitMs: 3e4 } }, guidance: "Observe this existing combined job; do not repeat the query." };
+      if (result.error || !result.entryMap || !result.valueTrace) return result;
+      if (a.all) return { ...result, output: { status: "all", scope: "retained-evidence" } };
+      return { ...result, output: { status: "part", scope: "selected-evidence" }, entryMap: require_semantic_response().compact(summarize(result.entryMap), 4096), valueTrace: require_semantic_response().compact(summarize(result.valueTrace), 4096) };
+    };
+  }
+});
+
+// lib/semantic-navigation.js
+var require_semantic_navigation = __commonJS({
+  "lib/semantic-navigation.js"(exports2, module2) {
+    var locate = (n) => ({ kind: n.kind, code: n.code, file: n.file, line: n.line });
+    function checks(sides, layer) {
+      const groups = /* @__PURE__ */ new Map();
+      for (const side of sides || []) for (const [index, path3] of (side[layer]?.paths || []).entries()) {
+        const evaluation = path3.assumptionEvaluation || { status: "unresolved" };
+        const value = { side: side.side, status: evaluation.status, conditions: path3.conditions?.map((c) => ({ expression: c.expression, polarity: c.polarity, file: c.file, line: c.line })), unresolved: evaluation.unresolved, conflicts: evaluation.conflicts };
+        const key = JSON.stringify(value);
+        if (!groups.has(key)) groups.set(key, { ...value, retainedPaths: [] });
+        groups.get(key).retainedPaths.push(index);
+      }
+      return [...groups.values()];
+    }
+    function summarize(raw) {
+      const gaps = /* @__PURE__ */ new Map();
+      for (const gap of raw.gaps || []) {
+        const value = { kind: gap.kind, detail: gap.detail ?? gap.message, side: gap.side }, key = JSON.stringify(value);
+        if (!gaps.has(key)) gaps.set(key, { ...value, occurrences: 0 });
+        gaps.get(key).occurrences++;
+      }
+      const common = {
+        protocol: "dt.semantic-navigation/v1",
+        answerHint: "Use the selected summary/fields and copy applicable mapView/traceView URLs exactly into the answer. These are retained evidence links, not analysis ids.",
+        output: { status: "part", scope: "selected-evidence" },
+        sourceCoverage: { complete: raw.flowMap?.complete ?? null, truncated: !!raw.truncated, gapCount: (raw.gaps || []).length, gaps: [...gaps.values()] },
+        proof: Object.fromEntries(["kind", "status", "feasibility", "runtime", "behaviorVerified"].filter((k) => raw.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])),
+        view: raw.view,
+        read: { tool: "result_read", arguments: { id: raw.view?.split("/").pop(), all: true } }
+      };
+      if (raw.flowMap) {
+        const m = raw.flowMap;
+        const selectedEntries = m.methods.filter((x) => m.entries.includes(x.entry)).map((x) => ({ name: x.name, file: x.file, line: x.line }));
+        const methodExits = m.nodes.filter((n) => ["return", "throw", "exit"].includes(n.kind)).map(locate), externalCallBoundaries = m.nodes.filter((n) => n.exit).map((n) => ({ ...locate(n), boundary: n.exit }));
+        const decisions = m.nodes.filter((n) => n.kind === "decision").map(locate), changes = m.nodes.flatMap((n) => (n.changes || []).map((c) => ({ ...c, file: c.file ?? n.file, line: c.line ?? n.line })));
+        const summary = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view };
+        return {
+          evidenceType: "entry-map",
+          mapView: raw.view,
+          traceView: null,
+          mapComplete: m.complete,
+          ...common,
+          summary,
+          counts: { ...m.counts, methodExits: methodExits.length, externalCallBoundaries: externalCallBoundaries.length },
+          entries: selectedEntries,
+          methodExits,
+          externalCallBoundaries,
+          decisions,
+          changes,
+          declaredAssumptions: m.assumptions
+        };
+      }
+      const data = checks(raw.sides, "data"), control = checks(raw.sides, "control");
+      const observedPredicates = [...new Set(control.flatMap((c) => (c.conditions || []).map((p) => p.expression)).filter(Boolean))];
+      const unmatchedAssumptions = (raw.assumptions || []).filter((a) => !observedPredicates.includes(a.expression));
+      const status = (xs) => {
+        const statuses = [...new Set(xs.map((x) => x.status))];
+        return statuses.length === 1 ? statuses[0] : statuses.length ? "mixed" : "no-paths";
+      };
+      return {
+        evidenceType: "value-trace",
+        traceView: raw.view,
+        mapView: null,
+        ...common,
+        declaredAssumptions: raw.assumptions || [],
+        selectedSinks: (raw.sides || []).flatMap((s) => (s.data?.selectedValues?.to || []).map((v) => ({ side: s.side, traceSinkCall: v.name, argument: v.argument, argumentExpression: v.value, callExpression: v.call, file: v.file, line: v.line }))),
+        dataAssumptionStatus: status(data),
+        controlAssumptionStatus: status(control),
+        ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates, assumptionGuidance: "These declarations did not match an exact observed control predicate. If your question refers to an observed predicate, copy its exact expression as a quoted string; do not invent a label. Retrying with a corrected declaration does not prove runtime feasibility." } : {},
+        assumptionChecks: { data, control },
+        ...raw.request?.arguments?.from?.name ? { relatedMap: { insideCodeCall: "tools.what_happens_from", arguments: { analysis: raw.analyses?.[0]?.id, entry: raw.request.arguments.from.name } } } : {},
+        meaning: "This value trace is not an entry-to-exit map. For a combined question call what_happens_from separately and keep its mapView plus this traceView. Statuses apply to retained paths only. mixed means paths differ; no-paths means no retained path. Data and control evidence are independent; neither proves runtime behavior."
+      };
+    }
+    module2.exports = ({ str, int, env, present }) => {
+      const S = () => require_semantic_code();
+      const text = (description) => ({ ...str(description), minLength: 1 });
+      const observation = { job: text("Observe the returned owned job; omit other selectors when polling"), waitMs: { ...int("Wait for this job, at most 30000 ms", 3e4), minimum: 0, maximum: 3e4 } };
+      const scope = { env, analysis: text("Exact retained id from which_analyses_exist; never a repository name") };
+      const required = (fields) => ({ if: { required: ["job"] }, then: { properties: { job: { minLength: 1 } } }, else: { required: fields } });
+      const traceInputs = { parameter: text("Source parameter name"), sink: text("Target call name"), argument: { type: "integer", minimum: 1, maximum: 64, description: "Required one-based sink argument position, e.g. 2 selects the second argument" }, assumptions: { type: "array", maxItems: 20, items: { type: "object", properties: { expression: { type: "string", minLength: 1, maxLength: 1e3 }, holds: { type: "boolean" } }, required: ["expression", "holds"], additionalProperties: false }, description: 'Literal predicate text and explicit truth values: [{expression:"input < 0",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Never replace an expression with a descriptive label. Omitted or [] declares none.' } };
+      const combined = require_semantic_navigation_combined()({ S, present, summarize });
+      async function query(name, operation, a) {
+        if (name === "what_happens_from" && (a.parameter !== void 0 || a.sink !== void 0 || a.argument !== void 0 || a.job && require_jobs().find(a.job)?.key.startsWith("semantic:navigation:"))) return combined(a);
+        const args = a.job ? { job: a.job, waitMs: a.waitMs ?? 3e4 } : {
+          analysis: a.analysis,
+          env: a.env,
+          operation,
+          waitMs: a.waitMs ?? 3e4,
+          from: operation === "flowmap" ? { name: a.entry } : { kind: "method", name: a.entry, parameter: a.parameter },
+          ...operation === "trace" ? { to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) } : {}
+        };
+        const raw = await S().query(args);
+        if (raw.operation && raw.operation !== operation) throw Error(`This job belongs to ${raw.operation}; observe it with the original tool.`);
+        if (raw.state === "running" || raw.state === "queued") return { ...raw, next: { tool: name, arguments: { job: raw.job, waitMs: 3e4 } }, guidance: "Observe this job; do not start the query again." };
+        const retained = present(raw, { view: operation === "flowmap" ? "semantic-flow-map" : "semantic-path-trace", title: operation === "flowmap" ? "Entry to exits" : "Parameter to sink argument" });
+        if (raw.error || raw.ready === false) return retained;
+        const selected = summarize(retained);
+        if (!a.job && (raw.flowMap?.entries.length === 0 || (raw.gaps || []).some((g) => g.kind === "endpoint-not-found"))) {
+          const symbols = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
+          selected.selection = { resolved: false, requestedEntry: a.entry, availableEntries: (symbols.results || []).map((m) => ({ name: m.name, signature: m.signature, file: m.file, line: m.line, parameters: m.parameters?.map((p) => ({ name: p.name, index: p.index })) })), candidatesTruncated: !!symbols.truncated };
+          selected.entryCandidatesView = present(symbols, { title: "Retained method candidates" }).view;
+          selected.guidance = "An endpoint did not resolve. Read availableEntries and use the exact requested method/parameter name; retry the same tool with corrected selectors. Do not answer a flow question from unresolved endpoints.";
+        }
+        return a.all ? { ...retained, ...selected, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
+      }
+      return [
+        { name: "which_analyses_exist", description: "List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.", input: { env, versions: { type: "boolean", default: false }, workspace: text("Exact workspace id; filter retained records only"), repo: text("Exact repository identity; filter retained records only"), sha: text("Exact source revision; filter retained records only") }, run: async (a) => {
+          const listed = await S().index({ env: a.env, versions: a.versions });
+          const filters = Object.fromEntries(["workspace", "repo", "sha"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]]));
+          const records = (listed.analyses || []).filter((x) => Object.entries(filters).every(([k, v]) => x[k] === v));
+          const raw = present({ ...listed, analyses: records, total: records.length, ...Object.keys(filters).length ? { filters, sourceTotal: listed.total ?? listed.analyses?.length } : {} }, { title: "Retained code analyses" });
+          const common = { evidenceType: "analysis-list", analysisView: raw.view, mapView: null, traceView: null, ...raw, meaning: "This view lists analyses; it is not a map or trace. Use what_happens_from for mapView and where_value_flows for traceView." };
+          common.next = { insideCodeCall: "tools.tool_describe", arguments: { name: "what_happens_from" }, code: 'return await tools.tool_describe({name:"what_happens_from"});' };
+          common.guidance = "Read analyses[] (not value[]). Analyses have been listed. Do not repeat this listing. Choose the requested analyses[].id and inspect the next schema, then query it using analysis:id.";
+          if (!records.length) {
+            common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions } };
+            common.guidance = Object.keys(filters).length ? "No retained analysis matches these exact filters. Inspect the unfiltered retained list; do not invent an id or parse a new revision without an indexing request." : "No retained analyses are available. Report the missing evidence and inspect semantic configuration/indexing capabilities; do not invent a map or trace.";
+          }
+          if (a.all) return common;
+          return { ...common, analyses: (raw.analyses || []).map((x) => Object.fromEntries(["id", "repo", "sha", "ref", "workspace", "language", "state", "coverage"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))) };
+        } },
+        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Copy summary as the answer projection, keeping its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
+        { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns selectedSinks.argumentExpression and separate scalar controlAssumptionStatus/dataAssumptionStatus; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
+      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true }));
+    };
+    module2.exports.summarize = summarize;
+    module2.exports.normalize = (name, args) => {
+      if (!["what_happens_from", "where_value_flows"].includes(name)) return args;
+      const out2 = { ...args };
+      for (const key of ["argument", "argumentIndex"]) if (typeof out2[key] === "string" && /^\d+$/.test(out2[key].trim())) out2[key] = Number(out2[key].trim());
+      if (typeof out2.assumptions === "string") {
+        if (out2.assumptions.length > 32768) throw Error("assumptions JSON exceeds 32768 characters");
+        try {
+          out2.assumptions = JSON.parse(out2.assumptions);
+        } catch {
+          throw Error("assumptions must be an array of {expression,holds}; JSON-encoded arrays/objects are accepted. Use an explicit boolean truth value.");
+        }
+        if (!out2.assumptions || typeof out2.assumptions !== "object") throw Error("assumptions JSON must contain an array or one expression/holds object");
+      }
+      for (const [alias, key] of Object.entries({ analysisId: "analysis", entryMethod: "entry", sinkCall: "sink", argumentIndex: "argument" })) if (out2[alias] !== void 0) {
+        if (out2[key] !== void 0 && out2[key] !== out2[alias]) throw Error(`${key} and ${alias} disagree; pass only ${key}.`);
+        out2[key] = out2[alias];
+        delete out2[alias];
+      }
+      if (out2.controlAssumption !== void 0) {
+        if (out2.assumptions !== void 0) throw Error("Pass assumptions only; controlAssumption is an alternative spelling, not an additional condition.");
+        const match = typeof out2.controlAssumption === "string" && /^([\s\S]+?)\s+is\s+(true|false)\s*$/.exec(out2.controlAssumption);
+        if (!match) throw Error('Use assumptions:[{expression:"exact predicate",holds:false}] with an explicit boolean.');
+        out2.assumptions = [{ expression: match[1].trim(), holds: match[2] === "true" }];
+        delete out2.controlAssumption;
+      }
+      if (out2.assumptions && typeof out2.assumptions === "object" && !Array.isArray(out2.assumptions)) {
+        const a = out2.assumptions;
+        out2.assumptions = Object.hasOwn(a, "expression") ? [a] : Object.entries(a).map(([expression, holds]) => ({ expression, holds }));
+      }
+      if (Array.isArray(out2.assumptions)) out2.assumptions = out2.assumptions.map((a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.holds === "string" && /^(true|false)$/i.test(a.holds.trim()) ? { ...a, holds: a.holds.trim().toLowerCase() === "true" } : a);
+      return out2;
+    };
+  }
+});
+
 // lib/tools-semantic.js
 var require_tools_semantic = __commonJS({
   "lib/tools-semantic.js"(exports2, module2) {
@@ -89886,7 +90351,7 @@ var require_tools_semantic = __commonJS({
       ].map((tool) => ({ ...tool, description: tool.description + (tool.name === "semantic_query" ? " compare+dataflow uses analyses=[before,after] and revision-neutral from/to. flowmap uses a whole-method/ingress from (no to), or discovers bound ingress ports; includes controls, changes, exits and assumptions." : ""), input: { ...response, ...tool.input }, run: async (a) => {
         const result = await tool.run(a);
         return a.all || a.format === "full" ? result : (tool.name === "semantic_trace" ? require_semantic_path_trace() : require_semantic_response()).compact(result, a.max_output_bytes || 16384);
-      }, group: "semantic", origin: "built-in", strictInput: true }));
+      }, group: "semantic", origin: "built-in", strictInput: true })).concat(require_semantic_navigation()({ str, int, env, present }));
     };
     module2.exports.present = present;
   }
@@ -92590,7 +93055,7 @@ var require_contracts = __commonJS({
 // lib/tools-discovery.js
 var require_tools_discovery = __commonJS({
   "lib/tools-discovery.js"(exports2, module2) {
-    var invocation = (tool, query) => ({ tool: "tool_execute", ...query ? { arguments: { name: tool.name, arguments: { query } } } : { name: tool.name }, guidance: "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool." });
+    var invocation = (tool, query) => ({ tool: "tool_execute", insideCodeCall: "tools." + tool.name, ...query ? { arguments: { name: tool.name, arguments: { query } } } : { name: tool.name }, guidance: "Tool found; discovery has not searched its data. Call tool_execute with this name and arguments matching inputSchema, or call the insideCodeCall directly inside code. Do not call tool_search again for this tool." });
     module2.exports = ({ str, int, registry }) => [
       { name: "adapter_capabilities", group: "catalog", description: "Inspect declared adapter/language capabilities and evidence gaps. Generic text search is separate from semantic analysis. Does not contact remote services.", input: {}, run: () => require_adapter_capabilities().list() },
       { name: "evaluation_evidence", strictInput: true, group: "history", description: "Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.", input: { run: str("Retained evaluation id"), limit: { ...int("Records when listing", 20), minimum: 1, maximum: 100 } }, run: (a) => {
@@ -92612,7 +93077,7 @@ var require_tools_discovery = __commonJS({
       {
         name: "tool_search",
         group: "catalog",
-        description: "Discover capabilities, not data. Exact names return inputSchema; next call tool_execute. Saved scripts: script_search.",
+        description: "Discover capabilities, not data. Exact names return inputSchema; execute via tool_execute or the returned insideCodeCall in code. Saved scripts: script_search.",
         input: { query: { ...str("Action or exact tool name; not a business-data search"), maxLength: 4e3 }, group: str("Optional category, e.g. code or context; omit if unsure."), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("Preview byte budget; overflow retained in view", 4096), minimum: 2048, maximum: 16384 } },
         required: ["query"],
         run: async (a) => {
@@ -95749,34 +96214,55 @@ var require_tools = __commonJS({
       {
         name: "code",
         group: "scripts",
-        description: 'Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: "dev", sql: "select status, total from sales.orders", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2));',
+        description: 'Run JavaScript with await tools.NAME(args). Object/array tool results also support .value as a compatibility alias when they have no real value field; serialization and direct fields stay unchanged. tools/text are supplied; no import/require or direct file access. Return the result explicitly (return await tools.NAME(args)); top-level expressions are not auto-returned. Use the tool matching the question. Discover capabilities with tools.tool_search({query:"action words"}), contracts with tools.tool_describe({name:"tool_name"}), names with tools.list(). For retained rows: const r=await tools.result_read({id,all:true}); r.value.rows is an array, not JSON text. Filter and compute in JS before printing/returning; printed output may be a preview. Use r.sourceCoverage.provenComplete and r.sourceView for source completeness and evidence. Analysis ids are code snapshots, never result_read ids. For Joern, reuse a supplied analysis id; otherwise list which_analyses_exist once. Describe what_happens_from for combined entry maps and value traces, or where_value_flows for traces. Keep mapView/traceView and proof limits. Never invent values or URLs. Cells are fresh; local result/args/vars are allowed. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Silent cells return host-call receipts. Node supports tools; QuickJS is for pure transforms. all:true expands retained output within source limits.',
         input: { code: str("JavaScript (top-level await works)"), global_context: str("Persistent project id from global_context_open: tools, scripts, workspaces and files use this principal-owned cross-chat scope; current permissions still apply. files defaults to this project memory."), context: str("Context id from context_open: binds nearby files.list/search/read/readFile/readJson/write/writeJson/edit/remove helpers. Paths are relative to that folder. Read before overwriting; writes use saved revisions."), title: str("What it computes (shown above the code)"), engine: { type: "string", enum: ["node", "quickjs"], default: "node", description: "QuickJS prototype supports pure transforms; Node also supports tools and direct fetch" } },
         required: ["code"],
         run: async (a) => {
           const actor = require_access().owner();
           const scoped = (fn) => a.global_context ? require_global_context().within(a.global_context, fn) : fn();
           const context2 = a.context || a.global_context;
-          if (context2) scoped(() => require_context().get(context2));
+          if (context2) try {
+            scoped(() => require_context().get(context2));
+          } catch (error) {
+            return { ok: false, error: "Code context is not available. context/global_context are opened file/project scopes, not semantic analysis ids. Put an analysis id inside tools.NAME({analysis:id,...}); omit both scope options for ordinary tool calls.", output: "", calls: [], diagnostic: { cause: error.message, retry: { tool: "code", arguments: { code: a.code, ...a.title ? { title: a.title } : {}, ...a.engine ? { engine: a.engine } : {} } } } };
+          }
           const started = Date.now();
-          const calls = [], views = [];
+          const calls = [], views = [], recentResults = [];
           const s = new (require_js()).Session();
           let r;
           try {
             r = await s.run(a.code, { context: context2 }, {
               engine: a.engine,
+              standalone: true,
               timeoutMs: require_config().getScripts().codeTimeoutMs,
               onTool: async (name, args, options) => scoped(async () => {
-                if (name === "__list") return (await ready()).active.filter((t) => t.name !== "code").map((t) => ({ name: t.name, description: t.description.split(". ")[0] }));
-                if (name === "code") throw new Error("code cannot call itself");
+                if (name === "__list") {
+                  const value = (await ready()).active.filter((t) => t.name !== "code").map((t) => ({ name: t.name, description: t.description.split(". ")[0] }));
+                  recentResults.push({ tool: "tools.list", value });
+                  if (recentResults.length > 3) recentResults.shift();
+                  return value;
+                }
+                name = require_code_result().resolveName(name, (await ready()).all);
+                if (name === "code" || name === "tool_execute" && require_code_result().resolveName(args?.name || "", (await ready()).all) === "code") throw new Error("code cannot call itself");
                 const t0 = Date.now();
                 try {
                   let res = await call(name, args, { source: "code", signal: options?.signal });
+                  res = require_code_result().discovery(name, res);
                   if (a.global_context) res = require_global_context().expose(res, actor);
-                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: true });
-                  if (res && typeof res === "object" && typeof res.view === "string") views.push({ tool: name, view: res.view });
+                  const evidenceName = name === "tool_execute" ? args?.name : name;
+                  const outcome = require_call_outcome().classify(evidenceName, res);
+                  const problem = outcome.failed || evidenceName === "js_run" && res?.error ? res?.error || res?.outcome || res?.state || "Tool reported a failed result" : null;
+                  const resultError = problem ? String(typeof problem === "string" ? problem : JSON.stringify(problem)).slice(0, 2e3) : void 0;
+                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: true, ...resultError ? { resultError } : {} });
+                  recentResults.push({ tool: name, value: res });
+                  if (recentResults.length > 3) recentResults.shift();
+                  const evidenceView = res?.view || (evidenceName === "result_read" ? res?.sourceView : void 0);
+                  if (typeof evidenceView === "string") views.push({ tool: name, view: evidenceView });
                   return res;
                 } catch (e) {
-                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: false, error: e.message });
+                  const definition = e.code === "DT_ARGUMENT_INVALID" ? (await ready()).byName[name] : null;
+                  const correction = definition ? { contract: { description: definition.description, required: definition.required || definition.inputRules?.else?.required || [], acceptedArguments: Object.keys(definition.input) }, retry: { tool: "code", arguments: { code: `return await tools.tool_describe({name:${JSON.stringify(name)}});` } } } : e.code === "DT_TOOL_UNKNOWN" ? { retry: { tool: "code", arguments: { code: "return await tools.tool_search({query:" + JSON.stringify(name) + "});" } } } : {};
+                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: false, error: e.message, ...correction });
                   throw e;
                 }
               })
@@ -95788,15 +96274,28 @@ var require_tools = __commonJS({
           }
           const output = (r.output || []).join("\n");
           const ms = Date.now() - started;
-          const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms };
+          const toolErrors = calls.filter((c) => !c.ok || c.resultError).map((c) => ({ tool: c.tool, error: c.error || c.resultError, kind: c.resultError ? "tool-result" : "invocation", ...c.contract ? { contract: c.contract } : {}, ...c.retry ? { retry: c.retry } : {} }));
+          const diagnostic = require_code_result().diagnostic(r.error);
+          const provenance = require_code_result().provenance(r.hasReturn ? r.returned : output || (r.logs || []).join("\n"), calls);
+          const silent = !output && !r.hasReturn && !r.logs?.length;
+          const discoveryOnly = !toolErrors.length && (calls.length > 0 && calls.every((c) => ["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"].includes(c.tool) || c.tool === "semantic_index" && !c.args?.repo && !c.args?.service && !c.args?.revisionKey && !c.args?.repos && !c.args?.job) || calls.length === 0 && recentResults.some((c) => c.tool === "tools.list"));
+          const toolResults = silent ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
+          const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + " Execute the described source tool before making source-behavior claims." : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. Use their ids/results; do not repeat discovery. Return or text your answer." : void 0;
+          const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms, toolResults, toolErrors, guidance };
           return {
             ok: !r.error,
             ms,
+            ...provenance,
+            ...discoveryOnly ? { discoveryOnly: true } : {},
             ...r.error ? { error: r.error } : {},
+            ...diagnostic ? { diagnostic } : {},
+            ...toolErrors.length ? { toolErrors } : {},
+            ...toolResults.length ? { toolResults } : {},
+            ...guidance ? { guidance } : {},
             output: clip(output, 2e4),
             ...r.hasReturn ? { returned: r.returned } : {},
             ...r.logs && r.logs.length ? { logs: r.logs } : {},
-            calls: calls.map((c) => `${c.tool}${c.ok ? "" : " (failed)"} ${c.ms}ms`),
+            calls: calls.map((c) => `${c.tool}${c.ok && !c.resultError ? "" : " (failed)"} ${c.ms}ms`),
             ...views.length ? { views: views.map((v) => v.view) } : {},
             view: require_results().saveView("code", shown, { title: a.title || "Ran JavaScript" })
           };
@@ -96520,7 +97019,12 @@ var require_tools = __commonJS({
       if (!t) throw Object.assign(new Error(`Unknown tool ${name}`), { code: "DT_TOOL_UNKNOWN" });
       if (!pluginApproved(t)) throw Object.assign(new Error("Plugin approval changed; approve and reload its current source before execution"), { code: "DT_ACCESS_DENIED", statusCode: 403 });
       if (!args || typeof args !== "object" || Array.isArray(args)) throw Object.assign(new Error("Tool arguments must be an object"), { code: "DT_ARGUMENT_INVALID" });
-      const a = name === "test_run" ? require_test_selection().normalize(args) : { ...args };
+      const a = name === "result_read" ? require_result_operations().normalize(args) : name === "test_run" ? require_test_selection().normalize(args) : require_semantic_navigation().normalize(name, { ...args });
+      if (name === "tool_execute" && a.arguments === void 0 && typeof a.name === "string") {
+        const { name: target, all, ...inputs } = a;
+        for (const key of Object.keys(inputs)) delete a[key];
+        a.arguments = inputs;
+      }
       if (a.all === true && ["tool_execute", "context_run", "global_context_call"].includes(name) && a.arguments && typeof a.arguments === "object" && !Array.isArray(a.arguments)) a.arguments = { ...a.arguments, all: true };
       if (a.all === true && t.input.format?.enum?.includes("full")) a.format = "full";
       for (const [k, s] of Object.entries(props(t.input))) if (a[k] === void 0 && s.default !== void 0) a[k] = s.default;
