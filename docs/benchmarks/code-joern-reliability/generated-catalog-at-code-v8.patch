@@ -1,0 +1,22 @@
+diff --git a/lib/self-model-catalog.json b/lib/self-model-catalog.json
+index 6e3f1e5..c01c026 100644
+--- a/lib/self-model-catalog.json
++++ b/lib/self-model-catalog.json
+@@ -1,7 +1,7 @@
+ {
+   "protocol": "dt.repo-source/v1",
+   "repo": "dev-tool",
+-  "sourceDigest": "6d6f9f6edc8ef4d18a7bae063c13107b8a78f33263b5def6c7d3eecb16a038ce",
++  "sourceDigest": "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede",
+   "machines": [
+     {
+       "id": "IO.atomic-file",
+@@ -1475,7 +1475,7 @@
+       "consumers": [
+         {
+           "file": "lib/tools.js",
+-          "line": 1051,
++          "line": 1052,
+           "snippet": "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
+         }
+       ],

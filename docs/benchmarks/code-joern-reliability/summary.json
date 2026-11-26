@@ -1,0 +1,1283 @@
+{
+  "protocol": "dt.code-joern-reliability-summary/v1",
+  "meaning": "Development cohorts, not independent A/B samples. Separate primary evidence/fact grades from strict bare JSON. Native-v7 is a targeted follow-up, not another 24-case matrix. See raw transcripts/index for exact prompts, tool scope and settings.",
+  "cohorts": {
+    "native-v4": {
+      "name": "native-v4",
+      "runs": 24,
+      "passed": 22,
+      "strictPassed": 10,
+      "calls": 47,
+      "usage": {
+        "input": 319761,
+        "output": 32423
+      },
+      "sourceDigests": [
+        "ced50c43d83047712cc42ee6ebc375d505efeb894550a849207b1490588b903d"
+      ],
+      "commits": [],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "native-v4-map-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v4-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "native-v4-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 8,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 7,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-dispatch-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-dispatch-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-map-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-quote-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-quote-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v4-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "native-v4-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v4-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "trace",
+          "seed": 99
+        }
+      ]
+    },
+    "native-v5": {
+      "name": "native-v5",
+      "runs": 24,
+      "passed": 22,
+      "strictPassed": 11,
+      "calls": 41,
+      "usage": {
+        "input": 326983,
+        "output": 33822
+      },
+      "sourceDigests": [
+        "543e91c58653cf834ce7a0880e596fc324c119d57d89b402a572d3f4464b85f6"
+      ],
+      "commits": [
+        "c835e8e1d864258ea455afc1f4d5aa953d626bf3"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "native-v5-aggregate-99.json.gz",
+          "finish": "output-budget",
+          "failedChecks": [
+            "count",
+            "sum",
+            "retainedRows",
+            "sourceCompleteness",
+            "view"
+          ]
+        },
+        {
+          "file": "native-v5-dispatch-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceRead",
+            "control",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "native-v5-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 7,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-aggregate-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-dispatch-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-dispatch-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-quote-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-quote-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v5-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "native-v5-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v5-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        }
+      ]
+    },
+    "native-v6": {
+      "name": "native-v6",
+      "runs": 24,
+      "passed": 22,
+      "strictPassed": 12,
+      "calls": 52,
+      "usage": {
+        "input": 339784,
+        "output": 31498
+      },
+      "sourceDigests": [
+        "6d6f9f6edc8ef4d18a7bae063c13107b8a78f33263b5def6c7d3eecb16a038ce"
+      ],
+      "commits": [
+        "64fe83ce017646d5630dfa444f862e5c56c90a92"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "native-v6-contradiction-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v6-discover-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "native-v6-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-contradiction-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-dispatch-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-dispatch-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-quote-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-quote-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        }
+      ]
+    },
+    "native-v7": {
+      "name": "native-v7",
+      "runs": 4,
+      "passed": 4,
+      "strictPassed": 1,
+      "calls": 10,
+      "usage": {
+        "input": 74749,
+        "output": 7714
+      },
+      "sourceDigests": [
+        "5cb66a10d883c04b6a0f62f7ae5c8a50086546130ffaf1e32211334cb6c5537b"
+      ],
+      "commits": [
+        "a967fb97f520239afb89accf8c64ccfe9923724d"
+      ],
+      "anyDirty": true,
+      "failures": [],
+      "trials": [
+        {
+          "file": "native-v7-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v7-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v7-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "native-v7-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "discover",
+          "seed": 99
+        }
+      ]
+    },
+    "code-v4": {
+      "name": "code-v4",
+      "runs": 8,
+      "passed": 4,
+      "strictPassed": 2,
+      "calls": 57,
+      "usage": {
+        "input": 287378,
+        "output": 25031
+      },
+      "sourceDigests": [
+        "ced50c43d83047712cc42ee6ebc375d505efeb894550a849207b1490588b903d"
+      ],
+      "commits": [],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v4-aggregate-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "count",
+            "sum",
+            "retainedRows",
+            "sourceCompleteness",
+            "view"
+          ]
+        },
+        {
+          "file": "code-v4-combined-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v4-contradiction-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v4-discover-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v4-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v4-aggregate-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 9,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v4-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 7,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v4-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v4-contradiction-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v4-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v4-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 7,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v4-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v6": {
+      "name": "code-v6",
+      "runs": 8,
+      "passed": 5,
+      "strictPassed": 2,
+      "calls": 54,
+      "usage": {
+        "input": 259658,
+        "output": 21543
+      },
+      "sourceDigests": [
+        "6d6f9f6edc8ef4d18a7bae063c13107b8a78f33263b5def6c7d3eecb16a038ce"
+      ],
+      "commits": [
+        "64fe83ce017646d5630dfa444f862e5c56c90a92"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v6-aggregate-99.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "count",
+            "sum",
+            "retainedRows",
+            "sourceCompleteness",
+            "view"
+          ]
+        },
+        {
+          "file": "code-v6-dispatch-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v6-quote-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v6-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v6-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v6-aggregate-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v6-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v6-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 6,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v6-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v6-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v6-quote-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v7": {
+      "name": "code-v7",
+      "runs": 1,
+      "passed": 1,
+      "strictPassed": 0,
+      "calls": 6,
+      "usage": {
+        "input": 23466,
+        "output": 2456
+      },
+      "sourceDigests": [
+        "5cb66a10d883c04b6a0f62f7ae5c8a50086546130ffaf1e32211334cb6c5537b"
+      ],
+      "commits": [
+        "a967fb97f520239afb89accf8c64ccfe9923724d"
+      ],
+      "anyDirty": true,
+      "failures": [],
+      "trials": [
+        {
+          "file": "code-v7-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "discover",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v8": {
+      "name": "code-v8",
+      "runs": 8,
+      "passed": 6,
+      "strictPassed": 3,
+      "calls": 56,
+      "usage": {
+        "input": 333134,
+        "output": 22145
+      },
+      "sourceDigests": [
+        "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede"
+      ],
+      "commits": [
+        "ac611194cfa901e75b65ff5b43e5ff3c990b5d89"
+      ],
+      "anyDirty": true,
+      "failures": [
+        {
+          "file": "code-v8-dispatch-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v8-quote-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v8-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v8-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v8-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 8,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v8-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v8-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 7,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v8-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 9,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v8-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v8-quote-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "native-v6-paired": {
+      "name": "native-v6-paired",
+      "runs": 8,
+      "passed": 7,
+      "strictPassed": 3,
+      "calls": 30,
+      "usage": {
+        "input": 157256,
+        "output": 12628
+      },
+      "sourceDigests": [
+        "6d6f9f6edc8ef4d18a7bae063c13107b8a78f33263b5def6c7d3eecb16a038ce"
+      ],
+      "commits": [
+        "64fe83ce017646d5630dfa444f862e5c56c90a92"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "native-v6-discover-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "native-v6-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v6-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v6-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v6-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    }
+  },
+  "codeV8DirtyExplanation": {
+    "file": "lib/self-model-catalog.json",
+    "changes": "Generated sourceDigest and lib/tools.js consumer line only; no executable source or harness changes during the cohort. Raw dirty flags are preserved.",
+    "patch": "generated-catalog-at-code-v8.patch"
+  },
+  "recommendedSurface": "code-semantic for Qwen 4B; code-only still has budget failures"
+}
