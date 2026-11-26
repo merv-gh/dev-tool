@@ -295,11 +295,44 @@ test('constructed static proof claims must agree with the linked retained map an
  assert.match(r.guidance,/without rerunning/);
 });
 
+test('semantic projections with wrong counts are checked against the exact linked map',async()=>{
+ const R=require('../lib/results');
+ const map=R.saveView('semantic-flow-map',{flowMap:{complete:false,entries:['m'],methods:[{entry:'m',name:'run'}],nodes:[{id:'n',kind:'decision',changes:[]}]},proof:{behaviorVerified:false},gaps:[]});
+ const r=await T().call('code',{code:'return '+JSON.stringify({mapView:map,entry:'run',decisionCount:0})+';'});
+ assert.equal(r.evidenceCheck.status,'contradictory-semantic-facts');
+ assert.deepEqual(r.evidenceCheck.fields,[{field:'decisionCount',reported:0,observed:1}]);
+ const correct=await T().call('code',{code:'return '+JSON.stringify({mapView:map,entry:'run',decisionCount:1})+';'});
+ assert.equal(correct.evidenceCheck,undefined);
+});
+
+test('successful semantic projections recover the original summary without replay',()=>{
+ const C=require('../lib/code-result'),R=require('../lib/results');
+ const summary={entry:'run',decisionCount:3,mapView:'source',proofLimits:{proof:{runtime:'unknown'},sourceCoverage:{complete:false}}};
+ const value={...Object.fromEntries(Array.from({length:20},(_,i)=>['field'+i,i])),summary};
+ const receipt=C.receipt('what_happens_from',value);
+ assert.deepEqual(receipt.result.summary,summary,'summary survives early-key receipt limits');
+ const recovery=C.recovery([{tool:'what_happens_from',value}],[receipt]);
+ assert.deepEqual(recovery.availableResult.summary,summary);
+ assert.match(recovery.message,/Do not rerun/);
+ assert.deepEqual(require('../lib/chat-context').read(recovery.availableResult.read.arguments).value,summary);
+ assert.equal(R.load(receipt.read.arguments.id).data.field19,19);
+});
+
+test('result_read accepts owned local view URLs without accepting a foreign lookalike',async()=>{
+ const R=require('../lib/results'),view=R.saveView('json',{flowMap:{nodes:[{id:'n'}]}});
+ const r=await T().call('result_read',{id:view+'?embed=1',path:'/flowMap',all:true});
+ assert.deepEqual(r.value,{nodes:[{id:'n'}]});
+ await assert.rejects(T().call('result_read',{id:'https://foreign.example/show/'+R.referenceId(view),all:true}));
+});
+
 test('the code schema advertises enabled call shapes without granting or leaking hidden capabilities',async()=>{
  const schema=(await T().schemas({profile:'code'}))[0];
  assert.match(schema.description,/tools.what_happens_from/);
  assert.match(schema.description,/assumptions\?:Array<\{expression:string, holds:boolean\}>/);
  assert.match(schema.description,/tools.result_read/);
+ const contract=await T().call('tool_describe',{name:'what_happens_from'});
+ assert.match(contract.codeUsage,/graph is flowMap/);
+ assert.match(schema.description,/traceView is a URL string/);
  const limited=await require('../lib/access').run({principalId:'interface-limited',storyId:'interface-limited',multiUser:true,role:'user',tools:['code']},()=>T().schemas({profile:'code'}));
  assert.doesNotMatch(limited[0].description,/Enabled JavaScript API shapes/);
  assert.equal(limited.length,1,'only the code outer tool is exposed');

@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b",
+      sourceDigest: "a94956fd5ddb4adf7c8487a653eabab1bc63ac9c99754b7834499afd688f5312",
       machines: [
         {
           id: "IO.atomic-file",
@@ -19722,7 +19722,7 @@ var require_self_model_catalog = __commonJS({
           consumers: [
             {
               file: "lib/tools.js",
-              line: 1052,
+              line: 1053,
               snippet: "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
             }
           ],
@@ -72072,714 +72072,6 @@ var require_semantic_claims = __commonJS({
   }
 });
 
-// lib/code-result.js
-var require_code_result = __commonJS({
-  "lib/code-result.js"(exports2, module2) {
-    function receipt(tool, value) {
-      const omitted = [];
-      function preview(v, path3 = "$", depth = 0) {
-        if (typeof v === "string" && v.length > 500) {
-          omitted.push(path3);
-          return v.slice(0, 500);
-        }
-        if (!v || typeof v !== "object") return v;
-        if (depth >= 7) {
-          omitted.push(path3);
-          return Array.isArray(v) ? [] : {};
-        }
-        if (Array.isArray(v)) {
-          if (v.length > 5) omitted.push(path3);
-          return v.slice(0, 5).map((x, i) => preview(x, `${path3}[${i}]`, depth + 1));
-        }
-        const entries = Object.entries(v);
-        if (entries.length > 16) omitted.push(path3);
-        return Object.fromEntries(entries.slice(0, 16).map(([k, x]) => [k, preview(x, `${path3}.${k}`, depth + 1)]));
-      }
-      let selected = preview(value);
-      if (Buffer.byteLength(JSON.stringify(selected) || "null") > 4096) {
-        selected = { keys: Object.keys(value || {}).slice(0, 30).map((k) => k.slice(0, 100)) };
-        for (const key of ["evidenceType", "state", "job", "mapView", "traceView", "analysisView"]) if (typeof value?.[key] === "string" && value[key].length <= 500) selected[key] = value[key];
-        if (value?.summary && typeof value.summary === "object" && !Array.isArray(value.summary)) {
-          selected.summary = preview(value.summary, "$.summary", 0);
-          while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && Object.keys(selected.summary).length) delete selected.summary[Object.keys(selected.summary).at(-1)];
-        }
-        while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && selected.keys.length) selected.keys.pop();
-        omitted.push("$");
-      }
-      const results = require_results(), existing = typeof value?.view === "string" && results.referenceId(value.view);
-      const sourceView = existing && results.load(existing) ? value.view : void 0;
-      let view, readScope = "tool-response", retentionError;
-      try {
-        view = results.saveTool(tool, JSON.stringify(value ?? null));
-      } catch (error) {
-        retentionError = String(error.message).slice(0, 300);
-        if (sourceView) {
-          view = sourceView;
-          readScope = "source-evidence";
-        }
-      }
-      return { tool, result: selected, ...sourceView ? { sourceView } : {}, readScope, ...retentionError ? { retentionError } : {}, output: { status: omitted.length ? "part" : "all", scope: "tool-response", ...omitted.length ? { omitted: [...new Set(omitted)].slice(0, 20) } : {} }, ...view ? { view, read: { tool: "result_read", arguments: { id: view.split("/").pop(), all: true } } } : { read: null } };
-    }
-    module2.exports = { receipt };
-    module2.exports.discovery = (name, value) => {
-      if (!value || typeof value !== "object") return value;
-      const direct = (target, args) => ({ insideCodeCall: `tools.${target}`, ...args ? { arguments: args } : {}, guidance: `Call await tools.${target}(args) directly inside code, using inputSchema. Do not wrap this in tool_execute.` });
-      const action = (next) => next?.tool === "tool_execute" ? direct(next.arguments?.name || next.name, next.arguments?.arguments) : next?.tool === "tool_describe" ? direct("tool_describe", next.arguments) : next;
-      if (name === "tool_describe" && value.name) return { ...value, next: direct(value.name) };
-      if (name === "tool_search") return { ...value, ...value.next ? { next: action(value.next) } : {}, tools: value.tools?.map((t) => ({ ...t, next: action(t.next) })) };
-      return value;
-    };
-    module2.exports.diagnostic = (error, recentResults = [], receipts = []) => {
-      if (error && /Cannot read properties of undefined|cannot read property/i.test(error)) {
-        for (let i = recentResults.length - 1; i >= 0; i--) {
-          const call = recentResults[i], value = call.value?.summary ? call.value : call.tool === "result_read" && call.value?.value?.summary ? call.value.value : null, receipt2 = receipts[i];
-          if (!value?.summary?.proofLimits || !receipt2?.read || receipt2.readScope !== "tool-response") continue;
-          const path3 = call.value === value ? "/summary" : "/value/summary", args = { ...receipt2.read.arguments, path: path3 };
-          return { message: "A local field access failed after source evidence was retrieved. Reuse its selected summary; proofLimits keeps proof and sourceCoverage separate. Do not rerun the completed source query to fix formatting. Inspect unresolved/partial statuses before answering.", availableResult: { tool: call.tool, path: path3, read: { tool: "result_read", arguments: args } }, retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } };
-        }
-      }
-      if (/Cannot read properties of undefined.*compacted/.test(error || "")) return { message: "modelContext is model-transport metadata and may be absent inside code. For result_read, use r.sourceCoverage.provenComplete and r.sourceView directly. A non-compacted result does not prove upstream completeness." };
-      if (/Cannot use import statement|require is not defined/.test(error || "")) return { message: 'tools is already supplied. Remove import/require; call tools.NAME(args) directly inside code. For discovery: return await tools.tool_search({query:"action words"});' };
-      const reserved = /Identifier '([^']+)' has already been declared/.exec(error || "")?.[1];
-      if (reserved) return {
-        message: `${reserved} was declared twice or shadows a supplied helper. Use a different local variable name. Each code cell is fresh.`,
-        ...reserved === "tools" ? { retry: { tool: "code", arguments: { code: "return await tools.list();" } } } : {}
-      };
-    };
-    module2.exports.provenance = (returned, calls) => {
-      const metadata = /* @__PURE__ */ new Set(["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"]);
-      const names = [...new Set(calls.filter((c) => c.ok && !c.resultError).map((c) => c.tool === "tool_execute" ? c.args?.name || c.tool : c.tool))];
-      const provenance = { kind: names.length ? names.every((n) => metadata.has(n)) ? "discovery" : "tool-results" : "code-inputs", successfulTools: names };
-      let value = returned;
-      if (typeof value === "string" && value.length <= 65536) try {
-        value = JSON.parse(value);
-      } catch {
-      }
-      const missing = [], sources = {};
-      for (const object of [value, value?.summary]) if (object && typeof object === "object") for (const [field, kind] of [["mapView", "map"], ["traceView", "trace"]]) {
-        const url = object[field];
-        if (typeof url !== "string") continue;
-        const id = require_results().referenceId(url), data = id && require_results().load(id)?.data;
-        if (!(kind === "map" ? data?.flowMap : data?.sides && data?.operation === "trace")) missing.push(field);
-        else sources[kind] = data;
-      }
-      const claims = require_semantic_claims().verify(value, sources);
-      if (!missing.length && !claims.valid) return { provenance, evidenceCheck: { status: "contradictory-static-claims", fields: claims.issues, observedProofLimits: claims.observed, meaning: "Reported proof/coverage values contradict the linked retained evidence. Use observedProofLimits below; static evidence does not establish runtime behavior. Repair the reported values without rerunning the source query." } };
-      return { provenance, ...missing.length ? { evidenceCheck: { status: "unbacked-references", fields: [...new Set(missing)], meaning: "These returned map/trace references do not identify the corresponding retained evidence. A constructed value is not a source-query result.", retry: { tool: "code", arguments: { code: 'return await tools.tool_describe({name:"what_happens_from"});' } } } } : {} };
-    };
-    module2.exports.resolveName = (name, definitions) => {
-      if (typeof name !== "string") return name;
-      if (definitions.some((t) => t.name === name)) return name;
-      const aliases = { list_analyses: "which_analyses_exist" };
-      if (aliases[name] && definitions.some((t) => t.name === aliases[name])) return aliases[name];
-      const key = (s) => s.replace(/[_-]/g, "").toLowerCase();
-      const matches = definitions.filter((t) => key(t.name) === key(name));
-      return matches.length === 1 ? matches[0].name : name;
-    };
-  }
-});
-
-// lib/call-evidence.js
-var require_call_evidence = __commonJS({
-  "lib/call-evidence.js"(exports2, module2) {
-    var FAILED = /* @__PURE__ */ new Set(["failed", "error", "cancelled", "interrupted", "timeout", "compile-error", "no-tests-ran", "skipped-only", "all-tests-skipped", "cleanup-failed", "invalid", "different"]);
-    var TESTS = /* @__PURE__ */ new Set(["test_run", "test_compare"]);
-    var ASSERTIONS = /* @__PURE__ */ new Set(["scenario_check", "scenario_preflight", "scenario_emulate", "scenario_assert", "scenario_observe", "scenario_run", "scenario_verify", "collection_check", "collection_validate", "collection_run", "collection_report", "script_run", "fixture_validate", "fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_arm", "fixture_runtime_check", "fixture_runtime_cleanup"]);
-    function classify(tool, value, { invocation = "succeeded", job, traceId } = {}) {
-      const r = value && typeof value === "object" ? value : {};
-      const out2 = { version: 1, invocation, ...traceId ? { traceId } : {} };
-      const id = !tool.startsWith("jenkins_") && typeof r.job === "string" ? r.job : job?.id;
-      if (id) out2.job = { id, state: job?.state || r.state || r.status || "unknown", ...job?.traceId ? { traceId: job.traceId } : {} };
-      const payload = job?.result || job?.resultSummary || r;
-      if (/^jenkins_(build|wait|tests)$/.test(tool) && payload.state) out2.execution = { kind: "ci", status: ["failed", "unstable", "aborted"].includes(payload.state) ? "failed" : payload.state };
-      else if (/^bitbucket_pr_(status|wait)$/.test(tool) && payload.state) out2.execution = { kind: "review", status: payload.state === "build_failed" ? "failed" : payload.state };
-      else if (tool === "files_archive" && payload.archived === true) out2.execution = { kind: "files", status: payload.sourceRemoved === true ? "archived" : "cleanup-failed" };
-      else if (["files_delete", "workspace_delete"].includes(tool) && typeof payload.deleted === "boolean") out2.execution = { kind: "files", status: payload.deleted ? "deleted" : "cleanup-failed" };
-      else if (tool === "testdb_template_verify" && typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
-      else if (tool === "testdb_gc" && Array.isArray(payload.failures)) out2.execution = { kind: "cleanup", status: payload.failures.length ? "cleanup-failed" : "done" };
-      else if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out2.execution = { kind: "assertions", status: payload.outcome };
-      else if (TESTS.has(tool) && typeof payload.outcome === "string") out2.execution = { kind: "tests", status: payload.outcome, ...payload.counts ? { counts: payload.counts } : {} };
-      else if (ASSERTIONS.has(tool)) {
-        if (typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
-        else if (typeof payload.status === "string") out2.execution = { kind: "assertions", status: payload.status };
-      }
-      if (tool.startsWith("service_env_") && payload.state) out2.execution = { kind: "service-environment", status: payload.outcome === "failed" ? "failed" : payload.state };
-      if (tool === "service_env_request") out2.execution = { kind: "runtime-observation", status: payload.ok === false ? "failed" : "observed" };
-      if (!out2.execution && out2.job) out2.execution = { kind: "job", status: out2.job.state };
-      out2.failed = invocation === "failed" || FAILED.has(out2.execution?.status) || FAILED.has(out2.job?.state);
-      return out2;
-    }
-    module2.exports = { classify, FAILED };
-  }
-});
-
-// lib/call-outcome.js
-var require_call_outcome = __commonJS({
-  "lib/call-outcome.js"(exports2, module2) {
-    var { classify } = require_call_evidence();
-    function refresh(call) {
-      if (!call.evidence?.job) return call;
-      const job = require_jobs().get(call.evidence.job.id);
-      if (!job) return { ...call, evidence: { ...call.evidence, job: { ...call.evidence.job, retained: false } } };
-      return { ...call, evidence: classify(call.target || call.tool, null, { invocation: call.evidence.invocation, traceId: call.evidence.traceId, job }) };
-    }
-    function failed(call) {
-      return call.evidence ? call.evidence.failed : call.ok === false;
-    }
-    module2.exports = { classify, refresh, failed };
-  }
-});
-
-// lib/views.js
-var require_views = __commonJS({
-  "lib/views.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var path3 = require("path");
-    var { PATHS, ROOT } = require_config();
-    var BUILTIN = path3.join(__dirname, path3.basename(__dirname) === "lib" ? "../web/views" : "web/views");
-    var DIR = PATHS.views;
-    var scopeDirectory = () => require_access().scopedDirectory(DIR);
-    var NAME = /^[a-z][a-z0-9-]{1,40}$/;
-    var CSP = [
-      "sandbox allow-scripts allow-popups allow-downloads",
-      "default-src 'none'",
-      "script-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
-      "style-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
-      "font-src https://fonts.gstatic.com data:",
-      "img-src data: blob:",
-      "connect-src 'none'",
-      "form-action 'none'",
-      "base-uri 'none'",
-      "frame-ancestors *"
-    ].join("; ");
-    function policy(view) {
-      return ["data-lineage", "mapping-debugger", "service-environment", "ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench", "semantic-path-trace"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
-    }
-    function parse(text) {
-      const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
-      let meta = {};
-      if (m) {
-        try {
-          meta = JSON.parse(m[1]);
-        } catch (e) {
-          meta = { error: `first-line comment is not JSON: ${e.message}` };
-        }
-      }
-      return { meta, html: m ? text.slice(m[0].length) : text };
-    }
-    function files(dir) {
-      try {
-        return fs3.readdirSync(dir).filter((f) => f.endsWith(".html") && !f.startsWith("_")).map((f) => f.slice(0, -5));
-      } catch {
-        return [];
-      }
-    }
-    function get(name) {
-      if (!NAME.test(name || "")) throw new Error(`bad view name "${name}": lowercase letters, digits and -`);
-      const lifecycle = require_state_machine2().create(require_lifecycles().definition);
-      for (const [dir, builtin] of [[scopeDirectory(), false], [BUILTIN, true]]) {
-        const f = path3.join(dir, `${name}.html`);
-        if (fs3.existsSync(f)) {
-          const text = fs3.readFileSync(f, "utf8");
-          const { meta, html } = parse(text);
-          lifecycle.to(builtin ? "builtin" : "custom");
-          return { name, builtin, overrides: !builtin && fs3.existsSync(path3.join(BUILTIN, `${name}.html`)), description: meta.description || "", sample: meta.sample, error: meta.error, html, text };
-        }
-      }
-      lifecycle.to("missing");
-      throw new Error(`no view "${name}"; views: ${list().map((v) => v.name).join(", ")}`);
-    }
-    function list() {
-      const names = [.../* @__PURE__ */ new Set([...files(scopeDirectory()), ...files(BUILTIN)])].sort();
-      return names.map((n) => {
-        const v = get(n);
-        return { name: n, builtin: v.builtin, overrides: v.overrides, description: v.description, hasSample: v.sample !== void 0, ...v.error ? { error: v.error } : {} };
-      });
-    }
-    function save(name, { html, description = "", sample }) {
-      if (!NAME.test(name || "")) throw new Error(`bad view name "${name}": lowercase letters, digits and -`);
-      if (typeof html !== "string" || !html.trim()) throw new Error("html required: the page body, with a <script> that reads DATA");
-      const body = parse(html).html;
-      const meta = JSON.stringify({ description: String(description || "").trim(), ...sample !== void 0 ? { sample } : {} });
-      fs3.mkdirSync(scopeDirectory(), { recursive: true });
-      const f = path3.join(scopeDirectory(), `${name}.html`);
-      const existed = fs3.existsSync(f);
-      fs3.writeFileSync(f, `<!-- ${meta} -->
-${body.replace(/^\s+/, "")}`);
-      return { view: name, saved: true, replaced: existed, overridesBuiltin: fs3.existsSync(path3.join(BUILTIN, `${name}.html`)) };
-    }
-    function remove(name) {
-      if (!NAME.test(name || "")) throw new Error("bad view name");
-      const f = path3.join(scopeDirectory(), `${name}.html`);
-      if (!fs3.existsSync(f)) throw new Error(`no custom view "${name}" (built-in views cannot be deleted)`);
-      fs3.unlinkSync(f);
-      return { view: name, deleted: true };
-    }
-    var safeJson = (v) => JSON.stringify(v === void 0 ? null : v).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
-    var shared;
-    function assets() {
-      if (!shared) {
-        const web = path3.join(BUILTIN, "..");
-        const { diffLists, diffLines } = require_diff();
-        shared = {
-          css: fs3.readFileSync(path3.join(web, "ui.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "_views.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(web, "inline.css"), "utf8"),
-          js: fs3.readFileSync(path3.join(web, "state-machine.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(web, "inline.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "_helpers.js"), "utf8") + `
-dt.diffLists = ${diffLists.toString()};
-dt.diffLines = ${diffLines.toString()};
-`
-        };
-      }
-      return shared;
-    }
-    function render(name, data, meta = {}, { embed = false, html, metaCsp = false, definition } = {}) {
-      const v = definition || (html !== void 0 ? { name, html: parse(html).html } : get(name));
-      const a = assets();
-      const projectContext = name === "project-context" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context-ui.js"), "utf8") + "</script>" : "";
-      const diagnostics = ["test-coverage", "observability"].includes(name) ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../trace-format.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.js"), "utf8") + "</script>" : "";
-      const capabilities = name === "capabilities" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.js"), "utf8") + "</script>" : "";
-      const uiTrace = name === "ui-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.js"), "utf8") + "</script>" : "";
-      const uiPage = name === "ui-page" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../pages.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../page-primitives.js"), "utf8") + "</script>" : "";
-      const repoModel = name === "repo-model" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.js"), "utf8") + "</script>" : "";
-      const pathBrowser = name === "semantic-path-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "_path-browser.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "_path-browser.js"), "utf8") + "</script>" : "";
-      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-      return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
-<style>${a.css}</style>
-<script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ publicUrl: require_config().getServer().publicUrl, view: name, ...meta })};</script>
-<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}${repoModel}${pathBrowser}</head>
-<body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
-    }
-    module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
-  }
-});
-
-// lib/calls.js
-var require_calls = __commonJS({
-  "lib/calls.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var path3 = require("path");
-    var { CACHE: CACHE2 } = require_util2();
-    var state = require_state_store();
-    var FILE = path3.join(CACHE2, "_calls.jsonl");
-    var callFile = () => {
-      try {
-        return path3.join(require_access().scopedDirectory(CACHE2), "_calls.jsonl");
-      } catch {
-        return FILE;
-      }
-    };
-    var KEEP = 5e3;
-    var SKIP = /* @__PURE__ */ new Set(["call_history", "call_patterns", "script_list", "script_get", "script_save"]);
-    var appendedLines = 0;
-    var appendedBytes = 0;
-    var clipArgs = (v, n = 600) => {
-      if (typeof v === "string") return v.length > n ? `${v.slice(0, n)}\u2026` : v;
-      if (Array.isArray(v)) return v.slice(0, 50).map((x) => clipArgs(x, n));
-      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
-      return v;
-    };
-    function record({ tool, args, source, ok, ms, error, size, steps, evidence, target, redactions = [] }) {
-      if (SKIP.has(tool)) return;
-      const st = (steps || []).filter((x) => x.depth === 0 || !x.ok).slice(0, 30).map((x) => ({ name: x.name, ms: x.ms, ...x.ok ? {} : { error: x.error } }));
-      const cleaned = require_redact().clean({ args: args || {}, error, steps: st, evidence, target: typeof target === "string" ? target : void 0 }, { known: redactions });
-      const entry = { at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(cleaned.args), ok, ms, ...cleaned.target ? { target: cleaned.target } : {}, ...evidence ? { evidence: cleaned.evidence } : {}, ...error ? { error: String(cleaned.error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: cleaned.steps } : {} };
-      if (state.enabled()) {
-        state.recordCall(entry);
-        return;
-      }
-      const line = JSON.stringify(entry);
-      try {
-        const file = callFile();
-        fs3.mkdirSync(path3.dirname(file), { recursive: true });
-        const owner = require_access().owner();
-        if (owner.scopeKey !== "legacy") {
-          try {
-            fs3.writeFileSync(path3.join(path3.dirname(file), "_owner.json"), JSON.stringify(owner), { flag: "wx", mode: 384 });
-          } catch (error2) {
-            if (error2.code !== "EEXIST") throw error2;
-          }
-        }
-        fs3.appendFileSync(file, line + "\n");
-        appendedBytes += line.length;
-        if (++appendedLines >= 200 || appendedBytes > 1048576) {
-          appendedLines = 0;
-          appendedBytes = 0;
-          trim(file);
-        }
-      } catch {
-      }
-    }
-    function trim(file) {
-      let maxMb = 50;
-      try {
-        maxMb = Number(process.env.DT_LOG_MAX_MB || require_config().load().raw.log?.maxMb || 50);
-      } catch {
-      }
-      const size = fs3.statSync(file).size;
-      const lines = fs3.readFileSync(file, "utf8").split("\n").filter(Boolean);
-      let keep = lines.length > KEEP ? Math.floor(KEEP * 0.8) : lines.length;
-      if (size > maxMb * 1048576) keep = Math.min(keep, Math.floor(lines.length * (maxMb * 1048576 * 0.8) / size));
-      if (keep < lines.length) fs3.writeFileSync(file, lines.slice(-keep).join("\n") + "\n");
-    }
-    function legacy() {
-      let text = "";
-      try {
-        text = fs3.readFileSync(callFile(), "utf8");
-      } catch {
-        return [];
-      }
-      return text.split("\n").filter(Boolean).map((l) => {
-        try {
-          return JSON.parse(l);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
-    }
-    function all() {
-      if (!state.enabled()) return legacy();
-      const rows = state.snapshot("calls").reverse();
-      if (!state.status().ready && !rows.some((row) => String(row.id).startsWith("legacy:"))) return [...legacy(), ...rows];
-      return rows;
-    }
-    function history({ q, tool, source, failed, status, kind, limit = 200 } = {}) {
-      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
-      return all().reverse().map(require_call_outcome().refresh).filter((c) => (!tool || c.tool === tool) && (!source || c.source === source || source === "direct" && !String(c.source || "api").startsWith("script:"))).filter((c) => !words.length || words.every((w) => `${c.tool} ${c.source} ${JSON.stringify(c.args)}`.toLowerCase().includes(w))).filter((c) => (!failed || require_call_outcome().failed(c)) && (!status || c.evidence?.execution?.status === status || c.evidence?.invocation === status) && (!kind || c.evidence?.execution?.kind === kind)).slice(0, limit);
-    }
-    var SLOT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|'[^']*'|\b\d+\b/gi;
-    var shape = (v) => typeof v === "string" ? v.replace(SLOT, "\0") : JSON.stringify(v);
-    var slots = (v) => typeof v === "string" ? v.match(SLOT) || [] : [];
-    var unquote = (x) => /^'.*'$/.test(x) ? x.slice(1, -1) : x;
-    var same = (xs) => xs.every((x) => JSON.stringify(x) === JSON.stringify(xs[0]));
-    function generalize(calls, prefix = "") {
-      const keys = [...new Set(calls.flatMap((c) => Object.keys(c.args || {})))].sort();
-      const args = {}, params = {};
-      const name = (k, i) => `${prefix}${k}${i ? i + 1 : ""}`.replace(/[^\w]/g, "_");
-      for (const k of keys) {
-        const vals = calls.map((c) => (c.args || {})[k]);
-        if (vals.some((v) => v === void 0)) {
-          params[name(k)] = { description: `${k} (not always given)`, examples: [...new Set(vals.filter((v) => v !== void 0).map(String))].slice(0, 3) };
-          args[k] = `{{${name(k)}}}`;
-          continue;
-        }
-        if (same(vals)) {
-          args[k] = vals[0];
-          continue;
-        }
-        if (vals.every((v) => typeof v === "string") && same(vals.map(shape)) && slots(vals[0]).length) {
-          const per = vals.map(slots);
-          let i = 0;
-          const tpl = vals[0].replace(SLOT, (lit, off, whole) => {
-            const j = i++;
-            const at = per.map((p2) => p2[j]);
-            if (same(at)) return lit;
-            const near = (whole.slice(0, off).match(/([a-z_][\w.]*)["'`]?\s*(?:=|<>|!=|>=|<=|>|<|:|\blike|\bin\s*\()\s*$/i) || [])[1];
-            const nk = near && near.split(".").pop().replace(/[^\w]/g, "_");
-            const p = nk && !params[nk] && !keys.includes(nk) ? nk : name(k, j);
-            params[p] = { description: `${k}: changing value`, examples: [...new Set(at.map(unquote))].slice(0, 3) };
-            return /^'/.test(lit) ? `'{{${p}}}'` : `{{${p}}}`;
-          });
-          args[k] = tpl;
-          continue;
-        }
-        params[name(k)] = { description: k, examples: [...new Set(vals.map((v) => typeof v === "string" ? v : JSON.stringify(v)))].slice(0, 3) };
-        args[k] = `{{${name(k)}}}`;
-      }
-      return { args, params };
-    }
-    var direct = (cs) => cs.map(require_call_outcome().refresh).filter((c) => !require_call_outcome().failed(c) && !String(c.source).startsWith("script:") && !String(c.tool).startsWith("script_"));
-    function sessions(cs) {
-      const out2 = [];
-      let cur = [];
-      for (const c of cs) {
-        const last = cur[cur.length - 1];
-        if (last && (Date.parse(c.at) - Date.parse(last.at) > 15 * 6e4 || last.source !== c.source)) {
-          out2.push(cur);
-          cur = [];
-        }
-        cur.push(c);
-      }
-      if (cur.length) out2.push(cur);
-      return out2;
-    }
-    function patterns({ min = 3, limit = 20 } = {}) {
-      const cs = direct(all());
-      const out2 = [];
-      const groups = /* @__PURE__ */ new Map();
-      for (const c of cs) {
-        const k = `${c.tool}|${Object.keys(c.args || {}).sort().join(",")}`;
-        if (!groups.has(k)) groups.set(k, []);
-        groups.get(k).push(c);
-      }
-      for (const g of groups.values()) {
-        if (g.length < min) continue;
-        const { args, params } = generalize(g);
-        out2.push({
-          kind: "repeat",
-          count: g.length,
-          last: g[g.length - 1].at,
-          tools: [g[0].tool],
-          summary: `${g[0].tool} called ${g.length}\xD7${Object.keys(params).length ? `, changing only ${Object.keys(params).join(", ")}` : " with the same arguments"}`,
-          script: { description: `${g[0].tool} ${describe(args)}`.slice(0, 200), params: paramDefs(params), steps: [{ tool: g[0].tool, args, as: "result" }] }
-        });
-      }
-      const seqs = /* @__PURE__ */ new Map();
-      for (const s of sessions(cs)) {
-        for (let n = 5; n >= 2; n--) {
-          for (let i = 0; i + n <= s.length; i++) {
-            const part = s.slice(i, i + n);
-            if (part.some((c, j) => j && c.tool === part[j - 1].tool)) continue;
-            const k = part.map((c) => c.tool).join(" \u2192 ");
-            if (!seqs.has(k)) seqs.set(k, []);
-            const list = seqs.get(k);
-            const prev = list[list.length - 1];
-            if (prev && prev.s === s && prev.i + n > i) continue;
-            list.push({ s, i, part });
-          }
-        }
-      }
-      const seqOut = [];
-      for (const [k, occ] of seqs) {
-        if (occ.length < 2) continue;
-        const n = occ[0].part.length;
-        const steps = [], params = {};
-        for (let j = 0; j < n; j++) {
-          const g = generalize(occ.map((o) => o.part[j]), `s${j + 1}_`);
-          Object.assign(params, g.params);
-          steps.push({ tool: occ[0].part[j].tool, args: g.args, as: `step${j + 1}` });
-        }
-        seqOut.push({
-          kind: "sequence",
-          count: occ.length,
-          last: occ[occ.length - 1].part[n - 1].at,
-          tools: k.split(" \u2192 "),
-          summary: `${k}: done ${occ.length}\xD7 in a row`,
-          script: { description: `Runs ${k}`, params: paramDefs(params), steps }
-        });
-      }
-      const key = (x) => ` ${x.tools.join(" ")} `;
-      for (const p of seqOut) {
-        if (seqOut.some((q) => q !== p && q.tools.length > p.tools.length && q.count >= p.count && key(q).includes(key(p)))) continue;
-        if (seqOut.some((q) => q !== p && q.count >= p.count && ` ${[...q.tools, ...q.tools].join(" ")} `.includes(key(p)) && key(p) !== key(q))) continue;
-        out2.push(p);
-      }
-      return out2.sort((a, b) => b.count * b.tools.length - a.count * a.tools.length || b.last.localeCompare(a.last)).slice(0, limit);
-    }
-    var describe = (args) => Object.entries(args).filter(([, v]) => typeof v !== "object").map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(" ");
-    var paramDefs = (params) => Object.fromEntries(Object.entries(params).map(([k, p]) => [k, { description: `${p.description}${p.examples.length ? `, e.g. ${p.examples.join(" / ")}` : ""}`.slice(0, 200), required: true }]));
-    async function historyPage({ kind, status, ...query } = {}) {
-      if (!state.enabled()) return { records: history({ ...query, kind, status }), nextCursor: null, backend: "legacy" };
-      const page = await state.list({ ...query, kind: "calls", category: kind, status });
-      return { ...page, records: page.records.map((row) => ({ ...row.value, id: row.id, metadataRevision: row.revision })) };
-    }
-    async function clear() {
-      if (state.enabled()) return state.clear("calls");
-      const file = callFile();
-      fs3.mkdirSync(path3.dirname(file), { recursive: true });
-      fs3.writeFileSync(file, "");
-      return { ok: true };
-    }
-    module2.exports = { record, history, historyPage, patterns, generalize, clear, FILE };
-  }
-});
-
-// lib/doctor.js
-var require_doctor = __commonJS({
-  "lib/doctor.js"(exports2, module2) {
-    var fs3 = require("fs");
-    var os = require("os");
-    var path3 = require("path");
-    var { execFile } = require("child_process");
-    var run = (cmd, args, { timeout = 2e4, env, cwd } = {}) => new Promise((resolve2) => {
-      const t0 = Date.now();
-      execFile(cmd, args, { timeout, env: env || process.env, cwd, maxBuffer: 8 << 20 }, (err, stdout, stderr) => resolve2({ ok: !err, code: err?.code, out: `${stdout || ""}${stderr || ""}`.trim(), ms: Date.now() - t0, error: err?.message }));
-    });
-    async function head(url, { auth, timeout = 8e3 } = {}) {
-      const t0 = Date.now();
-      try {
-        const res = await fetch(url, { method: "GET", headers: auth ? { authorization: auth } : {}, signal: AbortSignal.timeout(timeout), redirect: "manual" });
-        return { status: res.status, ms: Date.now() - t0 };
-      } catch (e) {
-        return { error: e.cause?.code || e.cause?.message || e.message, ms: Date.now() - t0 };
-      }
-    }
-    function writable(dir) {
-      try {
-        fs3.mkdirSync(dir, { recursive: true });
-        const f = path3.join(dir, `.dt-doctor-${process.pid}`);
-        fs3.writeFileSync(f, "x");
-        let chmod = true;
-        try {
-          fs3.chmodSync(f, 384);
-        } catch {
-          chmod = false;
-        }
-        fs3.rmSync(f, { force: true });
-        return { ok: true, chmod };
-      } catch (e) {
-        return { ok: false, error: e.message };
-      }
-    }
-    var SHARED = /^(9p|drvfs|cifs|smb3?|smbfs|fakeowner|grpcfuse|fuse\.grpcfuse|virtiofs|osxfs|fuse\.osxfs|vboxsf|nfs4?|fuse\.sshfs|fuse)$/;
-    function mountOf(dir) {
-      let lines;
-      try {
-        lines = fs3.readFileSync("/proc/self/mountinfo", "utf8").split("\n");
-      } catch {
-        return null;
-      }
-      let best = null;
-      const target = path3.resolve(dir);
-      for (const l of lines) {
-        const parts = l.split(" ");
-        const dash = parts.indexOf("-");
-        if (dash < 0) continue;
-        const point = parts[4].replace(/\\040/g, " "), type = parts[dash + 1], source = parts[dash + 2];
-        if ((target === point || target.startsWith(point.endsWith("/") ? point : `${point}/`)) && (!best || point.length > best.point.length)) best = { point, type, source };
-      }
-      return best;
-    }
-    async function check({ repo, deep = false } = {}) {
-      const cfg = require_config();
-      const t = cfg.getTests();
-      const out2 = [];
-      const add = (group, name, status, detail, fix) => out2.push({ group, check: name, status, detail: String(detail ?? "").slice(0, 400), ...fix ? { fix } : {} });
-      for (const [name, dir] of [["config folder", cfg.HOME], ["repos", cfg.PATHS.repos], ["workspaces", cfg.PATHS.work], ["cache", cfg.PATHS.cache], ["git data (DT_GIT_DIR)", process.env.DT_GIT_DIR || path3.join(os.tmpdir(), "dt-git")]]) {
-        const w = writable(dir);
-        if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
-        else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
-      }
-      for (const [name, dir, what] of [["workspaces", cfg.PATHS.work, "DT_WORK_DIR=/var/dt-work"], ["Gradle home", cfg.getTests().gradleHome, "DT_GRADLE_USER_HOME=/var/dt-build/gradle"], ["Maven repository", cfg.getTests().mavenRepo, "DT_MAVEN_REPO=/var/dt-build/m2"], ["git data", process.env.DT_GIT_DIR || path3.join(os.tmpdir(), "dt-git"), "DT_GIT_DIR=/var/dt-git"]].filter(([, d]) => d)) {
-        const m = mountOf(dir);
-        if (!m) continue;
-        const shared = SHARED.test(m.type);
-        add("folders", `${name} filesystem`, shared ? name === "git data" ? "warn" : "fail" : "ok", `${dir} is on ${m.type} (${m.point}${m.source && m.source !== "none" ? ` from ${m.source}` : ""})${shared ? ": a host-shared mount: file locks and memory-mapped files do not work right there (Gradle's daemon hangs on its registry, builds slow down)" : ""}`, shared ? `put it on a Docker volume (compose does: ${what}) or a local disk` : null);
-      }
-      const gd = process.env.DT_GIT_DIR || path3.join(os.tmpdir(), "dt-git");
-      if (path3.resolve(gd).startsWith(path3.resolve(os.tmpdir()))) add("folders", "git data lasts", "warn", `${gd} is in the temporary folder: after a restart every repo is fetched again`, "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)");
-      try {
-        const st = fs3.statfsSync(cfg.PATHS.work.replace(/\/work$/, "") || cfg.HOME);
-        const free = st.bavail * st.bsize / 1e9;
-        add("folders", "free disk", free < 2 ? "fail" : free < 10 ? "warn" : "ok", `${free.toFixed(1)} GB free`, free < 10 ? "workspaces, Maven/Gradle caches and indexes need room: workspace_drop old workspaces" : null);
-      } catch {
-      }
-      const g = await run("git", ["--version"]);
-      add("git", "git", g.ok ? "ok" : "fail", g.ok ? g.out : g.error, g.ok ? null : "install git in the image (node:22-bookworm has it)");
-      const bb = cfg.getPersonal().bitbucket;
-      if (!bb.url) add("bitbucket", "Bitbucket URL", "fail", "not set", "bitbucket.url in config.json");
-      else {
-        add("bitbucket", "token", bb.token ? "ok" : "fail", bb.token ? `set (${bb.token.length} chars)` : "missing", bb.token ? null : "BITBUCKET_HTTP_TOKEN in .env (a personal access token with repository read)");
-        const api = await head(`${bb.url}/rest/api/1.0/repos?limit=1`, { auth: bb.token ? `Bearer ${bb.token}` : null });
-        add("bitbucket", "REST API", api.status === 200 ? "ok" : "fail", api.error ? `${bb.url}: ${api.error}` : `HTTP ${api.status} in ${api.ms} ms`, api.status === 401 ? "the token is wrong or expired" : api.error ? "dt cannot reach Bitbucket: DNS, proxy (HTTPS_PROXY), or the network of the container" : null);
-      }
-      if (repo) {
-        const [project, slug] = String(repo).split("/");
-        const G = require_git();
-        const url = `${bb.url}/scm/${String(project).toLowerCase()}/${slug}.git`;
-        const ls = await run("git", ["-c", `http.extraHeader=Authorization: Bearer ${bb.token || ""}`, "ls-remote", url, "HEAD"], { timeout: 3e4, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
-        add("bitbucket", `git ls-remote ${repo}`, ls.ok ? "ok" : "fail", ls.ok ? `${ls.out.slice(0, 12)} in ${ls.ms} ms` : ls.out.replace(bb.token || "\0", "***").slice(0, 300), ls.ok ? null : /401|403|Authentication/.test(ls.out) ? "the token cannot read this repo" : /Could not resolve|unable to access|timed out/i.test(ls.out) ? "git cannot reach Bitbucket from here (proxy: git uses HTTPS_PROXY / http.proxy)" : "check the project key and repo slug");
-        if (ls.ok && deep) {
-          const dir = fs3.mkdtempSync(path3.join(os.tmpdir(), "dt-doctor-"));
-          const t0 = Date.now();
-          try {
-            const info = await G.fetchRef(project, slug, "", { dir, gitKey: `doctor/${path3.basename(dir)}` });
-            add("bitbucket", `fetch ${repo}`, "ok", `${info.sha.slice(0, 10)} in ${Date.now() - t0} ms${info.fallback ? `; ${info.fallback}` : ""}`);
-          } catch (e) {
-            add("bitbucket", `fetch ${repo}`, "fail", e.message, "the fetch itself fails: see the message (disk, permissions, proxy)");
-          } finally {
-            fs3.rmSync(dir, { recursive: true, force: true });
-          }
-        }
-      }
-      let onRunner = false;
-      if (t.runnerUrl) {
-        try {
-          const i = await require_runner().remoteInfo();
-          onRunner = true;
-          add("runner", "runner", "ok", `${t.runnerUrl} (uid ${i.uid}), folders ${i.roots.join(", ")}`);
-          add("runner", "java", i.java?.ok ? "ok" : "fail", i.java?.out || i.java?.error, i.java?.ok ? null : "the runner needs the JDK: the jdk profile fills /opt/jdk");
-          add("runner", "javac (a JDK, not a JRE)", i.javac?.ok ? "ok" : "fail", i.javac?.out || i.javac?.error);
-          if (i.maven) add("runner", "Maven", i.maven.ok ? "ok" : "warn", i.maven.out || i.maven.error);
-          add("runner", "Docker (Testcontainers)", i.docker?.ok ? "ok" : "warn", i.docker?.ok ? `Docker ${i.docker.version} (${i.docker.platform || i.docker.os}); containers reached at ${i.testcontainersHost || "localhost"}` : i.docker?.error, i.docker?.ok ? null : /EACCES/.test(i.docker?.error || "") ? "set DT_DOCKER_GID to the group of the Docker socket (Docker Desktop: 0; Linux: getent group docker)" : "mount the Docker socket into the runner (compose does: DT_DOCKER_SOCKET)");
-        } catch (e) {
-          add("runner", "runner", "fail", `${t.runnerUrl}: ${e.cause?.code || e.message}`, /401|token/i.test(e.message) ? "DT_RUNNER_TOKEN must be the same for dt and the runner (run.sh writes one into .env)" : "start it: the jdk profile runs the runner (./run.sh up -d); builds run in dt meanwhile, without Docker");
-        }
-      }
-      const bin = (tool) => t.javaHome ? path3.join(t.javaHome, "bin", tool) : tool;
-      const java = await run(bin("java"), ["-version"]);
-      const javac = await run(bin("javac"), ["-version"]);
-      if (!onRunner) add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
-      if (!onRunner) add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
-      const mvn = t.maven || "mvn";
-      const mv = await run(mvn, ["-v"], { env: { ...process.env, ...t.javaHome ? { JAVA_HOME: t.javaHome } : {} } });
-      if (!onRunner) add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
-      if (t.gradle) {
-        const gr = await run(t.gradle, ["-v"], { timeout: 6e4 });
-        add("tests", "Gradle", gr.ok ? "ok" : "warn", gr.ok ? (gr.out.match(/Gradle [\d.]+/) || [gr.out])[0] : gr.error);
-      }
-      for (const [name, dir] of [["Maven repository", t.mavenRepo], ["Gradle home", t.gradleHome]].filter(([, d]) => d)) {
-        const w = writable(dir);
-        add("tests", name, w.ok ? "ok" : "fail", w.ok ? dir : `${dir}: ${w.error}`, w.ok ? null : "must be writable by dt's user");
-      }
-      const proxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
-      add("network", "proxy", "ok", proxy ? `${proxy.replace(/\/\/[^@/]*@/, "//***@")} (git, Maven and Gradle read it differently: Maven from settings.xml <proxies>, Gradle from systemProp.https.proxyHost)` : "none set");
-      if (!t.offline) {
-        const central = await head("https://repo.maven.apache.org/maven2/");
-        add("network", "Maven Central", central.status && central.status < 400 ? "ok" : "warn", central.error ? central.error : `HTTP ${central.status} in ${central.ms} ms`, central.status && central.status < 400 ? null : "not reachable: builds need your company repository (maven-settings.xml / gradle.properties) or a proxy");
-        const wrapper = await head("https://services.gradle.org/distributions/");
-        add("network", "Gradle distributions (gradlew)", wrapper.status && wrapper.status < 400 ? "ok" : "warn", wrapper.error || `HTTP ${wrapper.status}`, wrapper.status && wrapper.status < 400 ? null : "gradlew downloads Gradle from here on first use: point distributionUrl at your mirror");
-      }
-      if (t.mavenSettings) {
-        let text = "";
-        try {
-          text = fs3.readFileSync(t.mavenSettings, "utf8");
-        } catch (e) {
-          add("repository", "maven settings", "fail", `${t.mavenSettings}: ${e.message}`);
-        }
-        for (const m of text.matchAll(/<url>\s*([^<]+?)\s*<\/url>/g)) {
-          const r = await head(m[1]);
-          add("repository", `Maven repository ${m[1]}`, r.status && r.status < 500 ? "ok" : "fail", r.error || `HTTP ${r.status} (401 without credentials is normal)`);
-        }
-      }
-      const { props, from } = require_buildenv().gradleProperties(t);
-      if (Object.keys(props).length) {
-        add("repository", "gradle.properties", "ok", `${Object.keys(props).length} properties from ${[...new Set(Object.values(from))].join(", ")}: ${Object.keys(props).map((k) => /pass|secret|token|key/i.test(k) ? `${k}=***` : k).join(", ")}`);
-        const url = Object.entries(props).find(([k, v]) => /url/i.test(k) && /^https?:/.test(v));
-        if (url) {
-          const user = Object.entries(props).find(([k]) => /user/i.test(k))?.[1], pass = Object.entries(props).find(([k]) => /pass|token/i.test(k))?.[1];
-          const r = await head(url[1], { auth: user && pass ? `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` : null });
-          add("repository", `${url[0]} (${url[1]})`, r.status && r.status < 400 ? "ok" : r.status === 401 || r.status === 403 ? "fail" : r.status ? "ok" : "fail", r.error || `HTTP ${r.status} with the credentials`, r.status === 401 || r.status === 403 ? "the user/password in gradle.properties are refused" : r.error ? "not reachable from here" : null);
-        }
-      } else add("repository", "gradle.properties", "warn", `none found (looked in ${require_buildenv().gradleFiles({ ...t, gradleProperties: t.gradleProperties }).length ? "" : [...(t.gradleProperties || []).map((f) => path3.resolve(cfg.HOME, f)), path3.join(cfg.HOME, "gradle.properties"), ...t.gradleHome ? [path3.join(t.gradleHome, "gradle.properties")] : []].join(", ")}): builds that read nexusUrl/mavenUser/mavenPassword fail`, "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env");
-      if (t.pgUrl) {
-        try {
-          const postgres = require_src10();
-          const sql = postgres(t.pgUrl, { max: 1, connect_timeout: 5, onnotice: () => {
-          } });
-          const t0 = Date.now();
-          await sql`select 1`;
-          await sql.end({ timeout: 2 });
-          add("tests", "test database", "ok", `${new URL(t.pgUrl).host} in ${Date.now() - t0} ms`);
-        } catch (e) {
-          add("tests", "test database", "warn", `${(() => {
-            try {
-              return new URL(t.pgUrl).host;
-            } catch {
-              return t.pgUrl;
-            }
-          })()}: ${e.code || e.message}`, "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
-        }
-      } else add("tests", "test database", "warn", "not set", "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
-      for (const j of require_jobs().list(100).filter((x) => x.state === "running")) {
-        const ms = Date.now() - Date.parse(j.startedAt);
-        if (ms > t.timeoutMs) add("jobs", `job ${j.id}`, "warn", `${j.title}: running for ${Math.round(ms / 6e4)} min`, `job_cancel job="${j.id}"`);
-      }
-      const counts = { ok: out2.filter((x) => x.status === "ok").length, warn: out2.filter((x) => x.status === "warn").length, fail: out2.filter((x) => x.status === "fail").length };
-      return { counts, checks: out2 };
-    }
-    module2.exports = { check };
-  }
-});
-
 // lib/semantic-protocol.js
 var require_semantic_protocol = __commonJS({
   "lib/semantic-protocol.js"(exports2, module2) {
@@ -74205,6 +73497,954 @@ var require_semantic_code = __commonJS({
       return { ...snapshots[0], sources, list: list2, sourceDigest: hash.digest("hex") };
     }
     module2.exports = { capabilities, list, load, resolve: resolve2, index, query, runQuery, inputs, base, request, waitJob, compositeSource };
+  }
+});
+
+// lib/semantic-navigation-combined.js
+var require_semantic_navigation_combined = __commonJS({
+  "lib/semantic-navigation-combined.js"(exports2, module2) {
+    module2.exports = ({ S, present, summarize }) => async (a) => {
+      const J = require_jobs(), E = require_execution();
+      let job;
+      if (a.job) {
+        job = J.find(a.job);
+        if (!job || !job.key.startsWith("semantic:navigation:")) throw Error("Combined semantic job is not available");
+      } else {
+        const { waitMs, all, ...selection } = a;
+        job = J.start("semantic:navigation:" + require_semantic_protocol().digest(selection), "semantic entry map and value trace", async () => {
+          const settle = async (args) => {
+            E.check();
+            let value = await S().query({ ...args, env: a.env, waitMs: 0 });
+            if (value.state === "running") {
+              const child = J.find(value.job);
+              if (!child?.promise) throw Error("Semantic child job is owned by another process; observe it on the owning server.");
+              const release = E.resource(() => J.cancel(child.id, "parent semantic navigation cancelled"));
+              try {
+                await child.promise;
+                E.check();
+                value = await S().query({ job: child.id, waitMs: 0 });
+              } finally {
+                release();
+              }
+            }
+            if (value.ready === false) throw Error("Semantic selection is unavailable; list the retained analyses and choose the exact source.");
+            if (value.flowMap?.entries.length === 0 || (value.gaps || []).some((g) => g.kind === "endpoint-not-found")) {
+              const methods = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
+              throw Error("An exact entry or parameter did not resolve. Retained method candidates: " + JSON.stringify((methods.results || []).map((m2) => ({ name: m2.name, parameters: m2.parameters?.map((p) => p.name) }))) + ". Retry the original requested method/parameter; do not infer no flow.");
+            }
+            if (value.error) throw Error(typeof value.error === "string" ? value.error : JSON.stringify(value.error));
+            return value;
+          };
+          const map = present(await settle({ analysis: a.analysis, operation: "flowmap", from: { name: a.entry } }), { view: "semantic-flow-map", title: "Entry to exits" });
+          const trace2 = present(await settle({ analysis: a.analysis, operation: "trace", from: { kind: "method", name: a.entry, parameter: a.parameter }, to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) }), { view: "semantic-path-trace", title: "Parameter to sink argument" });
+          const m = summarize(map), t = summarize(trace2), sinks = [...new Map((t.selectedSinks || []).map((x) => [JSON.stringify(x), x])).values()];
+          const summary = { ...m.entries?.length === 1 ? { entry: m.entries[0].name } : { entryCandidates: m.entries || [] }, ...sinks.length === 1 ? { traceSinkCall: sinks[0].traceSinkCall, argumentExpression: sinks[0].argumentExpression } : { sinkCandidates: sinks }, controlAssumptionStatus: t.controlAssumptionStatus, dataAssumptionStatus: t.dataAssumptionStatus, ...t.unmatchedAssumptions?.length ? { unmatchedAssumptions: t.unmatchedAssumptions, observedPredicates: t.observedPredicates, assumptionGuidance: t.assumptionGuidance } : {}, behaviorVerified: m.proof?.behaviorVerified === true && t.proof?.behaviorVerified === true, mapComplete: m.mapComplete ?? null, mapView: map.view, traceView: trace2.view, proofLimits: { entryMap: m.summary?.proofLimits, valueTrace: t.summary?.proofLimits } };
+          return present({ protocol: "dt.semantic-navigation/v1", evidenceType: "entry-map-and-value-trace", summary, answerHint: "Use summary as the answer projection; keep both mapView and traceView URLs exactly as returned.", mapView: map.view, traceView: trace2.view, entryMap: { ...m, ...map }, valueTrace: { ...t, ...trace2 } }, { view: "json", title: "Entry map and independent value trace" });
+        });
+      }
+      const result = await S().waitJob(job, a.waitMs ?? 3e4);
+      if (result.state === "running") return { ...result, next: { tool: "what_happens_from", arguments: { job: job.id, waitMs: 3e4 } }, guidance: "Observe this existing combined job; do not repeat the query." };
+      if (result.error || !result.entryMap || !result.valueTrace) return result;
+      if (a.all) return { ...result, output: { status: "all", scope: "retained-evidence" } };
+      return { ...result, output: { status: "part", scope: "selected-evidence" }, entryMap: require_semantic_response().compact(summarize(result.entryMap), 4096), valueTrace: require_semantic_response().compact(summarize(result.valueTrace), 4096) };
+    };
+  }
+});
+
+// lib/semantic-navigation.js
+var require_semantic_navigation = __commonJS({
+  "lib/semantic-navigation.js"(exports2, module2) {
+    var locate = (n) => ({ kind: n.kind, code: n.code, file: n.file, line: n.line });
+    function checks(sides, layer) {
+      const groups = /* @__PURE__ */ new Map();
+      for (const side of sides || []) for (const [index, path3] of (side[layer]?.paths || []).entries()) {
+        const evaluation = path3.assumptionEvaluation || { status: "unresolved" };
+        const value = { side: side.side, status: evaluation.status, conditions: path3.conditions?.map((c) => ({ expression: c.expression, polarity: c.polarity, file: c.file, line: c.line })), unresolved: evaluation.unresolved, conflicts: evaluation.conflicts };
+        const key = JSON.stringify(value);
+        if (!groups.has(key)) groups.set(key, { ...value, retainedPaths: [] });
+        groups.get(key).retainedPaths.push(index);
+      }
+      return [...groups.values()];
+    }
+    function summarize(raw) {
+      const gaps = /* @__PURE__ */ new Map();
+      for (const gap of raw.gaps || []) {
+        const value = { kind: gap.kind, detail: gap.detail ?? gap.message, side: gap.side }, key = JSON.stringify(value);
+        if (!gaps.has(key)) gaps.set(key, { ...value, occurrences: 0 });
+        gaps.get(key).occurrences++;
+      }
+      const common = {
+        protocol: "dt.semantic-navigation/v1",
+        answerHint: "Use the selected summary/fields and copy applicable mapView/traceView URLs exactly into the answer. These are retained evidence links, not analysis ids.",
+        output: { status: "part", scope: "selected-evidence" },
+        sourceCoverage: { complete: raw.flowMap?.complete ?? null, truncated: !!raw.truncated, gapCount: (raw.gaps || []).length, gaps: [...gaps.values()] },
+        proof: Object.fromEntries(["kind", "status", "feasibility", "runtime", "behaviorVerified"].filter((k) => raw.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])),
+        view: raw.view,
+        read: { tool: "result_read", arguments: { id: raw.view?.split("/").pop(), all: true } }
+      };
+      const proofLimits = { proof: common.proof, sourceCoverage: { complete: common.sourceCoverage.complete, truncated: common.sourceCoverage.truncated, gapCount: common.sourceCoverage.gapCount } };
+      if (raw.flowMap) {
+        const m = raw.flowMap;
+        const selectedEntries = m.methods.filter((x) => m.entries.includes(x.entry)).map((x) => ({ name: x.name, file: x.file, line: x.line }));
+        const methodExits = m.nodes.filter((n) => ["return", "throw", "exit"].includes(n.kind)).map(locate), externalCallBoundaries = m.nodes.filter((n) => n.exit).map((n) => ({ ...locate(n), boundary: n.exit }));
+        const decisions = m.nodes.filter((n) => n.kind === "decision").map(locate), changes = m.nodes.flatMap((n) => (n.changes || []).map((c) => ({ ...c, file: c.file ?? n.file, line: c.line ?? n.line })));
+        const summary2 = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view, proofLimits };
+        return {
+          evidenceType: "entry-map",
+          mapView: raw.view,
+          traceView: null,
+          mapComplete: m.complete,
+          ...common,
+          summary: summary2,
+          counts: { ...m.counts, methodExits: methodExits.length, externalCallBoundaries: externalCallBoundaries.length },
+          entries: selectedEntries,
+          methodExits,
+          externalCallBoundaries,
+          decisions,
+          changes,
+          declaredAssumptions: m.assumptions
+        };
+      }
+      const data = checks(raw.sides, "data"), control = checks(raw.sides, "control");
+      const observedPredicates = [...new Set(control.flatMap((c) => (c.conditions || []).map((p) => p.expression)).filter(Boolean))];
+      const unmatchedAssumptions = (raw.assumptions || []).filter((a) => !observedPredicates.includes(a.expression));
+      const status = (xs) => {
+        const statuses = [...new Set(xs.map((x) => x.status))];
+        return statuses.length === 1 ? statuses[0] : statuses.length ? "mixed" : "no-paths";
+      };
+      const selectedSinks = (raw.sides || []).flatMap((s) => (s.data?.selectedValues?.to || []).map((v) => ({ side: s.side, traceSinkCall: v.name, argument: v.argument, argumentExpression: v.value, callExpression: v.call, file: v.file, line: v.line })));
+      const distinctSinks = [...new Map(selectedSinks.map((s) => [JSON.stringify([s.traceSinkCall, s.argument, s.argumentExpression]), s])).values()];
+      const summary = { ...raw.request?.arguments?.from?.name ? { entry: raw.request.arguments.from.name } : {}, ...distinctSinks.length === 1 ? { traceSinkCall: distinctSinks[0].traceSinkCall, argumentExpression: distinctSinks[0].argumentExpression } : { sinkCandidates: distinctSinks }, controlAssumptionStatus: status(control), dataAssumptionStatus: status(data), behaviorVerified: raw.proof?.behaviorVerified === true, traceView: raw.view, proofLimits, ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates } : {} };
+      return {
+        evidenceType: "value-trace",
+        traceView: raw.view,
+        mapView: null,
+        ...common,
+        summary,
+        declaredAssumptions: raw.assumptions || [],
+        selectedSinks,
+        dataAssumptionStatus: status(data),
+        controlAssumptionStatus: status(control),
+        ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates, assumptionGuidance: "These declarations did not match an exact observed control predicate. If your question refers to an observed predicate, copy its exact expression as a quoted string; do not invent a label. Retrying with a corrected declaration does not prove runtime feasibility." } : {},
+        assumptionChecks: { data, control },
+        ...raw.request?.arguments?.from?.name ? { relatedMap: { insideCodeCall: "tools.what_happens_from", arguments: { analysis: raw.analyses?.[0]?.id, entry: raw.request.arguments.from.name } } } : {},
+        meaning: "This value trace is not an entry-to-exit map. For a combined question call what_happens_from separately and keep its mapView plus this traceView. Statuses apply to retained paths only. mixed means paths differ; no-paths means no retained path. Data and control evidence are independent; neither proves runtime behavior."
+      };
+    }
+    module2.exports = ({ str, int, env, present }) => {
+      const S = () => require_semantic_code();
+      const text = (description) => ({ ...str(description), minLength: 1 });
+      const observation = { job: text("Observe the returned owned job; omit other selectors when polling"), waitMs: { ...int("Wait for this job, at most 30000 ms", 3e4), minimum: 0, maximum: 3e4 } };
+      const scope = { env, analysis: text("Exact retained id from which_analyses_exist; never a repository name") };
+      const required = (fields) => ({ if: { required: ["job"] }, then: { properties: { job: { minLength: 1 } } }, else: { required: fields } });
+      const traceInputs = { parameter: text("Source parameter name"), sink: text("Target call name"), argument: { type: "integer", minimum: 1, maximum: 64, description: "Required one-based sink argument position, e.g. 2 selects the second argument" }, assumptions: { type: "array", maxItems: 20, items: { type: "object", properties: { expression: { type: "string", minLength: 1, maxLength: 1e3 }, holds: { type: "boolean" } }, required: ["expression", "holds"], additionalProperties: false }, description: 'Literal predicate text and explicit truth values: [{expression:"input < 0",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Copy the user expression verbatim and its truth value separately. Never negate, simplify or paraphrase it, or replace it with a descriptive label. Omitted or [] declares none.' } };
+      const combined = require_semantic_navigation_combined()({ S, present, summarize });
+      async function query(name, operation, a) {
+        if (name === "what_happens_from" && (a.parameter !== void 0 || a.sink !== void 0 || a.argument !== void 0 || a.job && require_jobs().find(a.job)?.key.startsWith("semantic:navigation:"))) return combined(a);
+        const args = a.job ? { job: a.job, waitMs: a.waitMs ?? 3e4 } : {
+          analysis: a.analysis,
+          env: a.env,
+          operation,
+          waitMs: a.waitMs ?? 3e4,
+          from: operation === "flowmap" ? { name: a.entry } : { kind: "method", name: a.entry, parameter: a.parameter },
+          ...operation === "trace" ? { to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) } : {}
+        };
+        const raw = await S().query(args);
+        if (raw.operation && raw.operation !== operation) throw Error(`This job belongs to ${raw.operation}; observe it with the original tool.`);
+        if (raw.state === "running" || raw.state === "queued") return { ...raw, next: { tool: name, arguments: { job: raw.job, waitMs: 3e4 } }, guidance: "Observe this job; do not start the query again." };
+        const retained = present(raw, { view: operation === "flowmap" ? "semantic-flow-map" : "semantic-path-trace", title: operation === "flowmap" ? "Entry to exits" : "Parameter to sink argument" });
+        if (raw.error || raw.ready === false) return retained;
+        const selected = summarize(retained);
+        if (!a.job && (raw.flowMap?.entries.length === 0 || (raw.gaps || []).some((g) => g.kind === "endpoint-not-found"))) {
+          const symbols = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
+          selected.selection = { resolved: false, requestedEntry: a.entry, availableEntries: (symbols.results || []).map((m) => ({ name: m.name, signature: m.signature, file: m.file, line: m.line, parameters: m.parameters?.map((p) => ({ name: p.name, index: p.index })) })), candidatesTruncated: !!symbols.truncated };
+          selected.entryCandidatesView = present(symbols, { title: "Retained method candidates" }).view;
+          selected.guidance = "An endpoint did not resolve. Read availableEntries and use the exact requested method/parameter name; retry the same tool with corrected selectors. Do not answer a flow question from unresolved endpoints.";
+        }
+        return a.all ? { ...retained, ...selected, proof: retained.proof, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
+      }
+      return [
+        { name: "which_analyses_exist", description: "List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.", input: { env, versions: { type: "boolean", default: false }, workspace: text("Exact workspace id; filter retained records only"), repo: text("Exact repository identity; filter retained records only"), sha: text("Exact source revision; filter retained records only") }, run: async (a) => {
+          const listed = await S().index({ env: a.env, versions: a.versions });
+          const filters = Object.fromEntries(["workspace", "repo", "sha"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]]));
+          const records = (listed.analyses || []).filter((x) => Object.entries(filters).every(([k, v]) => x[k] === v));
+          const raw = present({ ...listed, analyses: records, total: records.length, ...Object.keys(filters).length ? { filters, sourceTotal: listed.total ?? listed.analyses?.length } : {} }, { title: "Retained code analyses" });
+          const common = { evidenceType: "analysis-list", analysisView: raw.view, mapView: null, traceView: null, ...raw, meaning: "This view lists analyses; it is not a map or trace. Use what_happens_from for mapView and where_value_flows for traceView." };
+          common.next = { insideCodeCall: "tools.tool_describe", arguments: { name: "what_happens_from" }, code: 'return await tools.tool_describe({name:"what_happens_from"});' };
+          common.guidance = "Read analyses[] (not value[]). Analyses have been listed. Do not repeat this listing. Choose the requested analyses[].id and inspect the next schema, then query it using analysis:id.";
+          if (!records.length) {
+            common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions } };
+            common.guidance = Object.keys(filters).length ? "No retained analysis matches these exact filters. Inspect the unfiltered retained list; do not invent an id or parse a new revision without an indexing request." : "No retained analyses are available. Report the missing evidence and inspect semantic configuration/indexing capabilities; do not invent a map or trace.";
+          }
+          if (a.all) return common;
+          return { ...common, analyses: (raw.analyses || []).map((x) => Object.fromEntries(["id", "repo", "sha", "ref", "workspace", "language", "state", "coverage"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))) };
+        } },
+        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Return summary directly as the answer projection: it includes proofLimits with proof and sourceCoverage kept separate. Keep its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
+        { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
+      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true, codeHint: t.name === "which_analyses_exist" ? "Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown." : t.name === "what_happens_from" ? "Map-only returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,mapComplete,behaviorVerified,mapView,proofLimits. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only." : "Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only." }));
+    };
+    module2.exports.summarize = summarize;
+    module2.exports.normalize = (name, args) => {
+      if (name === "which_analyses_exist") {
+        const out3 = { ...args };
+        for (const key of ["workspace", "repo", "sha"]) if (out3[key] === null || typeof out3[key] === "string" && !out3[key].trim()) delete out3[key];
+        return out3;
+      }
+      if (!["what_happens_from", "where_value_flows"].includes(name)) return args;
+      const out2 = { ...args };
+      for (const key of ["argument", "argumentIndex"]) if (typeof out2[key] === "string" && /^\d+$/.test(out2[key].trim())) out2[key] = Number(out2[key].trim());
+      if (typeof out2.assumptions === "string") {
+        if (out2.assumptions.length > 32768) throw Error("assumptions JSON exceeds 32768 characters");
+        try {
+          out2.assumptions = JSON.parse(out2.assumptions);
+        } catch {
+          throw Error("assumptions must be an array of {expression,holds}; JSON-encoded arrays/objects are accepted. Use an explicit boolean truth value.");
+        }
+        if (!out2.assumptions || typeof out2.assumptions !== "object") throw Error("assumptions JSON must contain an array or one expression/holds object");
+      }
+      for (const [alias, key] of Object.entries({ analysisId: "analysis", entryMethod: "entry", sinkCall: "sink", argumentIndex: "argument" })) if (out2[alias] !== void 0) {
+        if (out2[key] !== void 0 && out2[key] !== out2[alias]) throw Error(`${key} and ${alias} disagree; pass only ${key}.`);
+        out2[key] = out2[alias];
+        delete out2[alias];
+      }
+      if (out2.controlAssumption !== void 0) {
+        if (out2.assumptions !== void 0) throw Error("Pass assumptions only; controlAssumption is an alternative spelling, not an additional condition.");
+        const match = typeof out2.controlAssumption === "string" && /^([\s\S]+?)\s+is\s+(true|false)\s*$/.exec(out2.controlAssumption);
+        if (!match) throw Error('Use assumptions:[{expression:"exact predicate",holds:false}] with an explicit boolean.');
+        out2.assumptions = [{ expression: match[1].trim(), holds: match[2] === "true" }];
+        delete out2.controlAssumption;
+      }
+      if (out2.assumptions && typeof out2.assumptions === "object" && !Array.isArray(out2.assumptions)) {
+        const a = out2.assumptions;
+        out2.assumptions = Object.hasOwn(a, "expression") ? [a] : Object.entries(a).map(([expression, holds]) => ({ expression, holds }));
+      }
+      if (Array.isArray(out2.assumptions)) out2.assumptions = out2.assumptions.map((a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.holds === "string" && /^(true|false)$/i.test(a.holds.trim()) ? { ...a, holds: a.holds.trim().toLowerCase() === "true" } : a);
+      return out2;
+    };
+  }
+});
+
+// lib/code-result.js
+var require_code_result = __commonJS({
+  "lib/code-result.js"(exports2, module2) {
+    function receipt(tool, value) {
+      const omitted = [];
+      function preview(v, path3 = "$", depth = 0) {
+        if (typeof v === "string" && v.length > 500) {
+          omitted.push(path3);
+          return v.slice(0, 500);
+        }
+        if (!v || typeof v !== "object") return v;
+        if (depth >= 7) {
+          omitted.push(path3);
+          return Array.isArray(v) ? [] : {};
+        }
+        if (Array.isArray(v)) {
+          if (v.length > 5) omitted.push(path3);
+          return v.slice(0, 5).map((x, i) => preview(x, `${path3}[${i}]`, depth + 1));
+        }
+        const priority = ["summary", "mapView", "traceView", "sourceView", "proof", "sourceCoverage", "output"];
+        const entries = Object.entries(v).sort(([a], [b]) => (priority.includes(b) ? 1 : 0) - (priority.includes(a) ? 1 : 0));
+        if (entries.length > 16) omitted.push(path3);
+        return Object.fromEntries(entries.slice(0, 16).map(([k, x]) => [k, preview(x, `${path3}.${k}`, depth + 1)]));
+      }
+      let selected = preview(value);
+      if (Buffer.byteLength(JSON.stringify(selected) || "null") > 4096) {
+        selected = { keys: Object.keys(value || {}).slice(0, 30).map((k) => k.slice(0, 100)) };
+        for (const key of ["evidenceType", "state", "job", "mapView", "traceView", "analysisView"]) if (typeof value?.[key] === "string" && value[key].length <= 500) selected[key] = value[key];
+        if (value?.summary && typeof value.summary === "object" && !Array.isArray(value.summary)) {
+          selected.summary = preview(value.summary, "$.summary", 0);
+          while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && Object.keys(selected.summary).length) delete selected.summary[Object.keys(selected.summary).at(-1)];
+        }
+        while (Buffer.byteLength(JSON.stringify(selected)) > 4096 && selected.keys.length) selected.keys.pop();
+        omitted.push("$");
+      }
+      const results = require_results(), existing = typeof value?.view === "string" && results.referenceId(value.view);
+      const sourceView = existing && results.load(existing) ? value.view : void 0;
+      let view, readScope = "tool-response", retentionError;
+      try {
+        view = results.saveTool(tool, JSON.stringify(value ?? null));
+      } catch (error) {
+        retentionError = String(error.message).slice(0, 300);
+        if (sourceView) {
+          view = sourceView;
+          readScope = "source-evidence";
+        }
+      }
+      return { tool, result: selected, ...sourceView ? { sourceView } : {}, readScope, ...retentionError ? { retentionError } : {}, output: { status: omitted.length ? "part" : "all", scope: "tool-response", ...omitted.length ? { omitted: [...new Set(omitted)].slice(0, 20) } : {} }, ...view ? { view, read: { tool: "result_read", arguments: { id: view.split("/").pop(), all: true } } } : { read: null } };
+    }
+    module2.exports = { receipt };
+    module2.exports.discovery = (name, value) => {
+      if (!value || typeof value !== "object") return value;
+      const direct = (target, args) => ({ insideCodeCall: `tools.${target}`, ...args ? { arguments: args } : {}, guidance: `Call await tools.${target}(args) directly inside code, using inputSchema. Do not wrap this in tool_execute.` });
+      const action = (next) => next?.tool === "tool_execute" ? direct(next.arguments?.name || next.name, next.arguments?.arguments) : next?.tool === "tool_describe" ? direct("tool_describe", next.arguments) : next;
+      if (name === "tool_describe" && value.name) return { ...value, next: direct(value.name) };
+      if (name === "tool_search") return { ...value, ...value.next ? { next: action(value.next) } : {}, tools: value.tools?.map((t) => ({ ...t, next: action(t.next) })) };
+      return value;
+    };
+    module2.exports.recovery = (recentResults = [], receipts = []) => {
+      for (let i = recentResults.length - 1; i >= 0; i--) {
+        const call = recentResults[i], value = call.value?.summary ? call.value : call.tool === "result_read" && call.value?.value?.summary ? call.value.value : null, receipt2 = receipts[i];
+        if (!value?.summary?.proofLimits || !receipt2?.read || receipt2.readScope !== "tool-response") continue;
+        const path3 = call.value === value ? "/summary" : "/value/summary", args = { ...receipt2.read.arguments, path: path3 };
+        const map = value.mapView || value.summary.mapView, id = require_results().referenceId(map);
+        const graphRead = id ? { tool: "result_read", arguments: { id, path: "/flowMap", all: true } } : void 0;
+        return { message: "Source evidence was already retrieved. The cell projection may be incorrect. Reuse the original selected summary below; proofLimits keeps proof and sourceCoverage separate. Do not rerun the completed source query to fix formatting. For graph calculations use graphRead; its value has nodes:[{id,kind}] and edges:[{from,to,kind}]. Declare calculation variables in this fresh cell.", availableResult: { tool: call.tool, summary: value.summary, path: path3, read: { tool: "result_read", arguments: args }, ...graphRead ? { graphRead } : {} }, retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } };
+      }
+    };
+    module2.exports.diagnostic = (error, recentResults = [], receipts = []) => {
+      if (error && /Cannot read properties of undefined|cannot read property|is not defined/i.test(error)) {
+        const recovery = module2.exports.recovery(recentResults, receipts);
+        if (recovery) return recovery;
+      }
+      if (/Cannot read properties of undefined.*compacted/.test(error || "")) return { message: "modelContext is model-transport metadata and may be absent inside code. For result_read, use r.sourceCoverage.provenComplete and r.sourceView directly. A non-compacted result does not prove upstream completeness." };
+      if (/Cannot use import statement|require is not defined/.test(error || "")) return { message: 'tools is already supplied. Remove import/require; call tools.NAME(args) directly inside code. For discovery: return await tools.tool_search({query:"action words"});' };
+      const reserved = /Identifier '([^']+)' has already been declared/.exec(error || "")?.[1];
+      if (reserved) return {
+        message: `${reserved} was declared twice or shadows a supplied helper. Use a different local variable name. Each code cell is fresh.`,
+        ...reserved === "tools" ? { retry: { tool: "code", arguments: { code: "return await tools.list();" } } } : {}
+      };
+    };
+    module2.exports.provenance = (returned, calls) => {
+      const metadata = /* @__PURE__ */ new Set(["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"]);
+      const names = [...new Set(calls.filter((c) => c.ok && !c.resultError).map((c) => c.tool === "tool_execute" ? c.args?.name || c.tool : c.tool))];
+      const provenance = { kind: names.length ? names.every((n) => metadata.has(n)) ? "discovery" : "tool-results" : "code-inputs", successfulTools: names };
+      let value = returned;
+      if (typeof value === "string" && value.length <= 65536) try {
+        value = JSON.parse(value);
+      } catch {
+      }
+      const missing = [], sources = {};
+      for (const object of [value, value?.summary]) if (object && typeof object === "object") for (const [field, kind] of [["mapView", "map"], ["traceView", "trace"]]) {
+        const url = object[field];
+        if (typeof url !== "string") continue;
+        const id = require_results().referenceId(url), data = id && require_results().load(id)?.data;
+        if (!(kind === "map" ? data?.flowMap : data?.sides && data?.operation === "trace")) missing.push(field);
+        else sources[kind] = data;
+      }
+      const claims = require_semantic_claims().verify(value, sources);
+      if (!missing.length && !claims.valid) return { provenance, evidenceCheck: { status: "contradictory-static-claims", fields: claims.issues, observedProofLimits: claims.observed, meaning: "Reported proof/coverage values contradict the linked retained evidence. Use observedProofLimits below; static evidence does not establish runtime behavior. Repair the reported values without rerunning the source query." } };
+      const facts = [];
+      for (const source of Object.values(sources)) {
+        if (source.flowMap && (!Array.isArray(source.flowMap.nodes) || !Array.isArray(source.flowMap.methods))) continue;
+        const summary = require_semantic_navigation().summarize(source).summary;
+        for (const object of [value, value?.summary]) if (object && typeof object === "object") for (const field of ["entry", "decisionCount", "changeCount", "methodExitCount", "externalCallBoundaryCount", "traceSinkCall", "argumentExpression", "controlAssumptionStatus", "dataAssumptionStatus"]) {
+          if (Object.hasOwn(object, field) && Object.hasOwn(summary, field) && JSON.stringify(object[field]) !== JSON.stringify(summary[field])) facts.push({ field, reported: object[field], observed: summary[field] });
+        }
+      }
+      if (!missing.length && facts.length) return { provenance, evidenceCheck: { status: "contradictory-semantic-facts", fields: facts, meaning: "The cell projection contradicts the linked retained source summary. Read the original summary without rerunning the completed query." } };
+      return { provenance, ...missing.length ? { evidenceCheck: { status: "unbacked-references", fields: [...new Set(missing)], meaning: "These returned map/trace references do not identify the corresponding retained evidence. A constructed value is not a source-query result.", retry: { tool: "code", arguments: { code: 'return await tools.tool_describe({name:"what_happens_from"});' } } } } : {} };
+    };
+    module2.exports.resolveName = (name, definitions) => {
+      if (typeof name !== "string") return name;
+      if (definitions.some((t) => t.name === name)) return name;
+      const aliases = { list_analyses: "which_analyses_exist" };
+      if (aliases[name] && definitions.some((t) => t.name === aliases[name])) return aliases[name];
+      const key = (s) => s.replace(/[_-]/g, "").toLowerCase();
+      const matches = definitions.filter((t) => key(t.name) === key(name));
+      return matches.length === 1 ? matches[0].name : name;
+    };
+  }
+});
+
+// lib/call-evidence.js
+var require_call_evidence = __commonJS({
+  "lib/call-evidence.js"(exports2, module2) {
+    var FAILED = /* @__PURE__ */ new Set(["failed", "error", "cancelled", "interrupted", "timeout", "compile-error", "no-tests-ran", "skipped-only", "all-tests-skipped", "cleanup-failed", "invalid", "different"]);
+    var TESTS = /* @__PURE__ */ new Set(["test_run", "test_compare"]);
+    var ASSERTIONS = /* @__PURE__ */ new Set(["scenario_check", "scenario_preflight", "scenario_emulate", "scenario_assert", "scenario_observe", "scenario_run", "scenario_verify", "collection_check", "collection_validate", "collection_run", "collection_report", "script_run", "fixture_validate", "fixture_runtime_preflight", "fixture_runtime_start", "fixture_runtime_arm", "fixture_runtime_check", "fixture_runtime_cleanup"]);
+    function classify(tool, value, { invocation = "succeeded", job, traceId } = {}) {
+      const r = value && typeof value === "object" ? value : {};
+      const out2 = { version: 1, invocation, ...traceId ? { traceId } : {} };
+      const id = !tool.startsWith("jenkins_") && typeof r.job === "string" ? r.job : job?.id;
+      if (id) out2.job = { id, state: job?.state || r.state || r.status || "unknown", ...job?.traceId ? { traceId: job.traceId } : {} };
+      const payload = job?.result || job?.resultSummary || r;
+      if (/^jenkins_(build|wait|tests)$/.test(tool) && payload.state) out2.execution = { kind: "ci", status: ["failed", "unstable", "aborted"].includes(payload.state) ? "failed" : payload.state };
+      else if (/^bitbucket_pr_(status|wait)$/.test(tool) && payload.state) out2.execution = { kind: "review", status: payload.state === "build_failed" ? "failed" : payload.state };
+      else if (tool === "files_archive" && payload.archived === true) out2.execution = { kind: "files", status: payload.sourceRemoved === true ? "archived" : "cleanup-failed" };
+      else if (["files_delete", "workspace_delete"].includes(tool) && typeof payload.deleted === "boolean") out2.execution = { kind: "files", status: payload.deleted ? "deleted" : "cleanup-failed" };
+      else if (tool === "testdb_template_verify" && typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
+      else if (tool === "testdb_gc" && Array.isArray(payload.failures)) out2.execution = { kind: "cleanup", status: payload.failures.length ? "cleanup-failed" : "done" };
+      else if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out2.execution = { kind: "assertions", status: payload.outcome };
+      else if (TESTS.has(tool) && typeof payload.outcome === "string") out2.execution = { kind: "tests", status: payload.outcome, ...payload.counts ? { counts: payload.counts } : {} };
+      else if (ASSERTIONS.has(tool)) {
+        if (typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
+        else if (typeof payload.status === "string") out2.execution = { kind: "assertions", status: payload.status };
+      }
+      if (tool.startsWith("service_env_") && payload.state) out2.execution = { kind: "service-environment", status: payload.outcome === "failed" ? "failed" : payload.state };
+      if (tool === "service_env_request") out2.execution = { kind: "runtime-observation", status: payload.ok === false ? "failed" : "observed" };
+      if (!out2.execution && out2.job) out2.execution = { kind: "job", status: out2.job.state };
+      out2.failed = invocation === "failed" || FAILED.has(out2.execution?.status) || FAILED.has(out2.job?.state);
+      return out2;
+    }
+    module2.exports = { classify, FAILED };
+  }
+});
+
+// lib/call-outcome.js
+var require_call_outcome = __commonJS({
+  "lib/call-outcome.js"(exports2, module2) {
+    var { classify } = require_call_evidence();
+    function refresh(call) {
+      if (!call.evidence?.job) return call;
+      const job = require_jobs().get(call.evidence.job.id);
+      if (!job) return { ...call, evidence: { ...call.evidence, job: { ...call.evidence.job, retained: false } } };
+      return { ...call, evidence: classify(call.target || call.tool, null, { invocation: call.evidence.invocation, traceId: call.evidence.traceId, job }) };
+    }
+    function failed(call) {
+      return call.evidence ? call.evidence.failed : call.ok === false;
+    }
+    module2.exports = { classify, refresh, failed };
+  }
+});
+
+// lib/views.js
+var require_views = __commonJS({
+  "lib/views.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var path3 = require("path");
+    var { PATHS, ROOT } = require_config();
+    var BUILTIN = path3.join(__dirname, path3.basename(__dirname) === "lib" ? "../web/views" : "web/views");
+    var DIR = PATHS.views;
+    var scopeDirectory = () => require_access().scopedDirectory(DIR);
+    var NAME = /^[a-z][a-z0-9-]{1,40}$/;
+    var CSP = [
+      "sandbox allow-scripts allow-popups allow-downloads",
+      "default-src 'none'",
+      "script-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com",
+      "style-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com",
+      "font-src https://fonts.gstatic.com data:",
+      "img-src data: blob:",
+      "connect-src 'none'",
+      "form-action 'none'",
+      "base-uri 'none'",
+      "frame-ancestors *"
+    ].join("; ");
+    function policy(view) {
+      return ["data-lineage", "mapping-debugger", "service-environment", "ui-page", "ui-trace", "capabilities", "ci", "workspace-coverage", "workbench", "semantic-path-trace"].includes(view.name) && view.builtin ? CSP.replace("allow-popups ", "allow-popups allow-popups-to-escape-sandbox ") : CSP;
+    }
+    function parse(text) {
+      const m = text.match(/^\s*<!--\s*(\{[\s\S]*?\})\s*-->\s*/);
+      let meta = {};
+      if (m) {
+        try {
+          meta = JSON.parse(m[1]);
+        } catch (e) {
+          meta = { error: `first-line comment is not JSON: ${e.message}` };
+        }
+      }
+      return { meta, html: m ? text.slice(m[0].length) : text };
+    }
+    function files(dir) {
+      try {
+        return fs3.readdirSync(dir).filter((f) => f.endsWith(".html") && !f.startsWith("_")).map((f) => f.slice(0, -5));
+      } catch {
+        return [];
+      }
+    }
+    function get(name) {
+      if (!NAME.test(name || "")) throw new Error(`bad view name "${name}": lowercase letters, digits and -`);
+      const lifecycle = require_state_machine2().create(require_lifecycles().definition);
+      for (const [dir, builtin] of [[scopeDirectory(), false], [BUILTIN, true]]) {
+        const f = path3.join(dir, `${name}.html`);
+        if (fs3.existsSync(f)) {
+          const text = fs3.readFileSync(f, "utf8");
+          const { meta, html } = parse(text);
+          lifecycle.to(builtin ? "builtin" : "custom");
+          return { name, builtin, overrides: !builtin && fs3.existsSync(path3.join(BUILTIN, `${name}.html`)), description: meta.description || "", sample: meta.sample, error: meta.error, html, text };
+        }
+      }
+      lifecycle.to("missing");
+      throw new Error(`no view "${name}"; views: ${list().map((v) => v.name).join(", ")}`);
+    }
+    function list() {
+      const names = [.../* @__PURE__ */ new Set([...files(scopeDirectory()), ...files(BUILTIN)])].sort();
+      return names.map((n) => {
+        const v = get(n);
+        return { name: n, builtin: v.builtin, overrides: v.overrides, description: v.description, hasSample: v.sample !== void 0, ...v.error ? { error: v.error } : {} };
+      });
+    }
+    function save(name, { html, description = "", sample }) {
+      if (!NAME.test(name || "")) throw new Error(`bad view name "${name}": lowercase letters, digits and -`);
+      if (typeof html !== "string" || !html.trim()) throw new Error("html required: the page body, with a <script> that reads DATA");
+      const body = parse(html).html;
+      const meta = JSON.stringify({ description: String(description || "").trim(), ...sample !== void 0 ? { sample } : {} });
+      fs3.mkdirSync(scopeDirectory(), { recursive: true });
+      const f = path3.join(scopeDirectory(), `${name}.html`);
+      const existed = fs3.existsSync(f);
+      fs3.writeFileSync(f, `<!-- ${meta} -->
+${body.replace(/^\s+/, "")}`);
+      return { view: name, saved: true, replaced: existed, overridesBuiltin: fs3.existsSync(path3.join(BUILTIN, `${name}.html`)) };
+    }
+    function remove(name) {
+      if (!NAME.test(name || "")) throw new Error("bad view name");
+      const f = path3.join(scopeDirectory(), `${name}.html`);
+      if (!fs3.existsSync(f)) throw new Error(`no custom view "${name}" (built-in views cannot be deleted)`);
+      fs3.unlinkSync(f);
+      return { view: name, deleted: true };
+    }
+    var safeJson = (v) => JSON.stringify(v === void 0 ? null : v).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+    var shared;
+    function assets() {
+      if (!shared) {
+        const web = path3.join(BUILTIN, "..");
+        const { diffLists, diffLines } = require_diff();
+        shared = {
+          css: fs3.readFileSync(path3.join(web, "ui.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "_views.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(web, "inline.css"), "utf8"),
+          js: fs3.readFileSync(path3.join(web, "state-machine.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(web, "inline.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "_helpers.js"), "utf8") + `
+dt.diffLists = ${diffLists.toString()};
+dt.diffLines = ${diffLines.toString()};
+`
+        };
+      }
+      return shared;
+    }
+    function render(name, data, meta = {}, { embed = false, html, metaCsp = false, definition } = {}) {
+      const v = definition || (html !== void 0 ? { name, html: parse(html).html } : get(name));
+      const a = assets();
+      const projectContext = name === "project-context" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../project-context-ui.js"), "utf8") + "</script>" : "";
+      const diagnostics = ["test-coverage", "observability"].includes(name) ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.css"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../trace-format.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../diagnostics.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../request-events.js"), "utf8") + "</script>" : "";
+      const capabilities = name === "capabilities" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../capability-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../capability-map.js"), "utf8") + "</script>" : "";
+      const uiTrace = name === "ui-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-layout.js"), "utf8") + "\n" + fs3.readFileSync(path3.join(BUILTIN, "../ui-trace-inline.js"), "utf8") + "</script>" : "";
+      const uiPage = name === "ui-page" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../pages.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../page-primitives.js"), "utf8") + "</script>" : "";
+      const repoModel = name === "repo-model" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "../repo-model.js"), "utf8") + "</script>" : "";
+      const pathBrowser = name === "semantic-path-trace" ? "<style>" + fs3.readFileSync(path3.join(BUILTIN, "_path-browser.css"), "utf8") + "</style><script>" + fs3.readFileSync(path3.join(BUILTIN, "_path-browser.js"), "utf8") + "</script>" : "";
+      const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+      return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(meta.title || name)}</title>${metaCsp ? `<meta http-equiv="Content-Security-Policy" content="${esc(CSP.split("; ").filter((d) => !/^(sandbox|frame-ancestors)/.test(d)).join("; "))}">` : ""}
+<style>${a.css}</style>
+<script>window.DATA = ${safeJson(data)}; window.META = ${safeJson({ publicUrl: require_config().getServer().publicUrl, view: name, ...meta })};</script>
+<script>${a.js}</script>${diagnostics}${projectContext}${capabilities}${uiTrace}${uiPage}${repoModel}${pathBrowser}</head>
+<body class="${embed ? "embed" : ""}"><div class="wrap">${v.html}</div><script>dtInline.mount(document.querySelector('.wrap'), dtInline.describe(META.view, DATA, META));</script></body></html>`;
+    }
+    module2.exports = { list, get, save, remove, render, policy, CSP, BUILTIN, DIR };
+  }
+});
+
+// lib/calls.js
+var require_calls = __commonJS({
+  "lib/calls.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var path3 = require("path");
+    var { CACHE: CACHE2 } = require_util2();
+    var state = require_state_store();
+    var FILE = path3.join(CACHE2, "_calls.jsonl");
+    var callFile = () => {
+      try {
+        return path3.join(require_access().scopedDirectory(CACHE2), "_calls.jsonl");
+      } catch {
+        return FILE;
+      }
+    };
+    var KEEP = 5e3;
+    var SKIP = /* @__PURE__ */ new Set(["call_history", "call_patterns", "script_list", "script_get", "script_save"]);
+    var appendedLines = 0;
+    var appendedBytes = 0;
+    var clipArgs = (v, n = 600) => {
+      if (typeof v === "string") return v.length > n ? `${v.slice(0, n)}\u2026` : v;
+      if (Array.isArray(v)) return v.slice(0, 50).map((x) => clipArgs(x, n));
+      if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).slice(0, 50).map(([k, x]) => [k, clipArgs(x, n)]));
+      return v;
+    };
+    function record({ tool, args, source, ok, ms, error, size, steps, evidence, target, redactions = [] }) {
+      if (SKIP.has(tool)) return;
+      const st = (steps || []).filter((x) => x.depth === 0 || !x.ok).slice(0, 30).map((x) => ({ name: x.name, ms: x.ms, ...x.ok ? {} : { error: x.error } }));
+      const cleaned = require_redact().clean({ args: args || {}, error, steps: st, evidence, target: typeof target === "string" ? target : void 0 }, { known: redactions });
+      const entry = { at: (/* @__PURE__ */ new Date()).toISOString(), tool, source: source || "api", args: clipArgs(cleaned.args), ok, ms, ...cleaned.target ? { target: cleaned.target } : {}, ...evidence ? { evidence: cleaned.evidence } : {}, ...error ? { error: String(cleaned.error).slice(0, 600) } : {}, ...size ? { size } : {}, ...st.length ? { steps: cleaned.steps } : {} };
+      if (state.enabled()) {
+        state.recordCall(entry);
+        return;
+      }
+      const line = JSON.stringify(entry);
+      try {
+        const file = callFile();
+        fs3.mkdirSync(path3.dirname(file), { recursive: true });
+        const owner = require_access().owner();
+        if (owner.scopeKey !== "legacy") {
+          try {
+            fs3.writeFileSync(path3.join(path3.dirname(file), "_owner.json"), JSON.stringify(owner), { flag: "wx", mode: 384 });
+          } catch (error2) {
+            if (error2.code !== "EEXIST") throw error2;
+          }
+        }
+        fs3.appendFileSync(file, line + "\n");
+        appendedBytes += line.length;
+        if (++appendedLines >= 200 || appendedBytes > 1048576) {
+          appendedLines = 0;
+          appendedBytes = 0;
+          trim(file);
+        }
+      } catch {
+      }
+    }
+    function trim(file) {
+      let maxMb = 50;
+      try {
+        maxMb = Number(process.env.DT_LOG_MAX_MB || require_config().load().raw.log?.maxMb || 50);
+      } catch {
+      }
+      const size = fs3.statSync(file).size;
+      const lines = fs3.readFileSync(file, "utf8").split("\n").filter(Boolean);
+      let keep = lines.length > KEEP ? Math.floor(KEEP * 0.8) : lines.length;
+      if (size > maxMb * 1048576) keep = Math.min(keep, Math.floor(lines.length * (maxMb * 1048576 * 0.8) / size));
+      if (keep < lines.length) fs3.writeFileSync(file, lines.slice(-keep).join("\n") + "\n");
+    }
+    function legacy() {
+      let text = "";
+      try {
+        text = fs3.readFileSync(callFile(), "utf8");
+      } catch {
+        return [];
+      }
+      return text.split("\n").filter(Boolean).map((l) => {
+        try {
+          return JSON.parse(l);
+        } catch {
+          return null;
+        }
+      }).filter(Boolean);
+    }
+    function all() {
+      if (!state.enabled()) return legacy();
+      const rows = state.snapshot("calls").reverse();
+      if (!state.status().ready && !rows.some((row) => String(row.id).startsWith("legacy:"))) return [...legacy(), ...rows];
+      return rows;
+    }
+    function history({ q, tool, source, failed, status, kind, limit = 200 } = {}) {
+      const words = String(q || "").toLowerCase().split(/\s+/).filter(Boolean);
+      return all().reverse().map(require_call_outcome().refresh).filter((c) => (!tool || c.tool === tool) && (!source || c.source === source || source === "direct" && !String(c.source || "api").startsWith("script:"))).filter((c) => !words.length || words.every((w) => `${c.tool} ${c.source} ${JSON.stringify(c.args)}`.toLowerCase().includes(w))).filter((c) => (!failed || require_call_outcome().failed(c)) && (!status || c.evidence?.execution?.status === status || c.evidence?.invocation === status) && (!kind || c.evidence?.execution?.kind === kind)).slice(0, limit);
+    }
+    var SLOT = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|'[^']*'|\b\d+\b/gi;
+    var shape = (v) => typeof v === "string" ? v.replace(SLOT, "\0") : JSON.stringify(v);
+    var slots = (v) => typeof v === "string" ? v.match(SLOT) || [] : [];
+    var unquote = (x) => /^'.*'$/.test(x) ? x.slice(1, -1) : x;
+    var same = (xs) => xs.every((x) => JSON.stringify(x) === JSON.stringify(xs[0]));
+    function generalize(calls, prefix = "") {
+      const keys = [...new Set(calls.flatMap((c) => Object.keys(c.args || {})))].sort();
+      const args = {}, params = {};
+      const name = (k, i) => `${prefix}${k}${i ? i + 1 : ""}`.replace(/[^\w]/g, "_");
+      for (const k of keys) {
+        const vals = calls.map((c) => (c.args || {})[k]);
+        if (vals.some((v) => v === void 0)) {
+          params[name(k)] = { description: `${k} (not always given)`, examples: [...new Set(vals.filter((v) => v !== void 0).map(String))].slice(0, 3) };
+          args[k] = `{{${name(k)}}}`;
+          continue;
+        }
+        if (same(vals)) {
+          args[k] = vals[0];
+          continue;
+        }
+        if (vals.every((v) => typeof v === "string") && same(vals.map(shape)) && slots(vals[0]).length) {
+          const per = vals.map(slots);
+          let i = 0;
+          const tpl = vals[0].replace(SLOT, (lit, off, whole) => {
+            const j = i++;
+            const at = per.map((p2) => p2[j]);
+            if (same(at)) return lit;
+            const near = (whole.slice(0, off).match(/([a-z_][\w.]*)["'`]?\s*(?:=|<>|!=|>=|<=|>|<|:|\blike|\bin\s*\()\s*$/i) || [])[1];
+            const nk = near && near.split(".").pop().replace(/[^\w]/g, "_");
+            const p = nk && !params[nk] && !keys.includes(nk) ? nk : name(k, j);
+            params[p] = { description: `${k}: changing value`, examples: [...new Set(at.map(unquote))].slice(0, 3) };
+            return /^'/.test(lit) ? `'{{${p}}}'` : `{{${p}}}`;
+          });
+          args[k] = tpl;
+          continue;
+        }
+        params[name(k)] = { description: k, examples: [...new Set(vals.map((v) => typeof v === "string" ? v : JSON.stringify(v)))].slice(0, 3) };
+        args[k] = `{{${name(k)}}}`;
+      }
+      return { args, params };
+    }
+    var direct = (cs) => cs.map(require_call_outcome().refresh).filter((c) => !require_call_outcome().failed(c) && !String(c.source).startsWith("script:") && !String(c.tool).startsWith("script_"));
+    function sessions(cs) {
+      const out2 = [];
+      let cur = [];
+      for (const c of cs) {
+        const last = cur[cur.length - 1];
+        if (last && (Date.parse(c.at) - Date.parse(last.at) > 15 * 6e4 || last.source !== c.source)) {
+          out2.push(cur);
+          cur = [];
+        }
+        cur.push(c);
+      }
+      if (cur.length) out2.push(cur);
+      return out2;
+    }
+    function patterns({ min = 3, limit = 20 } = {}) {
+      const cs = direct(all());
+      const out2 = [];
+      const groups = /* @__PURE__ */ new Map();
+      for (const c of cs) {
+        const k = `${c.tool}|${Object.keys(c.args || {}).sort().join(",")}`;
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(c);
+      }
+      for (const g of groups.values()) {
+        if (g.length < min) continue;
+        const { args, params } = generalize(g);
+        out2.push({
+          kind: "repeat",
+          count: g.length,
+          last: g[g.length - 1].at,
+          tools: [g[0].tool],
+          summary: `${g[0].tool} called ${g.length}\xD7${Object.keys(params).length ? `, changing only ${Object.keys(params).join(", ")}` : " with the same arguments"}`,
+          script: { description: `${g[0].tool} ${describe(args)}`.slice(0, 200), params: paramDefs(params), steps: [{ tool: g[0].tool, args, as: "result" }] }
+        });
+      }
+      const seqs = /* @__PURE__ */ new Map();
+      for (const s of sessions(cs)) {
+        for (let n = 5; n >= 2; n--) {
+          for (let i = 0; i + n <= s.length; i++) {
+            const part = s.slice(i, i + n);
+            if (part.some((c, j) => j && c.tool === part[j - 1].tool)) continue;
+            const k = part.map((c) => c.tool).join(" \u2192 ");
+            if (!seqs.has(k)) seqs.set(k, []);
+            const list = seqs.get(k);
+            const prev = list[list.length - 1];
+            if (prev && prev.s === s && prev.i + n > i) continue;
+            list.push({ s, i, part });
+          }
+        }
+      }
+      const seqOut = [];
+      for (const [k, occ] of seqs) {
+        if (occ.length < 2) continue;
+        const n = occ[0].part.length;
+        const steps = [], params = {};
+        for (let j = 0; j < n; j++) {
+          const g = generalize(occ.map((o) => o.part[j]), `s${j + 1}_`);
+          Object.assign(params, g.params);
+          steps.push({ tool: occ[0].part[j].tool, args: g.args, as: `step${j + 1}` });
+        }
+        seqOut.push({
+          kind: "sequence",
+          count: occ.length,
+          last: occ[occ.length - 1].part[n - 1].at,
+          tools: k.split(" \u2192 "),
+          summary: `${k}: done ${occ.length}\xD7 in a row`,
+          script: { description: `Runs ${k}`, params: paramDefs(params), steps }
+        });
+      }
+      const key = (x) => ` ${x.tools.join(" ")} `;
+      for (const p of seqOut) {
+        if (seqOut.some((q) => q !== p && q.tools.length > p.tools.length && q.count >= p.count && key(q).includes(key(p)))) continue;
+        if (seqOut.some((q) => q !== p && q.count >= p.count && ` ${[...q.tools, ...q.tools].join(" ")} `.includes(key(p)) && key(p) !== key(q))) continue;
+        out2.push(p);
+      }
+      return out2.sort((a, b) => b.count * b.tools.length - a.count * a.tools.length || b.last.localeCompare(a.last)).slice(0, limit);
+    }
+    var describe = (args) => Object.entries(args).filter(([, v]) => typeof v !== "object").map(([k, v]) => `${k}=${String(v).slice(0, 40)}`).join(" ");
+    var paramDefs = (params) => Object.fromEntries(Object.entries(params).map(([k, p]) => [k, { description: `${p.description}${p.examples.length ? `, e.g. ${p.examples.join(" / ")}` : ""}`.slice(0, 200), required: true }]));
+    async function historyPage({ kind, status, ...query } = {}) {
+      if (!state.enabled()) return { records: history({ ...query, kind, status }), nextCursor: null, backend: "legacy" };
+      const page = await state.list({ ...query, kind: "calls", category: kind, status });
+      return { ...page, records: page.records.map((row) => ({ ...row.value, id: row.id, metadataRevision: row.revision })) };
+    }
+    async function clear() {
+      if (state.enabled()) return state.clear("calls");
+      const file = callFile();
+      fs3.mkdirSync(path3.dirname(file), { recursive: true });
+      fs3.writeFileSync(file, "");
+      return { ok: true };
+    }
+    module2.exports = { record, history, historyPage, patterns, generalize, clear, FILE };
+  }
+});
+
+// lib/doctor.js
+var require_doctor = __commonJS({
+  "lib/doctor.js"(exports2, module2) {
+    var fs3 = require("fs");
+    var os = require("os");
+    var path3 = require("path");
+    var { execFile } = require("child_process");
+    var run = (cmd, args, { timeout = 2e4, env, cwd } = {}) => new Promise((resolve2) => {
+      const t0 = Date.now();
+      execFile(cmd, args, { timeout, env: env || process.env, cwd, maxBuffer: 8 << 20 }, (err, stdout, stderr) => resolve2({ ok: !err, code: err?.code, out: `${stdout || ""}${stderr || ""}`.trim(), ms: Date.now() - t0, error: err?.message }));
+    });
+    async function head(url, { auth, timeout = 8e3 } = {}) {
+      const t0 = Date.now();
+      try {
+        const res = await fetch(url, { method: "GET", headers: auth ? { authorization: auth } : {}, signal: AbortSignal.timeout(timeout), redirect: "manual" });
+        return { status: res.status, ms: Date.now() - t0 };
+      } catch (e) {
+        return { error: e.cause?.code || e.cause?.message || e.message, ms: Date.now() - t0 };
+      }
+    }
+    function writable(dir) {
+      try {
+        fs3.mkdirSync(dir, { recursive: true });
+        const f = path3.join(dir, `.dt-doctor-${process.pid}`);
+        fs3.writeFileSync(f, "x");
+        let chmod = true;
+        try {
+          fs3.chmodSync(f, 384);
+        } catch {
+          chmod = false;
+        }
+        fs3.rmSync(f, { force: true });
+        return { ok: true, chmod };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+    var SHARED = /^(9p|drvfs|cifs|smb3?|smbfs|fakeowner|grpcfuse|fuse\.grpcfuse|virtiofs|osxfs|fuse\.osxfs|vboxsf|nfs4?|fuse\.sshfs|fuse)$/;
+    function mountOf(dir) {
+      let lines;
+      try {
+        lines = fs3.readFileSync("/proc/self/mountinfo", "utf8").split("\n");
+      } catch {
+        return null;
+      }
+      let best = null;
+      const target = path3.resolve(dir);
+      for (const l of lines) {
+        const parts = l.split(" ");
+        const dash = parts.indexOf("-");
+        if (dash < 0) continue;
+        const point = parts[4].replace(/\\040/g, " "), type = parts[dash + 1], source = parts[dash + 2];
+        if ((target === point || target.startsWith(point.endsWith("/") ? point : `${point}/`)) && (!best || point.length > best.point.length)) best = { point, type, source };
+      }
+      return best;
+    }
+    async function check({ repo, deep = false } = {}) {
+      const cfg = require_config();
+      const t = cfg.getTests();
+      const out2 = [];
+      const add = (group, name, status, detail, fix) => out2.push({ group, check: name, status, detail: String(detail ?? "").slice(0, 400), ...fix ? { fix } : {} });
+      for (const [name, dir] of [["config folder", cfg.HOME], ["repos", cfg.PATHS.repos], ["workspaces", cfg.PATHS.work], ["cache", cfg.PATHS.cache], ["git data (DT_GIT_DIR)", process.env.DT_GIT_DIR || path3.join(os.tmpdir(), "dt-git")]]) {
+        const w = writable(dir);
+        if (!w.ok) add("folders", name, "fail", `${dir}: ${w.error}`, "run dt as the owner of the folder (run.sh sets DT_UID/DT_GID), or point DT_HOME_DIR at a writable folder");
+        else add("folders", name, w.chmod ? "ok" : "warn", `${dir}${w.chmod ? "" : ": no chmod here (a Windows drive, SMB, some mounts): git keeps its data in DT_GIT_DIR"}`);
+      }
+      for (const [name, dir, what] of [["workspaces", cfg.PATHS.work, "DT_WORK_DIR=/var/dt-work"], ["Gradle home", cfg.getTests().gradleHome, "DT_GRADLE_USER_HOME=/var/dt-build/gradle"], ["Maven repository", cfg.getTests().mavenRepo, "DT_MAVEN_REPO=/var/dt-build/m2"], ["git data", process.env.DT_GIT_DIR || path3.join(os.tmpdir(), "dt-git"), "DT_GIT_DIR=/var/dt-git"]].filter(([, d]) => d)) {
+        const m = mountOf(dir);
+        if (!m) continue;
+        const shared = SHARED.test(m.type);
+        add("folders", `${name} filesystem`, shared ? name === "git data" ? "warn" : "fail" : "ok", `${dir} is on ${m.type} (${m.point}${m.source && m.source !== "none" ? ` from ${m.source}` : ""})${shared ? ": a host-shared mount: file locks and memory-mapped files do not work right there (Gradle's daemon hangs on its registry, builds slow down)" : ""}`, shared ? `put it on a Docker volume (compose does: ${what}) or a local disk` : null);
+      }
+      const gd = process.env.DT_GIT_DIR || path3.join(os.tmpdir(), "dt-git");
+      if (path3.resolve(gd).startsWith(path3.resolve(os.tmpdir()))) add("folders", "git data lasts", "warn", `${gd} is in the temporary folder: after a restart every repo is fetched again`, "set DT_GIT_DIR to a lasting folder git can chmod in (compose: the dt-git volume)");
+      try {
+        const st = fs3.statfsSync(cfg.PATHS.work.replace(/\/work$/, "") || cfg.HOME);
+        const free = st.bavail * st.bsize / 1e9;
+        add("folders", "free disk", free < 2 ? "fail" : free < 10 ? "warn" : "ok", `${free.toFixed(1)} GB free`, free < 10 ? "workspaces, Maven/Gradle caches and indexes need room: workspace_drop old workspaces" : null);
+      } catch {
+      }
+      const g = await run("git", ["--version"]);
+      add("git", "git", g.ok ? "ok" : "fail", g.ok ? g.out : g.error, g.ok ? null : "install git in the image (node:22-bookworm has it)");
+      const bb = cfg.getPersonal().bitbucket;
+      if (!bb.url) add("bitbucket", "Bitbucket URL", "fail", "not set", "bitbucket.url in config.json");
+      else {
+        add("bitbucket", "token", bb.token ? "ok" : "fail", bb.token ? `set (${bb.token.length} chars)` : "missing", bb.token ? null : "BITBUCKET_HTTP_TOKEN in .env (a personal access token with repository read)");
+        const api = await head(`${bb.url}/rest/api/1.0/repos?limit=1`, { auth: bb.token ? `Bearer ${bb.token}` : null });
+        add("bitbucket", "REST API", api.status === 200 ? "ok" : "fail", api.error ? `${bb.url}: ${api.error}` : `HTTP ${api.status} in ${api.ms} ms`, api.status === 401 ? "the token is wrong or expired" : api.error ? "dt cannot reach Bitbucket: DNS, proxy (HTTPS_PROXY), or the network of the container" : null);
+      }
+      if (repo) {
+        const [project, slug] = String(repo).split("/");
+        const G = require_git();
+        const url = `${bb.url}/scm/${String(project).toLowerCase()}/${slug}.git`;
+        const ls = await run("git", ["-c", `http.extraHeader=Authorization: Bearer ${bb.token || ""}`, "ls-remote", url, "HEAD"], { timeout: 3e4, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" } });
+        add("bitbucket", `git ls-remote ${repo}`, ls.ok ? "ok" : "fail", ls.ok ? `${ls.out.slice(0, 12)} in ${ls.ms} ms` : ls.out.replace(bb.token || "\0", "***").slice(0, 300), ls.ok ? null : /401|403|Authentication/.test(ls.out) ? "the token cannot read this repo" : /Could not resolve|unable to access|timed out/i.test(ls.out) ? "git cannot reach Bitbucket from here (proxy: git uses HTTPS_PROXY / http.proxy)" : "check the project key and repo slug");
+        if (ls.ok && deep) {
+          const dir = fs3.mkdtempSync(path3.join(os.tmpdir(), "dt-doctor-"));
+          const t0 = Date.now();
+          try {
+            const info = await G.fetchRef(project, slug, "", { dir, gitKey: `doctor/${path3.basename(dir)}` });
+            add("bitbucket", `fetch ${repo}`, "ok", `${info.sha.slice(0, 10)} in ${Date.now() - t0} ms${info.fallback ? `; ${info.fallback}` : ""}`);
+          } catch (e) {
+            add("bitbucket", `fetch ${repo}`, "fail", e.message, "the fetch itself fails: see the message (disk, permissions, proxy)");
+          } finally {
+            fs3.rmSync(dir, { recursive: true, force: true });
+          }
+        }
+      }
+      let onRunner = false;
+      if (t.runnerUrl) {
+        try {
+          const i = await require_runner().remoteInfo();
+          onRunner = true;
+          add("runner", "runner", "ok", `${t.runnerUrl} (uid ${i.uid}), folders ${i.roots.join(", ")}`);
+          add("runner", "java", i.java?.ok ? "ok" : "fail", i.java?.out || i.java?.error, i.java?.ok ? null : "the runner needs the JDK: the jdk profile fills /opt/jdk");
+          add("runner", "javac (a JDK, not a JRE)", i.javac?.ok ? "ok" : "fail", i.javac?.out || i.javac?.error);
+          if (i.maven) add("runner", "Maven", i.maven.ok ? "ok" : "warn", i.maven.out || i.maven.error);
+          add("runner", "Docker (Testcontainers)", i.docker?.ok ? "ok" : "warn", i.docker?.ok ? `Docker ${i.docker.version} (${i.docker.platform || i.docker.os}); containers reached at ${i.testcontainersHost || "localhost"}` : i.docker?.error, i.docker?.ok ? null : /EACCES/.test(i.docker?.error || "") ? "set DT_DOCKER_GID to the group of the Docker socket (Docker Desktop: 0; Linux: getent group docker)" : "mount the Docker socket into the runner (compose does: DT_DOCKER_SOCKET)");
+        } catch (e) {
+          add("runner", "runner", "fail", `${t.runnerUrl}: ${e.cause?.code || e.message}`, /401|token/i.test(e.message) ? "DT_RUNNER_TOKEN must be the same for dt and the runner (run.sh writes one into .env)" : "start it: the jdk profile runs the runner (./run.sh up -d); builds run in dt meanwhile, without Docker");
+        }
+      }
+      const bin = (tool) => t.javaHome ? path3.join(t.javaHome, "bin", tool) : tool;
+      const java = await run(bin("java"), ["-version"]);
+      const javac = await run(bin("javac"), ["-version"]);
+      if (!onRunner) add("tests", "java", java.ok ? "ok" : "fail", java.ok ? `${java.out.split("\n")[0]}${t.javaHome ? ` (${t.javaHome})` : " (PATH)"}` : `${bin("java")}: ${java.error}`, java.ok ? null : "add jdk to COMPOSE_PROFILES (run.sh does by default) or set tests.javaHome");
+      if (!onRunner) add("tests", "javac (a JDK, not a JRE)", javac.ok ? "ok" : "fail", javac.ok ? javac.out : `${bin("javac")}: ${javac.error}`, javac.ok ? null : "tests need a JDK: the jdk compose profile, or tests.javaHome pointing at a JDK");
+      const mvn = t.maven || "mvn";
+      const mv = await run(mvn, ["-v"], { env: { ...process.env, ...t.javaHome ? { JAVA_HOME: t.javaHome } : {} } });
+      if (!onRunner) add("tests", "Maven", mv.ok ? "ok" : "warn", mv.ok ? mv.out.split("\n")[0] : `${mvn}: ${mv.error}`, mv.ok ? null : "Maven projects without mvnw need it: the jdk compose profile, or tests.maven");
+      if (t.gradle) {
+        const gr = await run(t.gradle, ["-v"], { timeout: 6e4 });
+        add("tests", "Gradle", gr.ok ? "ok" : "warn", gr.ok ? (gr.out.match(/Gradle [\d.]+/) || [gr.out])[0] : gr.error);
+      }
+      for (const [name, dir] of [["Maven repository", t.mavenRepo], ["Gradle home", t.gradleHome]].filter(([, d]) => d)) {
+        const w = writable(dir);
+        add("tests", name, w.ok ? "ok" : "fail", w.ok ? dir : `${dir}: ${w.error}`, w.ok ? null : "must be writable by dt's user");
+      }
+      const proxy = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
+      add("network", "proxy", "ok", proxy ? `${proxy.replace(/\/\/[^@/]*@/, "//***@")} (git, Maven and Gradle read it differently: Maven from settings.xml <proxies>, Gradle from systemProp.https.proxyHost)` : "none set");
+      if (!t.offline) {
+        const central = await head("https://repo.maven.apache.org/maven2/");
+        add("network", "Maven Central", central.status && central.status < 400 ? "ok" : "warn", central.error ? central.error : `HTTP ${central.status} in ${central.ms} ms`, central.status && central.status < 400 ? null : "not reachable: builds need your company repository (maven-settings.xml / gradle.properties) or a proxy");
+        const wrapper = await head("https://services.gradle.org/distributions/");
+        add("network", "Gradle distributions (gradlew)", wrapper.status && wrapper.status < 400 ? "ok" : "warn", wrapper.error || `HTTP ${wrapper.status}`, wrapper.status && wrapper.status < 400 ? null : "gradlew downloads Gradle from here on first use: point distributionUrl at your mirror");
+      }
+      if (t.mavenSettings) {
+        let text = "";
+        try {
+          text = fs3.readFileSync(t.mavenSettings, "utf8");
+        } catch (e) {
+          add("repository", "maven settings", "fail", `${t.mavenSettings}: ${e.message}`);
+        }
+        for (const m of text.matchAll(/<url>\s*([^<]+?)\s*<\/url>/g)) {
+          const r = await head(m[1]);
+          add("repository", `Maven repository ${m[1]}`, r.status && r.status < 500 ? "ok" : "fail", r.error || `HTTP ${r.status} (401 without credentials is normal)`);
+        }
+      }
+      const { props, from } = require_buildenv().gradleProperties(t);
+      if (Object.keys(props).length) {
+        add("repository", "gradle.properties", "ok", `${Object.keys(props).length} properties from ${[...new Set(Object.values(from))].join(", ")}: ${Object.keys(props).map((k) => /pass|secret|token|key/i.test(k) ? `${k}=***` : k).join(", ")}`);
+        const url = Object.entries(props).find(([k, v]) => /url/i.test(k) && /^https?:/.test(v));
+        if (url) {
+          const user = Object.entries(props).find(([k]) => /user/i.test(k))?.[1], pass = Object.entries(props).find(([k]) => /pass|token/i.test(k))?.[1];
+          const r = await head(url[1], { auth: user && pass ? `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}` : null });
+          add("repository", `${url[0]} (${url[1]})`, r.status && r.status < 400 ? "ok" : r.status === 401 || r.status === 403 ? "fail" : r.status ? "ok" : "fail", r.error || `HTTP ${r.status} with the credentials`, r.status === 401 || r.status === 403 ? "the user/password in gradle.properties are refused" : r.error ? "not reachable from here" : null);
+        }
+      } else add("repository", "gradle.properties", "warn", `none found (looked in ${require_buildenv().gradleFiles({ ...t, gradleProperties: t.gradleProperties }).length ? "" : [...(t.gradleProperties || []).map((f) => path3.resolve(cfg.HOME, f)), path3.join(cfg.HOME, "gradle.properties"), ...t.gradleHome ? [path3.join(t.gradleHome, "gradle.properties")] : []].join(", ")}): builds that read nexusUrl/mavenUser/mavenPassword fail`, "copy the gradle.properties of your machine (Windows: %USERPROFILE%\\.gradle\\gradle.properties) into dt's config folder; passwords may be ${VAR} from .env");
+      if (t.pgUrl) {
+        try {
+          const postgres = require_src10();
+          const sql = postgres(t.pgUrl, { max: 1, connect_timeout: 5, onnotice: () => {
+          } });
+          const t0 = Date.now();
+          await sql`select 1`;
+          await sql.end({ timeout: 2 });
+          add("tests", "test database", "ok", `${new URL(t.pgUrl).host} in ${Date.now() - t0} ms`);
+        } catch (e) {
+          add("tests", "test database", "warn", `${(() => {
+            try {
+              return new URL(t.pgUrl).host;
+            } catch {
+              return t.pgUrl;
+            }
+          })()}: ${e.code || e.message}`, "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
+        }
+      } else add("tests", "test database", "warn", "not set", "needed only for DB tests: the testdb compose profile, or tests.pgUrl");
+      for (const j of require_jobs().list(100).filter((x) => x.state === "running")) {
+        const ms = Date.now() - Date.parse(j.startedAt);
+        if (ms > t.timeoutMs) add("jobs", `job ${j.id}`, "warn", `${j.title}: running for ${Math.round(ms / 6e4)} min`, `job_cancel job="${j.id}"`);
+      }
+      const counts = { ok: out2.filter((x) => x.status === "ok").length, warn: out2.filter((x) => x.status === "warn").length, fail: out2.filter((x) => x.status === "fail").length };
+      return { counts, checks: out2 };
+    }
+    module2.exports = { check };
   }
 });
 
@@ -79398,6 +79638,8 @@ var require_result_operations = __commonJS({
     }
     function normalize(args) {
       const out2 = { ...args };
+      const reference = require_results().referenceId(out2.id);
+      if (reference) out2.id = reference;
       if (typeof out2.where === "string") {
         if (out2.where.length > 32768) throw invalid("where JSON exceeds 32768 characters");
         try {
@@ -83718,7 +83960,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b";
+      if (true) return "a94956fd5ddb4adf7c8487a653eabab1bc63ac9c99754b7834499afd688f5312";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -90166,230 +90408,6 @@ var require_tools_service_environments = __commonJS({
   }
 });
 
-// lib/semantic-navigation-combined.js
-var require_semantic_navigation_combined = __commonJS({
-  "lib/semantic-navigation-combined.js"(exports2, module2) {
-    module2.exports = ({ S, present, summarize }) => async (a) => {
-      const J = require_jobs(), E = require_execution();
-      let job;
-      if (a.job) {
-        job = J.find(a.job);
-        if (!job || !job.key.startsWith("semantic:navigation:")) throw Error("Combined semantic job is not available");
-      } else {
-        const { waitMs, all, ...selection } = a;
-        job = J.start("semantic:navigation:" + require_semantic_protocol().digest(selection), "semantic entry map and value trace", async () => {
-          const settle = async (args) => {
-            E.check();
-            let value = await S().query({ ...args, env: a.env, waitMs: 0 });
-            if (value.state === "running") {
-              const child = J.find(value.job);
-              if (!child?.promise) throw Error("Semantic child job is owned by another process; observe it on the owning server.");
-              const release = E.resource(() => J.cancel(child.id, "parent semantic navigation cancelled"));
-              try {
-                await child.promise;
-                E.check();
-                value = await S().query({ job: child.id, waitMs: 0 });
-              } finally {
-                release();
-              }
-            }
-            if (value.ready === false) throw Error("Semantic selection is unavailable; list the retained analyses and choose the exact source.");
-            if (value.flowMap?.entries.length === 0 || (value.gaps || []).some((g) => g.kind === "endpoint-not-found")) {
-              const methods = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
-              throw Error("An exact entry or parameter did not resolve. Retained method candidates: " + JSON.stringify((methods.results || []).map((m2) => ({ name: m2.name, parameters: m2.parameters?.map((p) => p.name) }))) + ". Retry the original requested method/parameter; do not infer no flow.");
-            }
-            if (value.error) throw Error(typeof value.error === "string" ? value.error : JSON.stringify(value.error));
-            return value;
-          };
-          const map = present(await settle({ analysis: a.analysis, operation: "flowmap", from: { name: a.entry } }), { view: "semantic-flow-map", title: "Entry to exits" });
-          const trace2 = present(await settle({ analysis: a.analysis, operation: "trace", from: { kind: "method", name: a.entry, parameter: a.parameter }, to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) }), { view: "semantic-path-trace", title: "Parameter to sink argument" });
-          const m = summarize(map), t = summarize(trace2), sinks = [...new Map((t.selectedSinks || []).map((x) => [JSON.stringify(x), x])).values()];
-          const summary = { ...m.entries?.length === 1 ? { entry: m.entries[0].name } : { entryCandidates: m.entries || [] }, ...sinks.length === 1 ? { traceSinkCall: sinks[0].traceSinkCall, argumentExpression: sinks[0].argumentExpression } : { sinkCandidates: sinks }, controlAssumptionStatus: t.controlAssumptionStatus, dataAssumptionStatus: t.dataAssumptionStatus, ...t.unmatchedAssumptions?.length ? { unmatchedAssumptions: t.unmatchedAssumptions, observedPredicates: t.observedPredicates, assumptionGuidance: t.assumptionGuidance } : {}, behaviorVerified: m.proof?.behaviorVerified === true && t.proof?.behaviorVerified === true, mapComplete: m.mapComplete ?? null, mapView: map.view, traceView: trace2.view, proofLimits: { entryMap: m.summary?.proofLimits, valueTrace: t.summary?.proofLimits } };
-          return present({ protocol: "dt.semantic-navigation/v1", evidenceType: "entry-map-and-value-trace", summary, answerHint: "Use summary as the answer projection; keep both mapView and traceView URLs exactly as returned.", mapView: map.view, traceView: trace2.view, entryMap: { ...m, ...map }, valueTrace: { ...t, ...trace2 } }, { view: "json", title: "Entry map and independent value trace" });
-        });
-      }
-      const result = await S().waitJob(job, a.waitMs ?? 3e4);
-      if (result.state === "running") return { ...result, next: { tool: "what_happens_from", arguments: { job: job.id, waitMs: 3e4 } }, guidance: "Observe this existing combined job; do not repeat the query." };
-      if (result.error || !result.entryMap || !result.valueTrace) return result;
-      if (a.all) return { ...result, output: { status: "all", scope: "retained-evidence" } };
-      return { ...result, output: { status: "part", scope: "selected-evidence" }, entryMap: require_semantic_response().compact(summarize(result.entryMap), 4096), valueTrace: require_semantic_response().compact(summarize(result.valueTrace), 4096) };
-    };
-  }
-});
-
-// lib/semantic-navigation.js
-var require_semantic_navigation = __commonJS({
-  "lib/semantic-navigation.js"(exports2, module2) {
-    var locate = (n) => ({ kind: n.kind, code: n.code, file: n.file, line: n.line });
-    function checks(sides, layer) {
-      const groups = /* @__PURE__ */ new Map();
-      for (const side of sides || []) for (const [index, path3] of (side[layer]?.paths || []).entries()) {
-        const evaluation = path3.assumptionEvaluation || { status: "unresolved" };
-        const value = { side: side.side, status: evaluation.status, conditions: path3.conditions?.map((c) => ({ expression: c.expression, polarity: c.polarity, file: c.file, line: c.line })), unresolved: evaluation.unresolved, conflicts: evaluation.conflicts };
-        const key = JSON.stringify(value);
-        if (!groups.has(key)) groups.set(key, { ...value, retainedPaths: [] });
-        groups.get(key).retainedPaths.push(index);
-      }
-      return [...groups.values()];
-    }
-    function summarize(raw) {
-      const gaps = /* @__PURE__ */ new Map();
-      for (const gap of raw.gaps || []) {
-        const value = { kind: gap.kind, detail: gap.detail ?? gap.message, side: gap.side }, key = JSON.stringify(value);
-        if (!gaps.has(key)) gaps.set(key, { ...value, occurrences: 0 });
-        gaps.get(key).occurrences++;
-      }
-      const common = {
-        protocol: "dt.semantic-navigation/v1",
-        answerHint: "Use the selected summary/fields and copy applicable mapView/traceView URLs exactly into the answer. These are retained evidence links, not analysis ids.",
-        output: { status: "part", scope: "selected-evidence" },
-        sourceCoverage: { complete: raw.flowMap?.complete ?? null, truncated: !!raw.truncated, gapCount: (raw.gaps || []).length, gaps: [...gaps.values()] },
-        proof: Object.fromEntries(["kind", "status", "feasibility", "runtime", "behaviorVerified"].filter((k) => raw.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])),
-        view: raw.view,
-        read: { tool: "result_read", arguments: { id: raw.view?.split("/").pop(), all: true } }
-      };
-      const proofLimits = { proof: common.proof, sourceCoverage: { complete: common.sourceCoverage.complete, truncated: common.sourceCoverage.truncated, gapCount: common.sourceCoverage.gapCount } };
-      if (raw.flowMap) {
-        const m = raw.flowMap;
-        const selectedEntries = m.methods.filter((x) => m.entries.includes(x.entry)).map((x) => ({ name: x.name, file: x.file, line: x.line }));
-        const methodExits = m.nodes.filter((n) => ["return", "throw", "exit"].includes(n.kind)).map(locate), externalCallBoundaries = m.nodes.filter((n) => n.exit).map((n) => ({ ...locate(n), boundary: n.exit }));
-        const decisions = m.nodes.filter((n) => n.kind === "decision").map(locate), changes = m.nodes.flatMap((n) => (n.changes || []).map((c) => ({ ...c, file: c.file ?? n.file, line: c.line ?? n.line })));
-        const summary2 = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view, proofLimits };
-        return {
-          evidenceType: "entry-map",
-          mapView: raw.view,
-          traceView: null,
-          mapComplete: m.complete,
-          ...common,
-          summary: summary2,
-          counts: { ...m.counts, methodExits: methodExits.length, externalCallBoundaries: externalCallBoundaries.length },
-          entries: selectedEntries,
-          methodExits,
-          externalCallBoundaries,
-          decisions,
-          changes,
-          declaredAssumptions: m.assumptions
-        };
-      }
-      const data = checks(raw.sides, "data"), control = checks(raw.sides, "control");
-      const observedPredicates = [...new Set(control.flatMap((c) => (c.conditions || []).map((p) => p.expression)).filter(Boolean))];
-      const unmatchedAssumptions = (raw.assumptions || []).filter((a) => !observedPredicates.includes(a.expression));
-      const status = (xs) => {
-        const statuses = [...new Set(xs.map((x) => x.status))];
-        return statuses.length === 1 ? statuses[0] : statuses.length ? "mixed" : "no-paths";
-      };
-      const selectedSinks = (raw.sides || []).flatMap((s) => (s.data?.selectedValues?.to || []).map((v) => ({ side: s.side, traceSinkCall: v.name, argument: v.argument, argumentExpression: v.value, callExpression: v.call, file: v.file, line: v.line })));
-      const distinctSinks = [...new Map(selectedSinks.map((s) => [JSON.stringify([s.traceSinkCall, s.argument, s.argumentExpression]), s])).values()];
-      const summary = { ...raw.request?.arguments?.from?.name ? { entry: raw.request.arguments.from.name } : {}, ...distinctSinks.length === 1 ? { traceSinkCall: distinctSinks[0].traceSinkCall, argumentExpression: distinctSinks[0].argumentExpression } : { sinkCandidates: distinctSinks }, controlAssumptionStatus: status(control), dataAssumptionStatus: status(data), behaviorVerified: raw.proof?.behaviorVerified === true, traceView: raw.view, proofLimits, ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates } : {} };
-      return {
-        evidenceType: "value-trace",
-        traceView: raw.view,
-        mapView: null,
-        ...common,
-        summary,
-        declaredAssumptions: raw.assumptions || [],
-        selectedSinks,
-        dataAssumptionStatus: status(data),
-        controlAssumptionStatus: status(control),
-        ...unmatchedAssumptions.length ? { unmatchedAssumptions, observedPredicates, assumptionGuidance: "These declarations did not match an exact observed control predicate. If your question refers to an observed predicate, copy its exact expression as a quoted string; do not invent a label. Retrying with a corrected declaration does not prove runtime feasibility." } : {},
-        assumptionChecks: { data, control },
-        ...raw.request?.arguments?.from?.name ? { relatedMap: { insideCodeCall: "tools.what_happens_from", arguments: { analysis: raw.analyses?.[0]?.id, entry: raw.request.arguments.from.name } } } : {},
-        meaning: "This value trace is not an entry-to-exit map. For a combined question call what_happens_from separately and keep its mapView plus this traceView. Statuses apply to retained paths only. mixed means paths differ; no-paths means no retained path. Data and control evidence are independent; neither proves runtime behavior."
-      };
-    }
-    module2.exports = ({ str, int, env, present }) => {
-      const S = () => require_semantic_code();
-      const text = (description) => ({ ...str(description), minLength: 1 });
-      const observation = { job: text("Observe the returned owned job; omit other selectors when polling"), waitMs: { ...int("Wait for this job, at most 30000 ms", 3e4), minimum: 0, maximum: 3e4 } };
-      const scope = { env, analysis: text("Exact retained id from which_analyses_exist; never a repository name") };
-      const required = (fields) => ({ if: { required: ["job"] }, then: { properties: { job: { minLength: 1 } } }, else: { required: fields } });
-      const traceInputs = { parameter: text("Source parameter name"), sink: text("Target call name"), argument: { type: "integer", minimum: 1, maximum: 64, description: "Required one-based sink argument position, e.g. 2 selects the second argument" }, assumptions: { type: "array", maxItems: 20, items: { type: "object", properties: { expression: { type: "string", minLength: 1, maxLength: 1e3 }, holds: { type: "boolean" } }, required: ["expression", "holds"], additionalProperties: false }, description: 'Literal predicate text and explicit truth values: [{expression:"input < 0",holds:false}], also accepts one object or JSON-encoded array/object. Explicit true/false strings are normalized. Copy the user expression verbatim and its truth value separately. Never negate, simplify or paraphrase it, or replace it with a descriptive label. Omitted or [] declares none.' } };
-      const combined = require_semantic_navigation_combined()({ S, present, summarize });
-      async function query(name, operation, a) {
-        if (name === "what_happens_from" && (a.parameter !== void 0 || a.sink !== void 0 || a.argument !== void 0 || a.job && require_jobs().find(a.job)?.key.startsWith("semantic:navigation:"))) return combined(a);
-        const args = a.job ? { job: a.job, waitMs: a.waitMs ?? 3e4 } : {
-          analysis: a.analysis,
-          env: a.env,
-          operation,
-          waitMs: a.waitMs ?? 3e4,
-          from: operation === "flowmap" ? { name: a.entry } : { kind: "method", name: a.entry, parameter: a.parameter },
-          ...operation === "trace" ? { to: { kind: "call", name: a.sink, argument: Number(a.argument) }, assumptions: Array.isArray(a.assumptions) ? a.assumptions : Object.entries(a.assumptions || {}).map(([expression, holds]) => ({ expression, holds })) } : {}
-        };
-        const raw = await S().query(args);
-        if (raw.operation && raw.operation !== operation) throw Error(`This job belongs to ${raw.operation}; observe it with the original tool.`);
-        if (raw.state === "running" || raw.state === "queued") return { ...raw, next: { tool: name, arguments: { job: raw.job, waitMs: 3e4 } }, guidance: "Observe this job; do not start the query again." };
-        const retained = present(raw, { view: operation === "flowmap" ? "semantic-flow-map" : "semantic-path-trace", title: operation === "flowmap" ? "Entry to exits" : "Parameter to sink argument" });
-        if (raw.error || raw.ready === false) return retained;
-        const selected = summarize(retained);
-        if (!a.job && (raw.flowMap?.entries.length === 0 || (raw.gaps || []).some((g) => g.kind === "endpoint-not-found"))) {
-          const symbols = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
-          selected.selection = { resolved: false, requestedEntry: a.entry, availableEntries: (symbols.results || []).map((m) => ({ name: m.name, signature: m.signature, file: m.file, line: m.line, parameters: m.parameters?.map((p) => ({ name: p.name, index: p.index })) })), candidatesTruncated: !!symbols.truncated };
-          selected.entryCandidatesView = present(symbols, { title: "Retained method candidates" }).view;
-          selected.guidance = "An endpoint did not resolve. Read availableEntries and use the exact requested method/parameter name; retry the same tool with corrected selectors. Do not answer a flow question from unresolved endpoints.";
-        }
-        return a.all ? { ...retained, ...selected, proof: retained.proof, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
-      }
-      return [
-        { name: "which_analyses_exist", description: "List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.", input: { env, versions: { type: "boolean", default: false }, workspace: text("Exact workspace id; filter retained records only"), repo: text("Exact repository identity; filter retained records only"), sha: text("Exact source revision; filter retained records only") }, run: async (a) => {
-          const listed = await S().index({ env: a.env, versions: a.versions });
-          const filters = Object.fromEntries(["workspace", "repo", "sha"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]]));
-          const records = (listed.analyses || []).filter((x) => Object.entries(filters).every(([k, v]) => x[k] === v));
-          const raw = present({ ...listed, analyses: records, total: records.length, ...Object.keys(filters).length ? { filters, sourceTotal: listed.total ?? listed.analyses?.length } : {} }, { title: "Retained code analyses" });
-          const common = { evidenceType: "analysis-list", analysisView: raw.view, mapView: null, traceView: null, ...raw, meaning: "This view lists analyses; it is not a map or trace. Use what_happens_from for mapView and where_value_flows for traceView." };
-          common.next = { insideCodeCall: "tools.tool_describe", arguments: { name: "what_happens_from" }, code: 'return await tools.tool_describe({name:"what_happens_from"});' };
-          common.guidance = "Read analyses[] (not value[]). Analyses have been listed. Do not repeat this listing. Choose the requested analyses[].id and inspect the next schema, then query it using analysis:id.";
-          if (!records.length) {
-            common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions } };
-            common.guidance = Object.keys(filters).length ? "No retained analysis matches these exact filters. Inspect the unfiltered retained list; do not invent an id or parse a new revision without an indexing request." : "No retained analyses are available. Report the missing evidence and inspect semantic configuration/indexing capabilities; do not invent a map or trace.";
-          }
-          if (a.all) return common;
-          return { ...common, analyses: (raw.analyses || []).map((x) => Object.fromEntries(["id", "repo", "sha", "ref", "workspace", "language", "state", "coverage"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))) };
-        } },
-        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Return summary directly as the answer projection: it includes proofLimits with proof and sourceCoverage kept separate. Keep its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
-        { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
-      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true, codeHint: t.name === "which_analyses_exist" ? "Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown." : t.name === "what_happens_from" ? "Map: analysis + entry. Combined map/trace: also pass parameter, sink, one-based argument and assumptions. Returns {summary,entryMap,valueTrace}; return summary unchanged, including proofLimits and evidence URLs. Poll with job only." : "Returns {summary,selectedSinks}; return summary unchanged. Static proof runtime/feasibility are unknown. Poll with job only." }));
-    };
-    module2.exports.summarize = summarize;
-    module2.exports.normalize = (name, args) => {
-      if (name === "which_analyses_exist") {
-        const out3 = { ...args };
-        for (const key of ["workspace", "repo", "sha"]) if (out3[key] === null || typeof out3[key] === "string" && !out3[key].trim()) delete out3[key];
-        return out3;
-      }
-      if (!["what_happens_from", "where_value_flows"].includes(name)) return args;
-      const out2 = { ...args };
-      for (const key of ["argument", "argumentIndex"]) if (typeof out2[key] === "string" && /^\d+$/.test(out2[key].trim())) out2[key] = Number(out2[key].trim());
-      if (typeof out2.assumptions === "string") {
-        if (out2.assumptions.length > 32768) throw Error("assumptions JSON exceeds 32768 characters");
-        try {
-          out2.assumptions = JSON.parse(out2.assumptions);
-        } catch {
-          throw Error("assumptions must be an array of {expression,holds}; JSON-encoded arrays/objects are accepted. Use an explicit boolean truth value.");
-        }
-        if (!out2.assumptions || typeof out2.assumptions !== "object") throw Error("assumptions JSON must contain an array or one expression/holds object");
-      }
-      for (const [alias, key] of Object.entries({ analysisId: "analysis", entryMethod: "entry", sinkCall: "sink", argumentIndex: "argument" })) if (out2[alias] !== void 0) {
-        if (out2[key] !== void 0 && out2[key] !== out2[alias]) throw Error(`${key} and ${alias} disagree; pass only ${key}.`);
-        out2[key] = out2[alias];
-        delete out2[alias];
-      }
-      if (out2.controlAssumption !== void 0) {
-        if (out2.assumptions !== void 0) throw Error("Pass assumptions only; controlAssumption is an alternative spelling, not an additional condition.");
-        const match = typeof out2.controlAssumption === "string" && /^([\s\S]+?)\s+is\s+(true|false)\s*$/.exec(out2.controlAssumption);
-        if (!match) throw Error('Use assumptions:[{expression:"exact predicate",holds:false}] with an explicit boolean.');
-        out2.assumptions = [{ expression: match[1].trim(), holds: match[2] === "true" }];
-        delete out2.controlAssumption;
-      }
-      if (out2.assumptions && typeof out2.assumptions === "object" && !Array.isArray(out2.assumptions)) {
-        const a = out2.assumptions;
-        out2.assumptions = Object.hasOwn(a, "expression") ? [a] : Object.entries(a).map(([expression, holds]) => ({ expression, holds }));
-      }
-      if (Array.isArray(out2.assumptions)) out2.assumptions = out2.assumptions.map((a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.holds === "string" && /^(true|false)$/i.test(a.holds.trim()) ? { ...a, holds: a.holds.trim().toLowerCase() === "true" } : a);
-      return out2;
-    };
-  }
-});
-
 // lib/tools-semantic.js
 var require_tools_semantic = __commonJS({
   "lib/tools-semantic.js"(exports2, module2) {
@@ -96377,9 +96395,10 @@ var require_tools = __commonJS({
           const silent = !output && !r.hasReturn && !r.logs?.length;
           const discoveryOnly = !toolErrors.length && (calls.length > 0 && calls.every((c) => ["tool_search", "tool_describe", "tool_profiles", "which_analyses_exist"].includes(c.tool) || c.tool === "semantic_index" && !c.args?.repo && !c.args?.service && !c.args?.revisionKey && !c.args?.repos && !c.args?.job) || calls.length === 0 && recentResults.some((c) => c.tool === "tools.list"));
           const largePrintedOutput = Buffer.byteLength(output + (r.logs || []).join("\n")) > (require_config().getTools().modelResultBytes || 12288);
-          const toolResults = silent || largePrintedOutput || r.error ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
-          const diagnostic = require_code_result().diagnostic(r.error, recentResults, toolResults);
-          const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + (provenance.evidenceCheck.status === "unbacked-references" ? " Execute the described source tool before making source-behavior claims." : "") : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : largePrintedOutput && toolResults.length ? "Printed output exceeds the model preview budget. toolResults are bounded host-call summaries with full-data reads, not the cell computation. Use their selected summaries and evidence links to answer if sufficient; otherwise read only missing details. Do not rerun completed tools or use code just to format a final answer." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. If their summaries answer the request, answer the user directly; otherwise read missing details or compute. Do not repeat discovery." : calls.length ? "If the returned/logged facts answer the request, give the final answer to the user now. Do not call code again merely to format it. Keep the source evidence links and completeness/proof limits." : void 0;
+          const toolResults = silent || largePrintedOutput || r.error || provenance.evidenceCheck ? recentResults.map((c) => require_code_result().receipt(c.tool, c.value)) : [];
+          const diagnostic = require_code_result().diagnostic(r.error, recentResults, toolResults) || (provenance.evidenceCheck ? require_code_result().recovery(recentResults, toolResults) : void 0);
+          if (diagnostic && provenance.evidenceCheck) provenance.evidenceCheck = { ...provenance.evidenceCheck, retry: diagnostic.retry, meaning: diagnostic.message };
+          const guidance = provenance.evidenceCheck ? provenance.evidenceCheck.meaning + (provenance.evidenceCheck.status === "unbacked-references" && !diagnostic ? " Execute the described source tool before making source-behavior claims." : "") : toolErrors.length ? "Internal tool calls failed or reported an error. Inspect toolErrors; code ok only means the cell completed, not that its tools succeeded." : r.error ? "Cell failed. Inspect error/diagnostic and retained calls before retrying; completed tools are not rolled back." : discoveryOnly ? "This cell returned discovery metadata only, not a map, trace or source-data result. For a source-behavior question execute the described tool with the actual selectors before answering." : !calls.length && (r.hasReturn || output || r.logs?.length) ? "Only code inputs were used; this cell did not retrieve retained/live source evidence. For a question about unseen source/data, call the corresponding dt tool first." : largePrintedOutput && toolResults.length ? "Printed output exceeds the model preview budget. toolResults are bounded host-call summaries with full-data reads, not the cell computation. Use their selected summaries and evidence links to answer if sufficient; otherwise read only missing details. Do not rerun completed tools or use code just to format a final answer." : silent ? toolErrors.length ? "Internal tool calls failed; inspect toolErrors and correct the inputs. Return or text the result." : "No text(...) output or return value; console output is in logs. toolResults are host-call receipts, not a computed answer. If their summaries answer the request, answer the user directly; otherwise read missing details or compute. Do not repeat discovery." : calls.length ? "If the returned/logged facts answer the request, give the final answer to the user now. Do not call code again merely to format it. Keep the source evidence links and completeness/proof limits." : void 0;
           const shown = { code: a.code, title: a.title || "", output, returned: r.hasReturn ? r.returned : void 0, error: r.error, logs: r.logs, calls, views, ms, toolResults, toolErrors, guidance };
           return {
             ok: !r.error,
@@ -97038,6 +97057,7 @@ var require_tools = __commonJS({
       return require_tool_profiles().select(visible, profile).map((t) => ({
         name: t.name,
         description: (t.name === "code" ? codeInterface : "") + t.description,
+        ...metadata && t.codeHint ? { codeUsage: t.codeHint } : {},
         ...metadata ? { group: t.group, origin: t.origin, execution: { protocol: "dt.tool/v1", transport: require_adapter_port().route(t.name) ? "http" : "in-process", ...t.adapterSchema ? { resultSchema: t.adapterSchema } : {} } } : {},
         inputSchema: toolInputSchema(t)
       }));

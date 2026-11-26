@@ -1,7 +1,7 @@
 {
   "protocol": "dt.repo-source/v1",
   "repo": "dev-tool",
-  "sourceDigest": "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b",
+  "sourceDigest": "a94956fd5ddb4adf7c8487a653eabab1bc63ac9c99754b7834499afd688f5312",
   "machines": [
     {
       "id": "IO.atomic-file",
@@ -1475,7 +1475,7 @@
       "consumers": [
         {
           "file": "lib/tools.js",
-          "line": 1052,
+          "line": 1053,
           "snippet": "const activation=require('./state-machine').create(require('./lifecycles').registry,prior?'active':'missing');"
         }
       ],

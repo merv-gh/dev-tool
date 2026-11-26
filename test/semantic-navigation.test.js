@@ -192,3 +192,17 @@ test('all question results preserve their protocol, full proof and retained-evid
  assert.equal(delivered.modelContext.output.status,'all','all retained evidence is delivered');
  assert.equal(delivered.modelContext.output.source,'partial','source is separately bounded');
 });
+
+test('wrong semantic projections recover completed facts instead of inviting a second source query',async()=>{
+ let queries=0;S.query=async()=>{queries++;return {...raw(),request:{arguments:{from:{name:'charge'}}}};};
+ for(const projection of ["{traceView:'unknown',argumentExpression:'discount'}","{...r.summary,argumentExpression:'discount'}"]){
+  const before=queries,r=await T.call('code',{code:"const r=await tools.where_value_flows({analysis:'pin',entry:'charge',parameter:'discount',sink:'store',argument:2});return "+projection+';'});
+  assert.equal(r.ok,true);assert.ok(r.evidenceCheck);
+  assert.equal(r.diagnostic.availableResult.summary.argumentExpression,'net');
+  assert.equal(r.toolResults[0].result.summary.argumentExpression,'net');
+  assert.match(r.guidance,/Do not rerun/);assert.doesNotMatch(r.guidance,/Execute the described source tool/);
+  const recovered=await T.call('code',r.evidenceCheck.retry.arguments);
+  assert.equal(recovered.returned.argumentExpression,'net');
+  assert.equal(queries,before+1);
+ }
+});
