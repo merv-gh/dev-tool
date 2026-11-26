@@ -122,7 +122,7 @@ test('semantic discovery profile exposes question-shaped contracts',async()=>{
 test('analysis discovery filters exact retained identities without initiating indexing',async()=>{
  let request;S.index=async a=>{request=a;return {total:2,analyses:[{id:'wanted',workspace:'branch',repo:'P/service',sha:'abc'},{id:'other',workspace:'branch',repo:'P/service',sha:'def'}]};};
  const r=await T.call('which_analyses_exist',{workspace:'branch',sha:'abc'});
- assert.deepEqual(request,{env:'dev',versions:false});
+ assert.deepEqual(request,{env:'dev',versions:true});
  assert.deepEqual(r.analyses.map(x=>x.id),['wanted']);assert.equal(r.total,1);assert.equal(r.sourceTotal,2);
  const full=require('../lib/results').load(r.analysisView.split('/').pop()).data;
  assert.deepEqual(full.analyses.map(x=>x.id),['wanted']);
@@ -234,4 +234,15 @@ test('mismatched identity discovery shows authorized alternatives without preten
  assert.equal(r.next.arguments.sha,undefined);assert.equal(r.next.arguments.repo,'DEMO/service');
  assert.match(r.guidance,/do not repeat the unchanged/);
  assert.equal(r.mapView,null);assert.equal(r.traceView,null);
+});
+
+test('exact revision discovery includes retained older generations unless current-only was explicit',async()=>{
+ const latest={id:'new',repo:'DEMO/service',sha:'new-sha'},older={id:'old',repo:'DEMO/service',sha:'old-sha'};
+ S.index=async a=>({analyses:a.versions?[latest,older]:[latest],total:a.versions?2:1});
+ const pinned=await T.call('which_analyses_exist',{repo:'DEMO/service',sha:'old-sha'});
+ assert.deepEqual(pinned.analyses.map(x=>x.id),['old']);assert.equal(pinned.versions,true);
+ const currentOnly=await T.call('which_analyses_exist',{repo:'DEMO/service',sha:'old-sha',versions:false});
+ assert.equal(currentOnly.total,0);assert.equal(currentOnly.versions,false);
+ const ordinary=await T.call('which_analyses_exist',{});
+ assert.deepEqual(ordinary.analyses.map(x=>x.id),['new']);assert.equal(ordinary.versions,false);
 });

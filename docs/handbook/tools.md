@@ -17414,7 +17414,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "versions": {
       "type": "boolean",
-      "default": false
+      "description": "Include replaced retained generations; defaults true with an exact sha filter, otherwise false"
     },
     "workspace": {
       "type": "string",

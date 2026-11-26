@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "a378b7fd4d482e244ceaff86094b27cecdfd50eca08e087c0ac47cd5ee311faa",
+      sourceDigest: "fbd11d384c352e3d95dd13b3461fa7cf29dc66516cbb637d7685cf72779566a3",
       machines: [
         {
           id: "IO.atomic-file",
@@ -73694,16 +73694,16 @@ var require_semantic_navigation = __commonJS({
         return a.all ? { ...retained, ...selected, proof: retained.proof, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
       }
       return [
-        { name: "which_analyses_exist", description: "List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.", input: { env, versions: { type: "boolean", default: false }, workspace: text("Exact workspace id; filter retained records only"), repo: text("Exact repository identity; filter retained records only"), sha: text("Exact source revision; filter retained records only") }, run: async (a) => {
-          const listed = await S().index({ env: a.env, versions: a.versions });
+        { name: "which_analyses_exist", description: "List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.", input: { env, versions: { type: "boolean", description: "Include replaced retained generations; defaults true with an exact sha filter, otherwise false" }, workspace: text("Exact workspace id; filter retained records only"), repo: text("Exact repository identity; filter retained records only"), sha: text("Exact source revision; filter retained records only") }, run: async (a) => {
+          const versions = a.versions ?? a.sha !== void 0, listed = await S().index({ env: a.env, versions });
           const filters = Object.fromEntries(["workspace", "repo", "sha"].filter((k) => a[k] !== void 0).map((k) => [k, a[k]]));
           const records = (listed.analyses || []).filter((x) => Object.entries(filters).every(([k, v]) => x[k] === v));
-          const raw = present({ ...listed, analyses: records, total: records.length, ...Object.keys(filters).length ? { filters, sourceTotal: listed.total ?? listed.analyses?.length } : {} }, { title: "Retained code analyses" });
+          const raw = present({ ...listed, analyses: records, total: records.length, versions, ...Object.keys(filters).length ? { filters, sourceTotal: listed.total ?? listed.analyses?.length } : {} }, { title: "Retained code analyses" });
           const common = { evidenceType: "analysis-list", analysisView: raw.view, mapView: null, traceView: null, ...raw, meaning: "This view lists analyses; it is not a map or trace. Use what_happens_from for mapView and where_value_flows for traceView." };
           common.next = { insideCodeCall: "tools.tool_describe", arguments: { name: "what_happens_from" }, code: 'return await tools.tool_describe({name:"what_happens_from"});' };
           common.guidance = "Read analyses[] (not value[]). Analyses have been listed. Do not repeat this listing. Choose the requested analyses[].id and inspect the next schema, then query it using analysis:id.";
           if (!records.length) {
-            common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions } };
+            common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions } };
             common.guidance = Object.keys(filters).length ? "No retained analysis matches these exact filters. Inspect the unfiltered retained list; do not invent an id or parse a new revision without an indexing request." : "No retained analyses are available. Report the missing evidence and inspect semantic configuration/indexing capabilities; do not invent a map or trace.";
           }
           if (!records.length && Object.keys(filters).length) {
@@ -73711,7 +73711,7 @@ var require_semantic_navigation = __commonJS({
             if (mismatches.length) {
               const { field, peers } = mismatches[0];
               common.filterMismatch = { field, requested: filters[field], candidates: peers.slice(0, 10).map((x) => Object.fromEntries(["id", "repo", "sha", "workspace", "language"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))), candidatesTruncated: peers.length > 10, meaning: "Other retained identities matching the remaining filters, NOT matches for the requested revision. Verify against the user request before selecting an id." };
-              common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions: a.versions, ...Object.fromEntries(Object.entries(filters).filter(([k]) => k !== field)) } };
+              common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions, ...Object.fromEntries(Object.entries(filters).filter(([k]) => k !== field)) } };
               common.guidance = "No retained analysis matches these exact filters. Exact identity filter mismatch. Inspect filterMismatch candidates and copy the actual requested identity verbatim; do not repeat the unchanged failed filters. Candidates are metadata, not a map/trace and not proof of the requested revision.";
             }
           }
@@ -84051,7 +84051,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "a378b7fd4d482e244ceaff86094b27cecdfd50eca08e087c0ac47cd5ee311faa";
+      if (true) return "fbd11d384c352e3d95dd13b3461fa7cf29dc66516cbb637d7685cf72779566a3";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
