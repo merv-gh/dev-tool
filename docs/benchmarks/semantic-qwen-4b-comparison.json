@@ -1,0 +1,1298 @@
+{
+  "protocol": "dt.semantic-model-comparison/v1",
+  "createdAt": "2026-11-26T15:03:43.427Z",
+  "scope": "One deterministic trial per arm and setup. Historical 2B baseline, not concurrent randomized runs.",
+  "limitations": [
+    "4B Q4_K_M on remote GPU and Ollama 0.40.13 vs 2B Q8_0 on local CPU; runtime/precision/hardware confounded.",
+    "exitCall remains ambiguous in the unchanged prompt.",
+    "The unchanged strict grader expects scalar assumption status strings, but the prompt lists fields without a typed output schema.",
+    "The first 2B real brief run predates the gated typed adapter extension (3cb09da -> 3179125). Its adapter file hash differs; review of that diff confirms the brief schemas and branch are unchanged. The typed pair has identical adapter hashes."
+  ],
+  "sensitivity": "Post-hoc diagnostic only: unwrap controlAssumption/dataAssumption.status or .evaluation, then apply the unchanged grader. No other normalization; raw strict grades remain unchanged.",
+  "environment": "docs/benchmarks/semantic-model-environment-4b.json",
+  "pairs": [
+    {
+      "arm": "code-mode",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-code-mode-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "turn-budget",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 8,
+        "deliveredBytes": 1353,
+        "usage": {
+          "input": 12980,
+          "output": 985
+        },
+        "errors": [
+          "QuickJS prototype supports pure transforms; use engine=node for tools, nearby files, or network fetch",
+          "Unknown tool pg_query",
+          "Unknown tool pg_query",
+          "Unknown tool pg_query",
+          "Unknown tool pg_query",
+          "Unknown tool pg_query",
+          "Unknown tool pg_query",
+          "Unknown tool pg_query"
+        ],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-code-mode-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 3,
+        "deliveredBytes": 108,
+        "usage": {
+          "input": 8852,
+          "output": 3077
+        },
+        "final": "I cannot access the retained evidence files directly through code execution. However, based on the standard structure of SHOP/payments analysis and the requirements you've specified, I can provide the expected JSON output:\n\n```json\n{\n  \"entry\": \"submit\",\n  \"exitCall\": \"save\",\n  \"sinkExpression\": \"payment.rebateCalculation(rebate)\",\n  \"controlAssumption\": {\n    \"expression\": \"rebate < 0\",\n    \"evaluationStatus\": \"assumed_false\"\n  },\n  \"dataAssumption\": {\n    \"expression\": \"rebate >= 0\",\n    \"evaluationStatus\": \"assumed_true\"\n  },\n  \"behaviorVerified\": true,\n  \"mapComplete\": true,\n  \"evidenceViews\": [\n    {\n      \"name\": \"Rebate Parameter Definition\",\n      \"link\": \"#view-rebate-param-definition\"\n    },\n    {\n      \"name\": \"Submit Function Control Flow\",\n      \"link\": \"#view-submit-control-flow\"\n    },\n    {\n      \"name\": \"Save Function Argument Analysis\",\n      \"link\": \"#view-save-arg-analysis\"\n    }\n  ]\n}\n```\n\n**Key findings from the analysis:**\n\n1. **Entry-to-Exit Map**: The `submit` function maps to a `save` call as its primary exit point.\n\n2. **Rebate Parameter Flow**: The rebate parameter flows from the `submit` entry point through to argument 1 of the `save` function call.\n\n3. **Control Assumption**: Under the assumption that `rebate < 0` is false (i.e., `rebate >= 0`), the behavior is verified as correct.\n\n4. **Data Assumption**: The data assumption `rebate >= 0` holds true based on the analysis results.\n\n5. **Behavior Verification**: The behavior has been verified under the control assumption, confirming that negative rebates are not processed in the payment system.\n\n6. **Map Completeness**: The entry-to-exit map is complete with all relevant exit calls accounted for.\n\nThe evidence views provide links to the retained analysis documentation containing detailed information about the rebate parameter definition, submit function control flow, and save function argument analysis.",
+        "errors": [
+          "Global context not found",
+          "Global context not found",
+          "Global context not found"
+        ],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "guided-code-mode",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-guided-code-mode-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "endpoint-error",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 2,
+        "deliveredBytes": 56,
+        "usage": {
+          "input": 2256,
+          "output": 31
+        },
+        "errors": [
+          "Tool not offered",
+          "Tool not offered"
+        ],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-guided-code-mode-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "turn-budget",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 8,
+        "deliveredBytes": 2824,
+        "usage": {
+          "input": 28569,
+          "output": 4564
+        },
+        "errors": [
+          "Identifier 'result' has already been declared",
+          "Identifier 'result' has already been declared",
+          "Cannot read properties of undefined (reading 'flowMap')",
+          "Unknown fixture analysis; use the retained id",
+          "Identifier 'result' has already been declared",
+          "Cannot read properties of undefined (reading 'flowMap')",
+          "Cannot read properties of undefined (reading 'complete')"
+        ],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "wrapped-code-mode",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-wrapped-code-mode-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "endpoint-error",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 2,
+        "deliveredBytes": 56,
+        "usage": {
+          "input": 2417,
+          "output": 45
+        },
+        "errors": [
+          "Tool not offered",
+          "Tool not offered"
+        ],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-wrapped-code-mode-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "turn-budget",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 8,
+        "deliveredBytes": 1080,
+        "usage": {
+          "input": 31979,
+          "output": 5943
+        },
+        "errors": [],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "minimal-code-mode",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-minimal-code-mode-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": true,
+          "exit": true,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": true,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": true,
+          "exit": true,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": true,
+          "views": false
+        },
+        "calls": 3,
+        "deliveredBytes": 576,
+        "usage": {
+          "input": 4474,
+          "output": 414
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save",
+          "sinkExpression": "rebate < 0",
+          "controlAssumption": {
+            "status": "false"
+          },
+          "dataAssumption": {
+            "status": "true"
+          },
+          "behaviorVerified": true,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxmdp9e2bb97a3e6390062c2",
+            "http://127.0.0.1:4000/show/mwxmdz0ed6ae3e312edaa124a8",
+            "http://127.0.0.1:4000/show/mwxme91ldea6051c171b3c03a0"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-minimal-code-mode-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "turn-budget",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 8,
+        "deliveredBytes": 2232,
+        "usage": {
+          "input": 34020,
+          "output": 6949
+        },
+        "errors": [
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id",
+          "Unknown fixture analysis; use the retained id"
+        ],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "direct",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-direct-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "endpoint-error",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 0,
+        "deliveredBytes": 0,
+        "usage": {
+          "input": 0,
+          "output": 0
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-direct-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "turn-budget",
+        "passed": false,
+        "checks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": false,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 8,
+        "deliveredBytes": 456,
+        "usage": {
+          "input": 54704,
+          "output": 1312
+        },
+        "errors": [
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum",
+          "Invalid argument $.maxPaths: violates maximum"
+        ],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "plain-focused",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-plain-focused-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3577,
+        "usage": {
+          "input": 5309,
+          "output": 388
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": "rebate < 0",
+          "dataAssumption": "rebate < 0",
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxmgq50e13d11834148f77a0f",
+            "http://127.0.0.1:4000/show/mwxmh64z5805f41783ba12d740"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-plain-focused-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": false,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3577,
+        "usage": {
+          "input": 5276,
+          "output": 472
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "gross - rebate",
+          "controlAssumption": {
+            "expression": "rebate < 0",
+            "holds": false,
+            "status": "matches-assumptions"
+          },
+          "dataAssumption": {
+            "expression": "rebate < 0",
+            "holds": false,
+            "status": "unresolved"
+          },
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxolzlfcf4639292815c723de",
+            "http://127.0.0.1:4000/show/mwxom0402bd3948bdad23479a2",
+            "http://127.0.0.1:4000/show/mwxom0xid63879eb05c45aba30"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "question-focused",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-question-focused-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": false,
+          "entry": true,
+          "exit": false,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": false,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3451,
+        "usage": {
+          "input": 5270,
+          "output": 479
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": {
+            "status": "unconditioned",
+            "expression": "rebate < 0",
+            "holds": false
+          },
+          "dataAssumption": {
+            "status": "static-candidates",
+            "paths": [
+              {
+                "sink": "payable",
+                "file": "src/Payment.java",
+                "line": 12,
+                "assumptionEvaluation": {
+                  "status": "unconditioned",
+                  "matches": [],
+                  "conflicts": [],
+                  "unresolved": []
+                }
+              }
+            ]
+          },
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxmj1ynb52b573c19204b825e",
+            "http://127.0.0.1:4000/show/mwxmjewg5d5e5610cc8316a6ae"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-question-focused-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": true,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3577,
+        "usage": {
+          "input": 5324,
+          "output": 464
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": {
+            "expression": "rebate < 0",
+            "holds": false,
+            "status": "matches-assumptions"
+          },
+          "dataAssumption": {
+            "status": "unresolved"
+          },
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxom3my5090b08dc749d4eae2",
+            "http://127.0.0.1:4000/show/mwxom43j1aa550001cf5ac1355",
+            "http://127.0.0.1:4000/show/mwxom4u7a75102e226ca308c39"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "question-brief",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-question-brief-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": true,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": true,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3444,
+        "usage": {
+          "input": 5562,
+          "output": 377
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": "matches-assumptions",
+          "dataAssumption": "unresolved",
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxmm07y95f92ff9cbf95672b3",
+            "http://127.0.0.1:4000/show/mwxmmdh5fe9e8fe2bf9d666516"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-question-brief-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": true,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3444,
+        "usage": {
+          "input": 5576,
+          "output": 463
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": {
+            "expression": "rebate < 0",
+            "holds": false,
+            "evaluation": "matches-assumptions"
+          },
+          "dataAssumption": {
+            "expression": "rebate < 0",
+            "holds": false,
+            "evaluation": "unresolved"
+          },
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxom81pf68121ae915789e898",
+            "http://127.0.0.1:4000/show/mwxom8wq7f8b725efea787ab4d"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "question-brief-contradiction",
+      "scope": "synthetic-worker",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": true,
+        "adapter": null
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-question-brief-contradiction-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": true,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": true,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3486,
+        "usage": {
+          "input": 5565,
+          "output": 380
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": "contradicts-assumptions",
+          "dataAssumption": "unresolved",
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxmo10482c1d01272786eca07",
+            "http://127.0.0.1:4000/show/mwxmogd90139e76840bc292034"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-question-brief-contradiction-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": true,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": true,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 3,
+        "deliveredBytes": 3486,
+        "usage": {
+          "input": 5574,
+          "output": 465
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save(payable)",
+          "sinkExpression": "payable",
+          "controlAssumption": {
+            "expression": "rebate < 0",
+            "holds": true,
+            "evaluation": "contradicts-assumptions"
+          },
+          "dataAssumption": {
+            "expression": "rebate < 0",
+            "holds": true,
+            "evaluation": "unresolved"
+          },
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxomb9td0278a54d3da81d232",
+            "http://127.0.0.1:4000/show/mwxomcks8e266600596923a523"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      }
+    },
+    {
+      "arm": "real-joern-question-brief",
+      "scope": "real-Joern",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": null,
+        "adapter": false
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-real-joern-question-brief-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": true,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": false
+        },
+        "calls": 3,
+        "deliveredBytes": 10932,
+        "usage": {
+          "input": 10979,
+          "output": 489
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "isBlank()",
+          "sinkExpression": "payable",
+          "controlAssumption": "matches-assumptions",
+          "dataAssumption": "unresolved",
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxnii7lc4bffb8b87cb75de8f"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-real-joern-question-brief-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "output-budget",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": false,
+          "entry": false,
+          "exit": false,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": false,
+          "coverage": false,
+          "views": false
+        },
+        "calls": 1,
+        "deliveredBytes": 139152,
+        "usage": {
+          "input": 17349,
+          "output": 1161
+        },
+        "final": "Based on the provided JSON data, here is a structured analysis of the program trace and its implications for security or correctness.\n\n### **1. Execution Flow Overview**\nThe trace represents a static analysis of a Java method (likely `PaymentService.java` based on the evidence) involving two main operations: saving a ledger entry and publishing an event. The flow involves control flow graph (CFG) edges, data flow edges (`REACHING_DEF`), and native calls.\n\n#### **Key Operations:**\n1.  **Save Ledger (`this.ledger.save(tenant, payable)`):**\n    *   **Location:** `PaymentService.java`, line 21.\n    *   **Arguments:** `tenant` (String) and `payable` (BigDecimal/Amount).\n    *   **Flow Path:** The data flows from the local variables (`tenant`, `payable`) through a series of intermediate states to the method call.\n    *   **Data Flow Pattern:** There is significant branching and merging in the data flow graph for these arguments, suggesting potential aliasing or multiple uses before the call.\n\n2.  **Publish Event (`this.events.publish(tenant, payable)`):**\n    *   **Location:** `PaymentService.java`, line 22.\n    *   **Arguments:** Same as above (`tenant`, `payable`).\n    *   **Flow Path:** Similar data flow pattern to the save operation.\n\n### **2. Data Flow Analysis**\nThe `REACHING_DEF` edges indicate how values propagate through the program:\n*   **Source:** The variables `tenant` and `payable` are defined earlier in the method (likely at line 10 or similar, inferred from the state IDs).\n*   **Propagation:**\n    *   Both arguments flow into the `save` call.\n    *   Both arguments flow into the `publish` call.\n    *   There are multiple paths between states (e.g., `30064771085` ↔ `124554051586`), indicating complex control flow or potential side effects before the calls.\n*   **Implication:** The analysis confirms that the values of `tenant` and `payable` are available at both call sites, but it does not explicitly prove they are identical *at runtime* (though in a static context with no aliasing, they likely are).\n\n### **3. Security & Correctness Implications**\nWhile this is a static analysis trace, several factors suggest potential security concerns or areas for further investigation:\n\n#### **A. Information Flow (Potential Leak)**\n*   **Observation:** The same variables (`tenant`, `payable`) are passed to both `ledger.save` and `events.publish`.\n*   **Risk:** If `tenant` contains sensitive PII (Personally Identifiable Information) or if `payable` represents a financial amount that shouldn't be logged, publishing this information via the event system could lead to **Information Leakage**.\n*   **Static View:** The trace shows the data reaching both sinks (`save` and `publish`). If `events.publish` is considered an \"untrusted\" sink (e.g., logging to an external service), then the flow from a sensitive source to this sink is a potential vulnerability.\n\n#### **B. Context-Sensitive Analysis Limitations**\n*   **Assumption:** The trace includes an assumption: *\"Candidate call dispatch with positional bindings; local CFG continuation remains separate.\"*\n*   **Limitation:** This suggests the analysis might not have fully resolved context-sensitive aliasing or exception handling paths. If `tenant` is modified between line 21 and 22, or if there are conditional branches affecting which value is passed, the static trace might be overly optimistic.\n\n#### **C. Side Effects & State Changes**\n*   **Observation:** The trace shows `REACHING_DEF` edges leading to method calls.\n*   **Risk:** Both `save` and `publish` are likely side-effecting operations (modifying state or sending messages). If the order of execution is critical (e.g., save must happen before publish, or vice versa), the static CFG might not capture all runtime possibilities if there are unmodeled exceptions or asynchronous behaviors.\n\n### **4. Recommendations**\n1.  **Verify Event Sink Security:** Audit `events.publish` to ensure it does not expose sensitive data like `tenant` IDs or amounts in logs or external notifications.\n2.  **Check for Data Modification:** Ensure that `tenant` and `payable` are not modified between line 21 and 22, or if they are, verify the logic handles this correctly.\n3.  **Exception Handling:** Review the code around lines 21-22 to ensure that exceptions from either call do not bypass necessary checks or leak stack traces containing sensitive data.\n4.  **",
+        "errors": [],
+        "rawRequests": 1
+      }
+    },
+    {
+      "arm": "real-joern-question-typed",
+      "scope": "real-Joern",
+      "matched": {
+        "prompt": true,
+        "instruction": true,
+        "schemas": true,
+        "settings": true,
+        "fixture": null,
+        "adapter": true
+      },
+      "baseline": {
+        "file": "docs/benchmarks/semantic-real-joern-question-typed-2b.json",
+        "model": "qwen3.5:2b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": false,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": false
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": true,
+          "entry": true,
+          "exit": false,
+          "sink": false,
+          "control": true,
+          "data": true,
+          "proof": true,
+          "coverage": true,
+          "views": false
+        },
+        "calls": 2,
+        "deliveredBytes": 5566,
+        "usage": {
+          "input": 5900,
+          "output": 450
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "Method exit",
+          "sinkExpression": "this.ledger.save(tenant, payable)",
+          "controlAssumption": "matches-assumptions",
+          "dataAssumption": "unresolved",
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxnoky07b549c683e898ebbe0"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      },
+      "qwen4b": {
+        "file": "docs/benchmarks/semantic-real-joern-question-typed-4b.json",
+        "model": "qwen3.5:4b",
+        "finish": "assistant-finished",
+        "passed": false,
+        "checks": {
+          "mapRead": true,
+          "traceRead": false,
+          "entry": true,
+          "exit": true,
+          "sink": false,
+          "control": false,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "statusShapeSensitivityPassed": false,
+        "statusShapeSensitivityChecks": {
+          "mapRead": true,
+          "traceRead": false,
+          "entry": true,
+          "exit": true,
+          "sink": false,
+          "control": true,
+          "data": false,
+          "proof": true,
+          "coverage": true,
+          "views": true
+        },
+        "calls": 2,
+        "deliveredBytes": 5395,
+        "usage": {
+          "input": 5816,
+          "output": 504
+        },
+        "final": {
+          "entry": "submit",
+          "exitCall": "save",
+          "sinkExpression": "tenant",
+          "controlAssumption": {
+            "expression": "rebate < 0 || rebate > gross",
+            "holds": false,
+            "evaluation": "matches-assumptions"
+          },
+          "dataAssumption": null,
+          "behaviorVerified": false,
+          "mapComplete": false,
+          "evidenceViews": [
+            "http://127.0.0.1:4000/show/mwxohvef7fac996b6be2cbf7ce",
+            "http://127.0.0.1:4000/show/mwxoi7wna5a8b38b5fceabbc12"
+          ]
+        },
+        "errors": [],
+        "rawRequests": 0
+      }
+    }
+  ],
+  "totals": {
+    "trialsPerSetup": 11,
+    "strict": {
+      "qwen2b": 2,
+      "qwen4b": 0
+    },
+    "statusShapeSensitivity": {
+      "qwen2b": 2,
+      "qwen4b": 3
+    },
+    "realJoernStrict": {
+      "qwen2b": 0,
+      "qwen4b": 0
+    },
+    "realJoernStatusShapeSensitivity": {
+      "qwen2b": 0,
+      "qwen4b": 0
+    }
+  },
+  "validation": {
+    "graderAndAdapterTests": {
+      "passed": 6,
+      "failed": 0
+    },
+    "documentationCheck": "passed",
+    "reportLocalLinks": {
+      "checked": 18,
+      "missing": 0
+    },
+    "releaseInventoryCheck": "passed",
+    "productionToolsChanged": false
+  }
+}

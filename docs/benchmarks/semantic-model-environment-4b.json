@@ -1,0 +1,65 @@
+{
+  "protocol": "dt.semantic-model-environment/v2",
+  "capturedAt": "2026-11-26T14:58:56.681Z",
+  "host": "marchme@192.168.1.148",
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 3080 Ti",
+    "gpuMemoryMiB": 12288
+  },
+  "endpoint": "http://127.0.0.1:21435",
+  "transport": "SSH loopback forwarding to remote 127.0.0.1:11435",
+  "ollama": {
+    "version": "0.40.13"
+  },
+  "model": {
+    "name": "qwen3.5:4b",
+    "model": "qwen3.5:4b",
+    "modified_at": "2026-11-26T14:58:31.878281423Z",
+    "size": 3324173934,
+    "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+    "details": {
+      "parent_model": "model.gguf",
+      "format": "gguf",
+      "family": "qwen35",
+      "families": [
+        "qwen35"
+      ],
+      "parameter_size": "4.2B",
+      "quantization_level": "Q4_K_M",
+      "context_length": 262144,
+      "embedding_length": 2560,
+      "runner": "llamacpp"
+    },
+    "capabilities": [
+      "completion",
+      "vision",
+      "tools",
+      "thinking"
+    ]
+  },
+  "baselineLimit": "2B ran locally on CPU with Q8_0; 4B uses a different host, runtime and Q4_K_M. Do not attribute latency or quality differences solely to parameter count.",
+  "activeModels": {
+    "models": [
+      {
+        "name": "qwen3.5:4b",
+        "model": "qwen3.5:4b",
+        "size": 4109379828,
+        "digest": "d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04",
+        "details": {
+          "parent_model": "",
+          "format": "gguf",
+          "family": "qwen35",
+          "families": [
+            "qwen35"
+          ],
+          "parameter_size": "4.2B",
+          "quantization_level": "Q4_K_M"
+        },
+        "expires_at": "2026-11-26T15:04:20.204474278Z",
+        "size_vram": 4109379828,
+        "context_length": 32768,
+        "runner": "llamacpp"
+      }
+    ]
+  }
+}

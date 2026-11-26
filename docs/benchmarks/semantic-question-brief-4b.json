@@ -1,0 +1,2205 @@
+{
+  "protocol": "dt.semantic-code-model/v1",
+  "case": "combined",
+  "expectedAssumptionHolds": false,
+  "scope": "Real model, production code sandbox and retained projection/query/compact adapters. Synthetic worker records; no live Joern frontend or JVM query executed.",
+  "arm": "question-brief",
+  "model": "qwen3.5:4b",
+  "endpoint": "http://127.0.0.1:21435",
+  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "harnessDigest": "db6c6238e8348f0057f7ccbeae96cd9221f9c0043227cde641ba9670d60b07a8",
+  "fixtureDigest": "7537f4448e46f531fc40d65b31a7873a9bf2ad2c9b45d228250dbf6052eac83b",
+  "settings": {
+    "think": false,
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 32768,
+    "num_predict": 1024,
+    "maxTurns": 8,
+    "maxCalls": 16
+  },
+  "events": [
+    {
+      "tool": "which_analyses_exist",
+      "arguments": {
+        "all": false
+      },
+      "result": {
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "coverage": {
+              "complete": false,
+              "origin": "synthetic-model-fixture"
+            }
+          }
+        ],
+        "view": "http://127.0.0.1:4000/show/mwxom7j801664d5b7272b094c7"
+      }
+    },
+    {
+      "tool": "what_happens_from",
+      "arguments": {
+        "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "entry": "submit",
+        "all": false
+      },
+      "result": {
+        "output": {
+          "status": "part",
+          "scope": "selected-evidence",
+          "sourceTruncated": false
+        },
+        "proof": {
+          "status": "partial-static-map",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "view": "http://127.0.0.1:4000/show/mwxom81pf68121ae915789e898",
+        "complete": false,
+        "entries": [
+          {
+            "name": "submit",
+            "file": "src/Payment.java",
+            "line": 3
+          }
+        ],
+        "exits": [
+          {
+            "code": "save(payable)",
+            "kind": "external-or-unexpanded-call",
+            "file": "src/Payment.java",
+            "line": 12
+          }
+        ],
+        "changes": [
+          {
+            "target": "payable",
+            "expression": "gross - rebate"
+          }
+        ],
+        "assumptions": [
+          {
+            "id": "static",
+            "status": "unknown",
+            "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+          },
+          {
+            "id": "effects",
+            "status": "unknown",
+            "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+          },
+          {
+            "id": "scope",
+            "status": "bounded",
+            "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+          }
+        ],
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)"
+          }
+        ]
+      }
+    },
+    {
+      "tool": "where_value_flows",
+      "arguments": {
+        "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "entry": "submit",
+        "parameter": "rebate",
+        "sink": "save",
+        "argument": 1,
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "all": false
+      },
+      "result": {
+        "output": {
+          "status": "part",
+          "scope": "selected-evidence",
+          "sourceTruncated": false
+        },
+        "proof": {
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "view": "http://127.0.0.1:4000/show/mwxom8wq7f8b725efea787ab4d",
+        "declaredAssumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sinks": [
+          {
+            "side": "current",
+            "code": "payable",
+            "file": "src/Payment.java",
+            "line": 12
+          }
+        ],
+        "assumptionChecks": {
+          "data": [
+            {
+              "side": "current",
+              "evaluation": "unresolved",
+              "unresolved": [
+                {
+                  "expression": "rebate < 0",
+                  "holds": false
+                }
+              ],
+              "conflicts": []
+            }
+          ],
+          "control": [
+            {
+              "side": "current",
+              "evaluation": "matches-assumptions",
+              "conditions": [
+                {
+                  "expression": "rebate < 0",
+                  "polarity": "false"
+                }
+              ],
+              "unresolved": [],
+              "conflicts": []
+            }
+          ]
+        },
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "context-projection-missing",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance",
+            "side": "current"
+          }
+        ]
+      }
+    }
+  ],
+  "semanticCalls": [
+    {
+      "arguments": {
+        "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "operation": "flowmap",
+        "from": {
+          "name": "submit"
+        },
+        "all": true,
+        "format": "full",
+        "max_output_bytes": 16384,
+        "env": "dev",
+        "waitMs": 0,
+        "mode": "reachability",
+        "limit": 30,
+        "budgetMs": 5000,
+        "maxMethods": 20,
+        "maxStates": 180,
+        "maxHops": 8,
+        "maxPaths": 8,
+        "includeBypasses": false
+      },
+      "result": {
+        "protocol": "dt.semantic/v1",
+        "operation": "flowmap",
+        "mode": "dataflow",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "results": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)"
+          }
+        ],
+        "ambiguity": [],
+        "coverage": [
+          {
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "meta": {
+              "type": "meta",
+              "protocol": "dt.semantic.projection/v1"
+            },
+            "summary": {
+              "type": "summary",
+              "truncated": false,
+              "gaps": []
+            }
+          }
+        ],
+        "proof": {
+          "kind": "entry-exit-state-map",
+          "status": "partial-static-map",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "dependencies": [],
+        "overlayId": "b73bd0955924024ebac4f380333e2e2169d12bb5726a8e095a49d8046f1ba016",
+        "total": 5,
+        "nextCursor": null,
+        "counts": {
+          "entries": 1,
+          "methods": 1,
+          "states": 5,
+          "transitions": 4,
+          "decisions": 1,
+          "changes": 1,
+          "exits": 2
+        },
+        "mapRequest": {
+          "env": "dev",
+          "from": {
+            "name": "submit"
+          },
+          "maxMethods": 20,
+          "maxStates": 180,
+          "maxHops": 8,
+          "budgetMs": 5000
+        },
+        "flowMap": {
+          "protocol": "dt.flow-map/v1",
+          "entries": [
+            "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10"
+          ],
+          "methods": [
+            {
+              "id": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)",
+              "kind": "method",
+              "name": "submit",
+              "signature": "Payment.submit:long(long,long)",
+              "methodSignature": "long(long,long)",
+              "file": "src/Payment.java",
+              "projectionFile": "src/Payment.java",
+              "line": 3,
+              "endLine": 20,
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "10"
+              },
+              "parameters": [
+                {
+                  "index": 1,
+                  "name": "gross"
+                },
+                {
+                  "index": 2,
+                  "name": "rebate"
+                }
+              ],
+              "returnId": "13",
+              "owner": "Payment",
+              "coverage": "static-cpg",
+              "entry": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "exit": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13"
+            }
+          ],
+          "nodes": [
+            {
+              "type": "state",
+              "nodeId": "10",
+              "methodId": "10",
+              "kind": "entry",
+              "file": "src/Payment.java",
+              "line": 3,
+              "code": "submit(gross, rebate)",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "10"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "guard",
+              "methodId": "10",
+              "kind": "decision",
+              "file": "src/Payment.java",
+              "line": 5,
+              "code": "rebate < 0",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "guard"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "change",
+              "methodId": "10",
+              "kind": "change",
+              "file": "src/Payment.java",
+              "line": 8,
+              "code": "payable = gross - rebate",
+              "changes": [
+                {
+                  "target": "payable",
+                  "expression": "gross - rebate"
+                }
+              ],
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "change"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "20",
+              "methodId": "10",
+              "kind": "call",
+              "file": "src/Payment.java",
+              "line": 12,
+              "code": "save(payable)",
+              "arguments": [
+                {
+                  "index": 1,
+                  "expression": "payable"
+                }
+              ],
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "20"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)",
+              "callTargets": [],
+              "exit": "external-or-unexpanded-call",
+              "assumptions": [
+                "Call effects, result semantics and exceptions are not established by a retained callee body in this map."
+              ]
+            },
+            {
+              "type": "state",
+              "nodeId": "13",
+              "methodId": "10",
+              "kind": "exit",
+              "file": "src/Payment.java",
+              "line": 15,
+              "code": "Method exit",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "13"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            }
+          ],
+          "edges": [
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:a6c8adf3c45cb3000eae31b3"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:52dadf905eb426682df10d37"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:aa49d0bd2a31e2d9f6d5bd42"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:197d07cb86d5e84a806c1005"
+            }
+          ],
+          "ports": [],
+          "assumptions": [
+            {
+              "id": "static",
+              "status": "unknown",
+              "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+            },
+            {
+              "id": "effects",
+              "status": "unknown",
+              "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+            },
+            {
+              "id": "scope",
+              "status": "bounded",
+              "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+            }
+          ],
+          "complete": false,
+          "counts": {
+            "entries": 1,
+            "methods": 1,
+            "states": 5,
+            "transitions": 4,
+            "decisions": 1,
+            "changes": 1,
+            "exits": 2
+          }
+        }
+      }
+    },
+    {
+      "arguments": {
+        "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "from": {
+          "kind": "method",
+          "name": "submit",
+          "parameter": "rebate"
+        },
+        "to": {
+          "kind": "call",
+          "name": "save",
+          "argument": 1
+        },
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "all": true,
+        "format": "full",
+        "max_output_bytes": 16384,
+        "env": "dev",
+        "includeControl": true,
+        "includeContext": true,
+        "maxPaths": 8,
+        "maxHops": 60,
+        "budgetMs": 5000,
+        "waitMs": 0,
+        "operation": "trace"
+      },
+      "result": {
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "assumptions": [
+              {
+                "expression": "rebate < 0",
+                "holds": false
+              }
+            ],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 8,
+            "maxHops": 60,
+            "budgetMs": 5000
+          }
+        },
+        "assessment": {
+          "status": "single-revision",
+          "exhaustive": false,
+          "contextChanges": 0,
+          "layers": {
+            "data": "static-candidates",
+            "control": "static-candidates"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "current: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "Select a second retained analysis to compare the change.",
+          "0 reachable source-context change(s); current: 0 collected facts (unavailable). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sides": [
+          {
+            "side": "current",
+            "analysis": {
+              "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "sourceDigest": "synthetic",
+              "revisionKey": "fixture",
+              "language": "java"
+            },
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "data": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "data-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [],
+                  "proof": {
+                    "status": "static-dataflow"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "unresolved",
+                    "matches": [],
+                    "conflicts": [],
+                    "unresolved": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ]
+                  }
+                }
+              ],
+              "selectedValues": {
+                "from": [
+                  {
+                    "kind": "method",
+                    "name": "submit",
+                    "file": "src/Payment.java",
+                    "line": 3,
+                    "parameter": "rebate"
+                  }
+                ],
+                "to": [
+                  {
+                    "kind": "call",
+                    "name": "save",
+                    "file": "src/Payment.java",
+                    "line": 12,
+                    "argument": 1,
+                    "value": "payable"
+                  }
+                ],
+                "omitted": 0,
+                "meaning": "Source expressions at selected values; these are not observed runtime amounts"
+              },
+              "endpoints": [],
+              "proof": {
+                "kind": "dataflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "context": {
+              "protocol": "dt.path-context/v1",
+              "status": "unavailable",
+              "methods": [],
+              "facts": [],
+              "gaps": [
+                {
+                  "kind": "context-projection-missing",
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance"
+                }
+              ],
+              "truncated": false,
+              "receiver": null,
+              "complete": false,
+              "bindings": [],
+              "receiverConstraints": null,
+              "scope": "Bounded reachable source bodies, including callbacks and candidate dispatch. These facts do not prove invocation, dominance, loop counts, stream execution or path feasibility."
+            },
+            "control": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "control-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [
+                    {
+                      "expression": "rebate < 0",
+                      "polarity": "false",
+                      "status": "path_condition",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                    }
+                  ],
+                  "proof": {
+                    "status": "path_condition"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "matches-assumptions",
+                    "matches": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ],
+                    "conflicts": [],
+                    "unresolved": []
+                  }
+                }
+              ],
+              "endpoints": [],
+              "proof": {
+                "kind": "controlflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "gaps": [
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              },
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              }
+            ],
+            "ambiguity": [],
+            "truncated": false
+          }
+        ],
+        "changes": [],
+        "contextChanges": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "context-projection-missing",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance",
+            "side": "current"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        }
+      }
+    }
+  ],
+  "usage": {
+    "input": 5576,
+    "output": 463
+  },
+  "startedAt": "2026-11-26T15:02:54.362Z",
+  "examples": [
+    {
+      "name": "semantic_query",
+      "full": {
+        "protocol": "dt.semantic/v1",
+        "operation": "flowmap",
+        "mode": "dataflow",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "results": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)"
+          }
+        ],
+        "ambiguity": [],
+        "coverage": [
+          {
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "meta": {
+              "type": "meta",
+              "protocol": "dt.semantic.projection/v1"
+            },
+            "summary": {
+              "type": "summary",
+              "truncated": false,
+              "gaps": []
+            }
+          }
+        ],
+        "proof": {
+          "kind": "entry-exit-state-map",
+          "status": "partial-static-map",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "dependencies": [],
+        "overlayId": "b73bd0955924024ebac4f380333e2e2169d12bb5726a8e095a49d8046f1ba016",
+        "total": 5,
+        "nextCursor": null,
+        "counts": {
+          "entries": 1,
+          "methods": 1,
+          "states": 5,
+          "transitions": 4,
+          "decisions": 1,
+          "changes": 1,
+          "exits": 2
+        },
+        "mapRequest": {
+          "env": "dev",
+          "from": {
+            "name": "submit"
+          },
+          "maxMethods": 20,
+          "maxStates": 180,
+          "maxHops": 8,
+          "budgetMs": 5000
+        },
+        "flowMap": {
+          "protocol": "dt.flow-map/v1",
+          "entries": [
+            "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10"
+          ],
+          "methods": [
+            {
+              "id": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)",
+              "kind": "method",
+              "name": "submit",
+              "signature": "Payment.submit:long(long,long)",
+              "methodSignature": "long(long,long)",
+              "file": "src/Payment.java",
+              "projectionFile": "src/Payment.java",
+              "line": 3,
+              "endLine": 20,
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "10"
+              },
+              "parameters": [
+                {
+                  "index": 1,
+                  "name": "gross"
+                },
+                {
+                  "index": 2,
+                  "name": "rebate"
+                }
+              ],
+              "returnId": "13",
+              "owner": "Payment",
+              "coverage": "static-cpg",
+              "entry": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "exit": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13"
+            }
+          ],
+          "nodes": [
+            {
+              "type": "state",
+              "nodeId": "10",
+              "methodId": "10",
+              "kind": "entry",
+              "file": "src/Payment.java",
+              "line": 3,
+              "code": "submit(gross, rebate)",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "10"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "guard",
+              "methodId": "10",
+              "kind": "decision",
+              "file": "src/Payment.java",
+              "line": 5,
+              "code": "rebate < 0",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "guard"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "change",
+              "methodId": "10",
+              "kind": "change",
+              "file": "src/Payment.java",
+              "line": 8,
+              "code": "payable = gross - rebate",
+              "changes": [
+                {
+                  "target": "payable",
+                  "expression": "gross - rebate"
+                }
+              ],
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "change"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "20",
+              "methodId": "10",
+              "kind": "call",
+              "file": "src/Payment.java",
+              "line": 12,
+              "code": "save(payable)",
+              "arguments": [
+                {
+                  "index": 1,
+                  "expression": "payable"
+                }
+              ],
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "20"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)",
+              "callTargets": [],
+              "exit": "external-or-unexpanded-call",
+              "assumptions": [
+                "Call effects, result semantics and exceptions are not established by a retained callee body in this map."
+              ]
+            },
+            {
+              "type": "state",
+              "nodeId": "13",
+              "methodId": "10",
+              "kind": "exit",
+              "file": "src/Payment.java",
+              "line": 15,
+              "code": "Method exit",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "13"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            }
+          ],
+          "edges": [
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:a6c8adf3c45cb3000eae31b3"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:52dadf905eb426682df10d37"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:aa49d0bd2a31e2d9f6d5bd42"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:197d07cb86d5e84a806c1005"
+            }
+          ],
+          "ports": [],
+          "assumptions": [
+            {
+              "id": "static",
+              "status": "unknown",
+              "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+            },
+            {
+              "id": "effects",
+              "status": "unknown",
+              "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+            },
+            {
+              "id": "scope",
+              "status": "bounded",
+              "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+            }
+          ],
+          "complete": false,
+          "counts": {
+            "entries": 1,
+            "methods": 1,
+            "states": 5,
+            "transitions": 4,
+            "decisions": 1,
+            "changes": 1,
+            "exits": 2
+          }
+        },
+        "view": "http://127.0.0.1:4000/show/mwxom6psdca44e0af5826fef88"
+      },
+      "compact": {
+        "protocol": "dt.semantic/v1",
+        "operation": "flowmap",
+        "mode": "dataflow",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "revisionKey": "fixture",
+            "sourceDigest": "synthetic",
+            "language": "java"
+          }
+        ],
+        "results": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)"
+          }
+        ],
+        "ambiguity": [],
+        "coverage": [
+          {
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "truncated": false,
+            "gaps": []
+          }
+        ],
+        "proof": {
+          "kind": "entry-exit-state-map",
+          "status": "partial-static-map",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "dependencies": [],
+        "overlayId": "b73bd0955924024ebac4f380333e2e2169d12bb5726a8e095a49d8046f1ba016",
+        "total": 5,
+        "nextCursor": null,
+        "counts": {
+          "entries": 1,
+          "methods": 1,
+          "states": 5,
+          "transitions": 4,
+          "decisions": 1,
+          "changes": 1,
+          "exits": 2
+        },
+        "mapRequest": {
+          "env": "dev",
+          "from": {
+            "name": "submit"
+          },
+          "maxMethods": 20,
+          "maxStates": 180,
+          "maxHops": 8,
+          "budgetMs": 5000
+        },
+        "flowMap": {
+          "protocol": "dt.flow-map/v1",
+          "counts": {
+            "entries": 1,
+            "methods": 1,
+            "states": 5,
+            "transitions": 4,
+            "decisions": 1,
+            "changes": 1,
+            "exits": 2
+          },
+          "complete": false,
+          "assumptions": [
+            {
+              "id": "static",
+              "status": "unknown",
+              "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+            },
+            {
+              "id": "effects",
+              "status": "unknown",
+              "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+            },
+            {
+              "id": "scope",
+              "status": "bounded",
+              "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+            }
+          ],
+          "identity": "Local preview aliases; exact CPG/state identities and source locators are retained at view.",
+          "entries": [
+            "s0"
+          ],
+          "methods": [
+            {
+              "name": "submit",
+              "signature": "Payment.submit:long(long,long)",
+              "file": "src/Payment.java",
+              "line": 3,
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "id": "m0",
+              "entry": "s0",
+              "exit": "s4"
+            }
+          ],
+          "nodes": [
+            {
+              "kind": "entry",
+              "code": "submit(gross, rebate)",
+              "file": "src/Payment.java",
+              "line": 3,
+              "id": "s0",
+              "method": "m0"
+            },
+            {
+              "kind": "change",
+              "code": "payable = gross - rebate",
+              "file": "src/Payment.java",
+              "line": 8,
+              "changes": [
+                {
+                  "target": "payable",
+                  "expression": "gross - rebate"
+                }
+              ],
+              "id": "s2",
+              "method": "m0"
+            },
+            {
+              "kind": "decision",
+              "code": "rebate < 0",
+              "file": "src/Payment.java",
+              "line": 5,
+              "id": "s1",
+              "method": "m0"
+            },
+            {
+              "kind": "call",
+              "code": "save(payable)",
+              "file": "src/Payment.java",
+              "line": 12,
+              "arguments": [
+                {
+                  "index": 1,
+                  "expression": "payable"
+                }
+              ],
+              "exit": "external-or-unexpanded-call",
+              "assumptions": [
+                "Call effects, result semantics and exceptions are not established by a retained callee body in this map."
+              ],
+              "id": "s3",
+              "method": "m0"
+            },
+            {
+              "kind": "exit",
+              "code": "Method exit",
+              "file": "src/Payment.java",
+              "line": 15,
+              "id": "s4",
+              "method": "m0"
+            }
+          ],
+          "edges": [
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s0",
+              "to": "s1"
+            },
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s1",
+              "to": "s2"
+            },
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s2",
+              "to": "s3"
+            },
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s3",
+              "to": "s4"
+            }
+          ],
+          "ports": []
+        },
+        "view": "http://127.0.0.1:4000/show/mwxom6shdd9537e65b0e2837d2",
+        "format": "compact",
+        "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON."
+      },
+      "fullBytes": 9720,
+      "compactBytes": 3813
+    },
+    {
+      "name": "semantic_trace",
+      "full": {
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "assumptions": [
+              {
+                "expression": "rebate < 0",
+                "holds": false
+              }
+            ],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 8,
+            "maxHops": 60,
+            "budgetMs": 5000
+          }
+        },
+        "assessment": {
+          "status": "single-revision",
+          "exhaustive": false,
+          "contextChanges": 0,
+          "layers": {
+            "data": "static-candidates",
+            "control": "static-candidates"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "current: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "Select a second retained analysis to compare the change.",
+          "0 reachable source-context change(s); current: 0 collected facts (unavailable). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sides": [
+          {
+            "side": "current",
+            "analysis": {
+              "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "sourceDigest": "synthetic",
+              "revisionKey": "fixture",
+              "language": "java"
+            },
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "data": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "data-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [],
+                  "proof": {
+                    "status": "static-dataflow"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "unresolved",
+                    "matches": [],
+                    "conflicts": [],
+                    "unresolved": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ]
+                  }
+                }
+              ],
+              "selectedValues": {
+                "from": [
+                  {
+                    "kind": "method",
+                    "name": "submit",
+                    "file": "src/Payment.java",
+                    "line": 3,
+                    "parameter": "rebate"
+                  }
+                ],
+                "to": [
+                  {
+                    "kind": "call",
+                    "name": "save",
+                    "file": "src/Payment.java",
+                    "line": 12,
+                    "argument": 1,
+                    "value": "payable"
+                  }
+                ],
+                "omitted": 0,
+                "meaning": "Source expressions at selected values; these are not observed runtime amounts"
+              },
+              "endpoints": [],
+              "proof": {
+                "kind": "dataflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "context": {
+              "protocol": "dt.path-context/v1",
+              "status": "unavailable",
+              "methods": [],
+              "facts": [],
+              "gaps": [
+                {
+                  "kind": "context-projection-missing",
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance"
+                }
+              ],
+              "truncated": false,
+              "receiver": null,
+              "complete": false,
+              "bindings": [],
+              "receiverConstraints": null,
+              "scope": "Bounded reachable source bodies, including callbacks and candidate dispatch. These facts do not prove invocation, dominance, loop counts, stream execution or path feasibility."
+            },
+            "control": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "control-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [
+                    {
+                      "expression": "rebate < 0",
+                      "polarity": "false",
+                      "status": "path_condition",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                    }
+                  ],
+                  "proof": {
+                    "status": "path_condition"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "matches-assumptions",
+                    "matches": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ],
+                    "conflicts": [],
+                    "unresolved": []
+                  }
+                }
+              ],
+              "endpoints": [],
+              "proof": {
+                "kind": "controlflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "gaps": [
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              },
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              }
+            ],
+            "ambiguity": [],
+            "truncated": false
+          }
+        ],
+        "changes": [],
+        "contextChanges": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "context-projection-missing",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance",
+            "side": "current"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        },
+        "view": "http://127.0.0.1:4000/show/mwxom6wia87282c5cfc6596b2b"
+      },
+      "compact": {
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "revisionKey": "fixture",
+            "sourceDigest": "synthetic",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "assumptions": [
+              {
+                "expression": "rebate < 0",
+                "holds": false
+              }
+            ],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 8,
+            "maxHops": 60,
+            "budgetMs": 5000
+          }
+        },
+        "assessment": {
+          "status": "single-revision",
+          "exhaustive": false,
+          "contextChanges": 0,
+          "layers": {
+            "data": "static-candidates",
+            "control": "static-candidates"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "current: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "Select a second retained analysis to compare the change.",
+          "0 reachable source-context change(s); current: 0 collected facts (unavailable). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sides": [
+          {
+            "side": "current",
+            "truncated": false,
+            "context": {
+              "status": "unavailable",
+              "complete": false
+            },
+            "data": {
+              "status": "static-candidates",
+              "composed": 0
+            },
+            "control": {
+              "status": "static-candidates"
+            }
+          }
+        ],
+        "contextChanges": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        },
+        "view": "http://127.0.0.1:4000/show/mwxom7069622ea3982baa48bf6",
+        "results": [],
+        "total": 2,
+        "summary": [
+          {
+            "side": "current",
+            "dataPaths": 1,
+            "controlPaths": 1,
+            "dataStatus": "static-candidates",
+            "controlStatus": "static-candidates",
+            "contextStatus": "unavailable",
+            "contextFacts": 0,
+            "contextMethods": 0
+          }
+        ],
+        "format": "compact",
+        "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON.",
+        "omitted": {
+          "results": 2,
+          "gaps": 2
+        },
+        "previewTruncated": true
+      },
+      "fullBytes": 9552,
+      "compactBytes": 3462
+    }
+  ],
+  "candidateAdapters": true,
+  "schemas": [
+    {
+      "description": "List current retained code analyses and exact ids. Read-only; never starts a parse.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Full retained evidence instead of selected facts; source coverage limits still apply."
+          }
+        },
+        "additionalProperties": false
+      },
+      "name": "which_analyses_exist"
+    },
+    {
+      "description": "Map a whole entry method: decisions, value changes, exit calls, assumptions and coverage. Static evidence, not runtime proof.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "analysis": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Retained analysis id"
+          },
+          "entry": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entry method name"
+          },
+          "all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Full retained evidence instead of selected facts; source coverage limits still apply."
+          }
+        },
+        "required": [
+          "analysis",
+          "entry"
+        ],
+        "additionalProperties": false
+      },
+      "name": "what_happens_from"
+    },
+    {
+      "description": "Trace an entry parameter to a sink call argument. Return data and control assumption evaluations separately; neither proves runtime behavior. Pass user-specified predicates in assumptions; omitted or [] means no declared assumptions. Read evaluation strings in assumptionChecks.data and assumptionChecks.control; declaredAssumptions contains inputs, not evaluation results.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "analysis": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Retained analysis id"
+          },
+          "entry": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entry method name"
+          },
+          "parameter": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Entry parameter name"
+          },
+          "sink": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Target call name"
+          },
+          "argument": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64,
+            "default": 1
+          },
+          "assumptions": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "properties": {
+                "expression": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Exact guard expression"
+                },
+                "holds": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "expression",
+                "holds"
+              ],
+              "additionalProperties": false
+            },
+            "description": "User-specified predicate assumptions to evaluate. Omitted or [] means none; never infer false automatically."
+          },
+          "all": {
+            "type": "boolean",
+            "default": false,
+            "description": "Full retained evidence instead of selected facts; source coverage limits still apply."
+          }
+        },
+        "required": [
+          "analysis",
+          "entry",
+          "parameter",
+          "sink"
+        ],
+        "additionalProperties": false
+      },
+      "name": "where_value_flows"
+    }
+  ],
+  "schemaBytes": 2466,
+  "instructionDigest": "2782103d506adc66f53460ff85afd65b28ef7082e871d7345459e9eaa9be05bd",
+  "prompt": "For the retained SHOP/payments analysis, inspect the submit entry-to-exit map and trace its rebate parameter to argument 1 of save under the assumption that rebate < 0 is false. Return JSON {entry,exitCall,sinkExpression,controlAssumption,dataAssumption,behaviorVerified,mapComplete,evidenceViews}. Use exact assumption evaluation statuses from results. Include retained view links. Do not parse a new analysis.",
+  "finish": "assistant-finished",
+  "final": "```json\n{\n  \"entry\": \"submit\",\n  \"exitCall\": \"save(payable)\",\n  \"sinkExpression\": \"payable\",\n  \"controlAssumption\": {\n    \"expression\": \"rebate < 0\",\n    \"holds\": false,\n    \"evaluation\": \"matches-assumptions\"\n  },\n  \"dataAssumption\": {\n    \"expression\": \"rebate < 0\",\n    \"holds\": false,\n    \"evaluation\": \"unresolved\"\n  },\n  \"behaviorVerified\": false,\n  \"mapComplete\": false,\n  \"evidenceViews\": [\n    \"http://127.0.0.1:4000/show/mwxom81pf68121ae915789e898\",\n    \"http://127.0.0.1:4000/show/mwxom8wq7f8b725efea787ab4d\"\n  ]\n}\n```",
+  "parsed": {
+    "entry": "submit",
+    "exitCall": "save(payable)",
+    "sinkExpression": "payable",
+    "controlAssumption": {
+      "expression": "rebate < 0",
+      "holds": false,
+      "evaluation": "matches-assumptions"
+    },
+    "dataAssumption": {
+      "expression": "rebate < 0",
+      "holds": false,
+      "evaluation": "unresolved"
+    },
+    "behaviorVerified": false,
+    "mapComplete": false,
+    "evidenceViews": [
+      "http://127.0.0.1:4000/show/mwxom81pf68121ae915789e898",
+      "http://127.0.0.1:4000/show/mwxom8wq7f8b725efea787ab4d"
+    ]
+  },
+  "checks": {
+    "mapRead": true,
+    "traceRead": true,
+    "entry": true,
+    "exit": true,
+    "sink": true,
+    "control": false,
+    "data": false,
+    "proof": true,
+    "coverage": true,
+    "views": true
+  },
+  "passed": false,
+  "transcript": [
+    {
+      "role": "system",
+      "content": "Use the offered tools to inspect retained semantic evidence. Discover tools/schemas when needed. Keep entry-to-exit maps separate from value flow and runtime proof. No writes, no network fetch from code. Return only JSON when asked."
+    },
+    {
+      "role": "user",
+      "content": "For the retained SHOP/payments analysis, inspect the submit entry-to-exit map and trace its rebate parameter to argument 1 of save under the assumption that rebate < 0 is false. Return JSON {entry,exitCall,sinkExpression,controlAssumption,dataAssumption,behaviorVerified,mapComplete,evidenceViews}. Use exact assumption evaluation statuses from results. Include retained view links. Do not parse a new analysis."
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_7zq81xxr",
+          "function": {
+            "index": 0,
+            "name": "which_analyses_exist",
+            "arguments": {
+              "all": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "which_analyses_exist",
+      "content": "{\"analyses\":[{\"id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"repo\":\"SHOP/payments\",\"sha\":\"1111111111111111111111111111111111111111\",\"coverage\":{\"complete\":false,\"origin\":\"synthetic-model-fixture\"}}],\"view\":\"http://127.0.0.1:4000/show/mwxom7j801664d5b7272b094c7\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_49k6bzfh",
+          "function": {
+            "index": 0,
+            "name": "what_happens_from",
+            "arguments": {
+              "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "entry": "submit",
+              "all": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "what_happens_from",
+      "content": "{\"output\":{\"status\":\"part\",\"scope\":\"selected-evidence\",\"sourceTruncated\":false},\"proof\":{\"status\":\"partial-static-map\",\"feasibility\":\"unknown\",\"runtime\":\"unknown\",\"behaviorVerified\":false},\"view\":\"http://127.0.0.1:4000/show/mwxom81pf68121ae915789e898\",\"complete\":false,\"entries\":[{\"name\":\"submit\",\"file\":\"src/Payment.java\",\"line\":3}],\"exits\":[{\"code\":\"save(payable)\",\"kind\":\"external-or-unexpanded-call\",\"file\":\"src/Payment.java\",\"line\":12}],\"changes\":[{\"target\":\"payable\",\"expression\":\"gross - rebate\"}],\"assumptions\":[{\"id\":\"static\",\"status\":\"unknown\",\"detail\":\"Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement.\"},{\"id\":\"effects\",\"status\":\"unknown\",\"detail\":\"External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled.\"},{\"id\":\"scope\",\"status\":\"bounded\",\"detail\":\"Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred.\"}],\"gaps\":[{\"kind\":\"unresolved-call\",\"analysisId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"repo\":\"SHOP/payments\",\"sha\":\"1111111111111111111111111111111111111111\",\"file\":\"src/Payment.java\",\"line\":12,\"name\":\"save\",\"methodFullName\":\"Ledger.save:void(long)\"}]}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_zpreaddf",
+          "function": {
+            "index": 0,
+            "name": "where_value_flows",
+            "arguments": {
+              "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "entry": "submit",
+              "parameter": "rebate",
+              "sink": "save",
+              "argument": 1,
+              "assumptions": [
+                {
+                  "expression": "rebate < 0",
+                  "holds": false
+                }
+              ],
+              "all": false
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "where_value_flows",
+      "content": "{\"output\":{\"status\":\"part\",\"scope\":\"selected-evidence\",\"sourceTruncated\":false},\"proof\":{\"status\":\"single-revision\",\"feasibility\":\"unknown\",\"runtime\":\"unknown\",\"behaviorVerified\":false},\"view\":\"http://127.0.0.1:4000/show/mwxom8wq7f8b725efea787ab4d\",\"declaredAssumptions\":[{\"expression\":\"rebate < 0\",\"holds\":false}],\"sinks\":[{\"side\":\"current\",\"code\":\"payable\",\"file\":\"src/Payment.java\",\"line\":12}],\"assumptionChecks\":{\"data\":[{\"side\":\"current\",\"evaluation\":\"unresolved\",\"unresolved\":[{\"expression\":\"rebate < 0\",\"holds\":false}],\"conflicts\":[]}],\"control\":[{\"side\":\"current\",\"evaluation\":\"matches-assumptions\",\"conditions\":[{\"expression\":\"rebate < 0\",\"polarity\":\"false\"}],\"unresolved\":[],\"conflicts\":[]}]},\"gaps\":[{\"kind\":\"unresolved-call\",\"analysisId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"repo\":\"SHOP/payments\",\"sha\":\"1111111111111111111111111111111111111111\",\"file\":\"src/Payment.java\",\"line\":12,\"name\":\"save\",\"methodFullName\":\"Ledger.save:void(long)\",\"side\":\"current\"},{\"kind\":\"unresolved-call\",\"analysisId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"repo\":\"SHOP/payments\",\"sha\":\"1111111111111111111111111111111111111111\",\"file\":\"src/Payment.java\",\"line\":12,\"name\":\"save\",\"methodFullName\":\"Ledger.save:void(long)\",\"side\":\"current\"},{\"kind\":\"context-projection-missing\",\"analysisId\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"detail\":\"This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance\",\"side\":\"current\"}]}"
+    },
+    {
+      "role": "assistant",
+      "content": "```json\n{\n  \"entry\": \"submit\",\n  \"exitCall\": \"save(payable)\",\n  \"sinkExpression\": \"payable\",\n  \"controlAssumption\": {\n    \"expression\": \"rebate < 0\",\n    \"holds\": false,\n    \"evaluation\": \"matches-assumptions\"\n  },\n  \"dataAssumption\": {\n    \"expression\": \"rebate < 0\",\n    \"holds\": false,\n    \"evaluation\": \"unresolved\"\n  },\n  \"behaviorVerified\": false,\n  \"mapComplete\": false,\n  \"evidenceViews\": [\n    \"http://127.0.0.1:4000/show/mwxom81pf68121ae915789e898\",\n    \"http://127.0.0.1:4000/show/mwxom8wq7f8b725efea787ab4d\"\n  ]\n}\n```"
+    }
+  ],
+  "completedAt": "2026-11-26T15:02:59.118Z",
+  "deliveredBytes": 3444
+}

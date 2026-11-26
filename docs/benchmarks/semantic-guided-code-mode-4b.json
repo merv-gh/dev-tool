@@ -1,0 +1,1829 @@
+{
+  "protocol": "dt.semantic-code-model/v1",
+  "case": "combined",
+  "expectedAssumptionHolds": false,
+  "scope": "Real model, production code sandbox and retained projection/query/compact adapters. Synthetic worker records; no live Joern frontend or JVM query executed.",
+  "arm": "guided-code",
+  "model": "qwen3.5:4b",
+  "endpoint": "http://127.0.0.1:21435",
+  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
+  "harnessDigest": "db6c6238e8348f0057f7ccbeae96cd9221f9c0043227cde641ba9670d60b07a8",
+  "fixtureDigest": "7537f4448e46f531fc40d65b31a7873a9bf2ad2c9b45d228250dbf6052eac83b",
+  "settings": {
+    "think": false,
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 32768,
+    "num_predict": 1024,
+    "maxTurns": 8,
+    "maxCalls": 16
+  },
+  "events": [
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Retrieve the submit entry-to-exit map for SHOP/payments analysis\nconst result = await tools.semantic_query({\n  analysis: \"SHOP/payments\",\n  operation: \"flowmap\",\n  from: { name: \"submit\" },\n  all: true\n});\n\n// Extract the relevant information\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+      },
+      "result": {
+        "ok": false,
+        "ms": 220,
+        "error": "Identifier 'result' has already been declared",
+        "output": "",
+        "calls": [],
+        "view": "http://127.0.0.1:4000/show/mwxoj30lcf4c2ccf38419b51cd"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Retrieve the submit entry-to-exit map for SHOP/payments analysis\nconst result = await tools.semantic_query({\n  analysis: \"SHOP/payments\",\n  operation: \"flowmap\",\n  from: { name: \"submit\" },\n  all: true\n});\n\n// Extract the relevant information\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+      },
+      "result": {
+        "ok": false,
+        "ms": 109,
+        "error": "Identifier 'result' has already been declared",
+        "output": "",
+        "calls": [],
+        "view": "http://127.0.0.1:4000/show/mwxoj6a74a1b824ce26cb1b7bc"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Use the existing result from the previous query\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+      },
+      "result": {
+        "ok": false,
+        "ms": 117,
+        "error": "Cannot read properties of undefined (reading 'flowMap')",
+        "output": "",
+        "calls": [],
+        "view": "http://127.0.0.1:4000/show/mwxoj9hyc8174c731c651f6362"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Trace the rebate parameter from submit to save argument 1\nconst traceResult = await tools.semantic_trace({\n  analysis: \"SHOP/payments\",\n  from: { kind: \"method\", name: \"submit\" },\n  to: { kind: \"call\", name: \"save\", argument: 1 },\n  assumptions: [{ expression: \"rebate < 0\", holds: false }],\n  all: true\n});\n\n// Extract the relevant information from the trace result\nconst flowMap = traceResult.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Trace rebate parameter from submit to save argument 1"
+      },
+      "result": {
+        "ok": false,
+        "ms": 120,
+        "error": "Unknown fixture analysis; use the retained id",
+        "output": "",
+        "calls": [
+          "semantic_trace (failed) 4ms"
+        ],
+        "view": "http://127.0.0.1:4000/show/mwxojd6dc23808375c211af714"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// List available semantic analyses to find the correct ID\nconst indexResult = await tools.semantic_index({});\n\n// Print the available analyses\ntext(\"Available Analyses:\", JSON.stringify(indexResult, null, 2));\n\n// Return the index result\nreturn indexResult;",
+        "engine": "node",
+        "title": "List available semantic analyses"
+      },
+      "result": {
+        "ok": true,
+        "ms": 114,
+        "output": "Available Analyses: {\n  \"protocol\": \"dt.semantic/v1\",\n  \"analyses\": [\n    {\n      \"id\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n      \"repo\": \"SHOP/payments\",\n      \"sha\": \"1111111111111111111111111111111111111111\",\n      \"revisionKey\": \"fixture\",\n      \"sourceDigest\": \"synthetic\",\n      \"language\": \"java\",\n      \"coverage\": {\n        \"complete\": false,\n        \"origin\": \"synthetic-model-fixture\"\n      }\n    }\n  ],\n  \"total\": 1,\n  \"view\": \"http://127.0.0.1:4000/show/mwxoje2f14ea7a36181e81b0d3\",\n  \"format\": \"compact\",\n  \"detail\": \"Full evidence is retained at view. Use format:\\\"full\\\" or narrow limit/maxPaths for original JSON.\"\n}",
+        "returned": {
+          "protocol": "dt.semantic/v1",
+          "analyses": [
+            {
+              "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "sourceDigest": "synthetic",
+              "language": "java",
+              "coverage": {
+                "complete": false,
+                "origin": "synthetic-model-fixture"
+              }
+            }
+          ],
+          "total": 1,
+          "view": "http://127.0.0.1:4000/show/mwxoje2f14ea7a36181e81b0d3",
+          "format": "compact",
+          "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON."
+        },
+        "calls": [
+          "semantic_index 6ms"
+        ],
+        "views": [
+          "http://127.0.0.1:4000/show/mwxoje2f14ea7a36181e81b0d3"
+        ],
+        "view": "http://127.0.0.1:4000/show/mwxoje2n1d372dd95b9f2f11ef"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Retrieve the submit entry-to-exit map for SHOP/payments analysis using the retained ID\nconst result = await tools.semantic_query({\n  analysis: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n  operation: \"flowmap\",\n  from: { name: \"submit\" },\n  all: true\n});\n\n// Extract the relevant information\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+      },
+      "result": {
+        "ok": false,
+        "ms": 118,
+        "error": "Identifier 'result' has already been declared",
+        "output": "",
+        "calls": [],
+        "view": "http://127.0.0.1:4000/show/mwxojhmsc7016b2bebea1c29bc"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Use the existing result from the previous query\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+      },
+      "result": {
+        "ok": false,
+        "ms": 119,
+        "error": "Cannot read properties of undefined (reading 'flowMap')",
+        "output": "",
+        "calls": [],
+        "view": "http://127.0.0.1:4000/show/mwxojkvr8e3b9f39b2c866d979"
+      }
+    },
+    {
+      "tool": "code",
+      "arguments": {
+        "code": "// Trace the rebate parameter from submit to save argument 1 using the retained ID\nconst traceResult = await tools.semantic_trace({\n  analysis: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n  from: { kind: \"method\", name: \"submit\" },\n  to: { kind: \"call\", name: \"save\", argument: 1 },\n  assumptions: [{ expression: \"rebate < 0\", holds: false }],\n  all: true\n});\n\n// Extract the relevant information from the trace result\nconst flowMap = traceResult.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+        "engine": "node",
+        "title": "Trace rebate parameter from submit to save argument 1"
+      },
+      "result": {
+        "ok": false,
+        "ms": 269,
+        "error": "Cannot read properties of undefined (reading 'complete')",
+        "output": "",
+        "calls": [
+          "semantic_trace 145ms"
+        ],
+        "views": [
+          "http://127.0.0.1:4000/show/mwxojos58c2b54ee80a9bf9e30"
+        ],
+        "view": "http://127.0.0.1:4000/show/mwxojose6391543448af019000"
+      }
+    }
+  ],
+  "semanticCalls": [
+    {
+      "arguments": {
+        "analysis": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "from": {
+          "kind": "method",
+          "name": "submit"
+        },
+        "to": {
+          "kind": "call",
+          "name": "save",
+          "argument": 1
+        },
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "all": true,
+        "format": "full",
+        "max_output_bytes": 16384,
+        "env": "dev",
+        "includeControl": true,
+        "includeContext": true,
+        "maxPaths": 8,
+        "maxHops": 60,
+        "budgetMs": 5000,
+        "waitMs": 0,
+        "operation": "trace"
+      },
+      "result": {
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "submit"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "assumptions": [
+              {
+                "expression": "rebate < 0",
+                "holds": false
+              }
+            ],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 8,
+            "maxHops": 60,
+            "budgetMs": 5000
+          }
+        },
+        "assessment": {
+          "status": "single-revision",
+          "exhaustive": false,
+          "contextChanges": 0,
+          "layers": {
+            "data": "static-candidates",
+            "control": "static-candidates"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "current: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "Select a second retained analysis to compare the change.",
+          "0 reachable source-context change(s); current: 0 collected facts (unavailable). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sides": [
+          {
+            "side": "current",
+            "analysis": {
+              "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "sourceDigest": "synthetic",
+              "revisionKey": "fixture",
+              "language": "java"
+            },
+            "from": {
+              "kind": "method",
+              "name": "submit"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "data": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "data-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [],
+                  "proof": {
+                    "status": "static-dataflow"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "unresolved",
+                    "matches": [],
+                    "conflicts": [],
+                    "unresolved": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ]
+                  }
+                }
+              ],
+              "selectedValues": {
+                "from": [
+                  {
+                    "kind": "method",
+                    "name": "submit",
+                    "file": "src/Payment.java",
+                    "line": 3
+                  }
+                ],
+                "to": [
+                  {
+                    "kind": "call",
+                    "name": "save",
+                    "file": "src/Payment.java",
+                    "line": 12,
+                    "argument": 1,
+                    "value": "payable"
+                  }
+                ],
+                "omitted": 0,
+                "meaning": "Source expressions at selected values; these are not observed runtime amounts"
+              },
+              "endpoints": [],
+              "proof": {
+                "kind": "dataflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "context": {
+              "protocol": "dt.path-context/v1",
+              "status": "unavailable",
+              "methods": [],
+              "facts": [],
+              "gaps": [
+                {
+                  "kind": "context-projection-missing",
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance"
+                }
+              ],
+              "truncated": false,
+              "receiver": null,
+              "complete": false,
+              "bindings": [],
+              "receiverConstraints": null,
+              "scope": "Bounded reachable source bodies, including callbacks and candidate dispatch. These facts do not prove invocation, dominance, loop counts, stream execution or path feasibility."
+            },
+            "control": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "control-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [
+                    {
+                      "expression": "rebate < 0",
+                      "polarity": "false",
+                      "status": "path_condition",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                    }
+                  ],
+                  "proof": {
+                    "status": "path_condition"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "matches-assumptions",
+                    "matches": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ],
+                    "conflicts": [],
+                    "unresolved": []
+                  }
+                }
+              ],
+              "endpoints": [],
+              "proof": {
+                "kind": "controlflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "gaps": [
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              },
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              }
+            ],
+            "ambiguity": [],
+            "truncated": false
+          }
+        ],
+        "changes": [],
+        "contextChanges": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "context-projection-missing",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance",
+            "side": "current"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        }
+      }
+    }
+  ],
+  "usage": {
+    "input": 28569,
+    "output": 4564
+  },
+  "startedAt": "2026-11-26T15:00:24.731Z",
+  "examples": [
+    {
+      "name": "semantic_query",
+      "full": {
+        "protocol": "dt.semantic/v1",
+        "operation": "flowmap",
+        "mode": "dataflow",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "results": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)"
+          }
+        ],
+        "ambiguity": [],
+        "coverage": [
+          {
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "meta": {
+              "type": "meta",
+              "protocol": "dt.semantic.projection/v1"
+            },
+            "summary": {
+              "type": "summary",
+              "truncated": false,
+              "gaps": []
+            }
+          }
+        ],
+        "proof": {
+          "kind": "entry-exit-state-map",
+          "status": "partial-static-map",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "dependencies": [],
+        "overlayId": "b73bd0955924024ebac4f380333e2e2169d12bb5726a8e095a49d8046f1ba016",
+        "total": 5,
+        "nextCursor": null,
+        "counts": {
+          "entries": 1,
+          "methods": 1,
+          "states": 5,
+          "transitions": 4,
+          "decisions": 1,
+          "changes": 1,
+          "exits": 2
+        },
+        "mapRequest": {
+          "env": "dev",
+          "from": {
+            "name": "submit"
+          },
+          "maxMethods": 20,
+          "maxStates": 180,
+          "maxHops": 8,
+          "budgetMs": 5000
+        },
+        "flowMap": {
+          "protocol": "dt.flow-map/v1",
+          "entries": [
+            "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10"
+          ],
+          "methods": [
+            {
+              "id": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)",
+              "kind": "method",
+              "name": "submit",
+              "signature": "Payment.submit:long(long,long)",
+              "methodSignature": "long(long,long)",
+              "file": "src/Payment.java",
+              "projectionFile": "src/Payment.java",
+              "line": 3,
+              "endLine": 20,
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "10"
+              },
+              "parameters": [
+                {
+                  "index": 1,
+                  "name": "gross"
+                },
+                {
+                  "index": 2,
+                  "name": "rebate"
+                }
+              ],
+              "returnId": "13",
+              "owner": "Payment",
+              "coverage": "static-cpg",
+              "entry": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "exit": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13"
+            }
+          ],
+          "nodes": [
+            {
+              "type": "state",
+              "nodeId": "10",
+              "methodId": "10",
+              "kind": "entry",
+              "file": "src/Payment.java",
+              "line": 3,
+              "code": "submit(gross, rebate)",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "10"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "guard",
+              "methodId": "10",
+              "kind": "decision",
+              "file": "src/Payment.java",
+              "line": 5,
+              "code": "rebate < 0",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "guard"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "change",
+              "methodId": "10",
+              "kind": "change",
+              "file": "src/Payment.java",
+              "line": 8,
+              "code": "payable = gross - rebate",
+              "changes": [
+                {
+                  "target": "payable",
+                  "expression": "gross - rebate"
+                }
+              ],
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "change"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            },
+            {
+              "type": "state",
+              "nodeId": "20",
+              "methodId": "10",
+              "kind": "call",
+              "file": "src/Payment.java",
+              "line": 12,
+              "code": "save(payable)",
+              "arguments": [
+                {
+                  "index": 1,
+                  "expression": "payable"
+                }
+              ],
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "20"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)",
+              "callTargets": [],
+              "exit": "external-or-unexpanded-call",
+              "assumptions": [
+                "Call effects, result semantics and exceptions are not established by a retained callee body in this map."
+              ]
+            },
+            {
+              "type": "state",
+              "nodeId": "13",
+              "methodId": "10",
+              "kind": "exit",
+              "file": "src/Payment.java",
+              "line": 15,
+              "code": "Method exit",
+              "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "revisionKey": "fixture",
+              "locator": {
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "nodeId": "13"
+              },
+              "id": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13",
+              "method": "code:SHOP%2Fpayments@fixture:Payment.submit:long(long,long)"
+            }
+          ],
+          "edges": [
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:10",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:a6c8adf3c45cb3000eae31b3"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:guard",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:52dadf905eb426682df10d37"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:change",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:aa49d0bd2a31e2d9f6d5bd42"
+            },
+            {
+              "type": "edge",
+              "from": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:20",
+              "to": "state:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:13",
+              "kind": "control",
+              "relation": "CFG",
+              "evidence": {
+                "origin": "joern",
+                "relation": "CFG",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+              },
+              "proof": "static-candidate",
+              "id": "transition:197d07cb86d5e84a806c1005"
+            }
+          ],
+          "ports": [],
+          "assumptions": [
+            {
+              "id": "static",
+              "status": "unknown",
+              "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+            },
+            {
+              "id": "effects",
+              "status": "unknown",
+              "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+            },
+            {
+              "id": "scope",
+              "status": "bounded",
+              "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+            }
+          ],
+          "complete": false,
+          "counts": {
+            "entries": 1,
+            "methods": 1,
+            "states": 5,
+            "transitions": 4,
+            "decisions": 1,
+            "changes": 1,
+            "exits": 2
+          }
+        },
+        "view": "http://127.0.0.1:4000/show/mwxoiz76aa3dff88f6421e36a4"
+      },
+      "compact": {
+        "protocol": "dt.semantic/v1",
+        "operation": "flowmap",
+        "mode": "dataflow",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "revisionKey": "fixture",
+            "sourceDigest": "synthetic",
+            "language": "java"
+          }
+        ],
+        "results": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)"
+          }
+        ],
+        "ambiguity": [],
+        "coverage": [
+          {
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "truncated": false,
+            "gaps": []
+          }
+        ],
+        "proof": {
+          "kind": "entry-exit-state-map",
+          "status": "partial-static-map",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false
+        },
+        "dependencies": [],
+        "overlayId": "b73bd0955924024ebac4f380333e2e2169d12bb5726a8e095a49d8046f1ba016",
+        "total": 5,
+        "nextCursor": null,
+        "counts": {
+          "entries": 1,
+          "methods": 1,
+          "states": 5,
+          "transitions": 4,
+          "decisions": 1,
+          "changes": 1,
+          "exits": 2
+        },
+        "mapRequest": {
+          "env": "dev",
+          "from": {
+            "name": "submit"
+          },
+          "maxMethods": 20,
+          "maxStates": 180,
+          "maxHops": 8,
+          "budgetMs": 5000
+        },
+        "flowMap": {
+          "protocol": "dt.flow-map/v1",
+          "counts": {
+            "entries": 1,
+            "methods": 1,
+            "states": 5,
+            "transitions": 4,
+            "decisions": 1,
+            "changes": 1,
+            "exits": 2
+          },
+          "complete": false,
+          "assumptions": [
+            {
+              "id": "static",
+              "status": "unknown",
+              "detail": "Static control and reaching-definition edges are candidates. They do not prove feasibility, equal values, runtime order, or every-path enforcement."
+            },
+            {
+              "id": "effects",
+              "status": "unknown",
+              "detail": "External calls may change data or throw. Unresolved dispatch, aliasing, reflection, async execution, and implicit exceptions are not exhaustively modeled."
+            },
+            {
+              "id": "scope",
+              "status": "bounded",
+              "detail": "Bodies cover the selected entries and bounded reachable methods in exact retained CPGs. Transport boundaries are shown with their evidence; no distributed execution or field mapping is inferred."
+            }
+          ],
+          "identity": "Local preview aliases; exact CPG/state identities and source locators are retained at view.",
+          "entries": [
+            "s0"
+          ],
+          "methods": [
+            {
+              "name": "submit",
+              "signature": "Payment.submit:long(long,long)",
+              "file": "src/Payment.java",
+              "line": 3,
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "id": "m0",
+              "entry": "s0",
+              "exit": "s4"
+            }
+          ],
+          "nodes": [
+            {
+              "kind": "entry",
+              "code": "submit(gross, rebate)",
+              "file": "src/Payment.java",
+              "line": 3,
+              "id": "s0",
+              "method": "m0"
+            },
+            {
+              "kind": "change",
+              "code": "payable = gross - rebate",
+              "file": "src/Payment.java",
+              "line": 8,
+              "changes": [
+                {
+                  "target": "payable",
+                  "expression": "gross - rebate"
+                }
+              ],
+              "id": "s2",
+              "method": "m0"
+            },
+            {
+              "kind": "decision",
+              "code": "rebate < 0",
+              "file": "src/Payment.java",
+              "line": 5,
+              "id": "s1",
+              "method": "m0"
+            },
+            {
+              "kind": "call",
+              "code": "save(payable)",
+              "file": "src/Payment.java",
+              "line": 12,
+              "arguments": [
+                {
+                  "index": 1,
+                  "expression": "payable"
+                }
+              ],
+              "exit": "external-or-unexpanded-call",
+              "assumptions": [
+                "Call effects, result semantics and exceptions are not established by a retained callee body in this map."
+              ],
+              "id": "s3",
+              "method": "m0"
+            },
+            {
+              "kind": "exit",
+              "code": "Method exit",
+              "file": "src/Payment.java",
+              "line": 15,
+              "id": "s4",
+              "method": "m0"
+            }
+          ],
+          "edges": [
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s0",
+              "to": "s1"
+            },
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s1",
+              "to": "s2"
+            },
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s2",
+              "to": "s3"
+            },
+            {
+              "kind": "control",
+              "relation": "CFG",
+              "proof": "static-candidate",
+              "from": "s3",
+              "to": "s4"
+            }
+          ],
+          "ports": []
+        },
+        "view": "http://127.0.0.1:4000/show/mwxoiz965d47f07a096c26d45e",
+        "format": "compact",
+        "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON."
+      },
+      "fullBytes": 9720,
+      "compactBytes": 3813
+    },
+    {
+      "name": "semantic_trace",
+      "full": {
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "sourceDigest": "synthetic",
+            "revisionKey": "fixture",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "assumptions": [
+              {
+                "expression": "rebate < 0",
+                "holds": false
+              }
+            ],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 8,
+            "maxHops": 60,
+            "budgetMs": 5000
+          }
+        },
+        "assessment": {
+          "status": "single-revision",
+          "exhaustive": false,
+          "contextChanges": 0,
+          "layers": {
+            "data": "static-candidates",
+            "control": "static-candidates"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "current: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "Select a second retained analysis to compare the change.",
+          "0 reachable source-context change(s); current: 0 collected facts (unavailable). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sides": [
+          {
+            "side": "current",
+            "analysis": {
+              "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+              "repo": "SHOP/payments",
+              "sha": "1111111111111111111111111111111111111111",
+              "sourceDigest": "synthetic",
+              "revisionKey": "fixture",
+              "language": "java"
+            },
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "data": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "data-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [],
+                  "proof": {
+                    "status": "static-dataflow"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "unresolved",
+                    "matches": [],
+                    "conflicts": [],
+                    "unresolved": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ]
+                  }
+                }
+              ],
+              "selectedValues": {
+                "from": [
+                  {
+                    "kind": "method",
+                    "name": "submit",
+                    "file": "src/Payment.java",
+                    "line": 3,
+                    "parameter": "rebate"
+                  }
+                ],
+                "to": [
+                  {
+                    "kind": "call",
+                    "name": "save",
+                    "file": "src/Payment.java",
+                    "line": 12,
+                    "argument": 1,
+                    "value": "payable"
+                  }
+                ],
+                "omitted": 0,
+                "meaning": "Source expressions at selected values; these are not observed runtime amounts"
+              },
+              "endpoints": [],
+              "proof": {
+                "kind": "dataflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "context": {
+              "protocol": "dt.path-context/v1",
+              "status": "unavailable",
+              "methods": [],
+              "facts": [],
+              "gaps": [
+                {
+                  "kind": "context-projection-missing",
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance"
+                }
+              ],
+              "truncated": false,
+              "receiver": null,
+              "complete": false,
+              "bindings": [],
+              "receiverConstraints": null,
+              "scope": "Bounded reachable source bodies, including callbacks and candidate dispatch. These facts do not prove invocation, dominance, loop counts, stream execution or path feasibility."
+            },
+            "control": {
+              "status": "static-candidates",
+              "paths": [
+                {
+                  "type": "path",
+                  "kind": "control-flow",
+                  "nodes": [
+                    {
+                      "nodeId": "12",
+                      "file": "src/Payment.java",
+                      "line": 3,
+                      "code": "long rebate",
+                      "label": "METHOD_PARAMETER_IN",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:12",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "12"
+                      }
+                    },
+                    {
+                      "nodeId": "21",
+                      "file": "src/Payment.java",
+                      "line": 12,
+                      "code": "payable",
+                      "label": "IDENTIFIER",
+                      "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:21",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                      "repo": "SHOP/payments",
+                      "sha": "1111111111111111111111111111111111111111",
+                      "locator": {
+                        "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "generation": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                        "nodeId": "21"
+                      }
+                    }
+                  ],
+                  "conditions": [
+                    {
+                      "expression": "rebate < 0",
+                      "polarity": "false",
+                      "status": "path_condition",
+                      "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                    }
+                  ],
+                  "proof": {
+                    "status": "path_condition"
+                  },
+                  "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                  "id": "semantic-path:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:0",
+                  "assumptionEvaluation": {
+                    "status": "matches-assumptions",
+                    "matches": [
+                      {
+                        "expression": "rebate < 0",
+                        "holds": false
+                      }
+                    ],
+                    "conflicts": [],
+                    "unresolved": []
+                  }
+                }
+              ],
+              "endpoints": [],
+              "proof": {
+                "kind": "controlflow",
+                "status": "static-candidate",
+                "feasibility": "unknown",
+                "scope": "single-cpg"
+              }
+            },
+            "gaps": [
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              },
+              {
+                "kind": "unresolved-call",
+                "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "repo": "SHOP/payments",
+                "sha": "1111111111111111111111111111111111111111",
+                "file": "src/Payment.java",
+                "line": 12,
+                "name": "save",
+                "methodFullName": "Ledger.save:void(long)"
+              }
+            ],
+            "ambiguity": [],
+            "truncated": false
+          }
+        ],
+        "changes": [],
+        "contextChanges": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          },
+          {
+            "kind": "context-projection-missing",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "detail": "This retained projection predates path-context facts; reindex to collect lambda bodies, transformations and inheritance",
+            "side": "current"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        },
+        "view": "http://127.0.0.1:4000/show/mwxoizcsb726b2e47f274f6d51"
+      },
+      "compact": {
+        "protocol": "dt.path-trace/v1",
+        "operation": "trace",
+        "analyses": [
+          {
+            "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "revisionKey": "fixture",
+            "sourceDigest": "synthetic",
+            "language": "java"
+          }
+        ],
+        "request": {
+          "tool": "semantic_trace",
+          "arguments": {
+            "analyses": [
+              "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            ],
+            "from": {
+              "kind": "method",
+              "name": "submit",
+              "parameter": "rebate"
+            },
+            "to": {
+              "kind": "call",
+              "name": "save",
+              "argument": 1
+            },
+            "assumptions": [
+              {
+                "expression": "rebate < 0",
+                "holds": false
+              }
+            ],
+            "includeControl": true,
+            "includeContext": true,
+            "maxPaths": 8,
+            "maxHops": 60,
+            "budgetMs": 5000
+          }
+        },
+        "assessment": {
+          "status": "single-revision",
+          "exhaustive": false,
+          "contextChanges": 0,
+          "layers": {
+            "data": "static-candidates",
+            "control": "static-candidates"
+          },
+          "inconclusiveCandidates": 0,
+          "dataChanges": 0,
+          "controlChanges": 0,
+          "behaviorVerified": false,
+          "meaning": "A changed source expression or condition on a selected static path is evidence that this path differs. It does not prove that the changed line executes, the requested behavior is correct, or every affected path is covered."
+        },
+        "reading": [
+          "current: 1 value path(s) (static-candidates); 1 local control path(s) (static-candidates).",
+          "Select a second retained analysis to compare the change.",
+          "0 reachable source-context change(s); current: 0 collected facts (unavailable). Context facts include loops, callbacks and candidate inherited/library bodies; applicability to the selected paths remains unproven.",
+          "For a regression, exercise the entry with inputs that satisfy the recorded guards; assert values, identity and effect counts at each selected exit. Also test rejected inputs produce no effects."
+        ],
+        "assumptions": [
+          {
+            "expression": "rebate < 0",
+            "holds": false
+          }
+        ],
+        "sides": [
+          {
+            "side": "current",
+            "truncated": false,
+            "context": {
+              "status": "unavailable",
+              "complete": false
+            },
+            "data": {
+              "status": "static-candidates",
+              "composed": 0
+            },
+            "control": {
+              "status": "static-candidates"
+            }
+          }
+        ],
+        "contextChanges": [],
+        "truncated": false,
+        "gaps": [
+          {
+            "kind": "unresolved-call",
+            "analysisId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "repo": "SHOP/payments",
+            "sha": "1111111111111111111111111111111111111111",
+            "file": "src/Payment.java",
+            "line": 12,
+            "name": "save",
+            "methodFullName": "Ledger.save:void(long)",
+            "side": "current"
+          }
+        ],
+        "proof": {
+          "kind": "selected-path-comparison",
+          "status": "single-revision",
+          "feasibility": "unknown",
+          "runtime": "unknown",
+          "behaviorVerified": false,
+          "assumptions": "User declarations match exact displayed CFG predicates only. They do not constrain Joern value-flow queries or prove satisfiability. Data and control paths are independent evidence; no correlation is inferred.",
+          "scope": "Value flow is retained-CPG evidence; control paths are local CFG walks with explicit throws stopped. Aliasing, dispatch, loops, exceptions, and external effects can remain unresolved. No solver or runtime coverage is claimed."
+        },
+        "view": "http://127.0.0.1:4000/show/mwxoizg67d5a1dc20f8869dbea",
+        "results": [],
+        "total": 2,
+        "summary": [
+          {
+            "side": "current",
+            "dataPaths": 1,
+            "controlPaths": 1,
+            "dataStatus": "static-candidates",
+            "controlStatus": "static-candidates",
+            "contextStatus": "unavailable",
+            "contextFacts": 0,
+            "contextMethods": 0
+          }
+        ],
+        "format": "compact",
+        "detail": "Full evidence is retained at view. Use format:\"full\" or narrow limit/maxPaths for original JSON.",
+        "omitted": {
+          "results": 2,
+          "gaps": 2
+        },
+        "previewTruncated": true
+      },
+      "fullBytes": 9552,
+      "compactBytes": 3462
+    }
+  ],
+  "schemas": [
+    {
+      "name": "code",
+      "description": "Code mode: compute/join multiple tool results with JavaScript. For large exports, call source tools inside code and return only aggregates; save reusable intermediate JSON via context_write, not raw rows in chat. `await tools.pg_query({ env, sql, all: true })` (any tool by name; tools.call(name, args); await tools.list()), then work with the results in plain JS and print with text(...) (objects as pretty JSON); return a value too. Helpers: uuid now date rand hex diffLists diffLines log. console.log/info/warn/error are safely captured in logs. Pass context=id for nearby files via files.list/search/read/readFile/readJson/write/writeJson/edit/remove (async). Read before overwriting; conflicts reject stale edits. Sandboxed (files only through enabled dt tools, no direct filesystem; direct fetch is available, 60 s). The user sees the code and its output (embedded). Example: const r = await tools.pg_query({ env: \"dev\", sql: \"select status, total from sales.orders\", all: true }); const by = {}; for (const o of r.rows) (by[o.status] ||= []).push(Number(o.total)); for (const [s, xs] of Object.entries(by)) text(s, xs.length, (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(2)); Semantic workflow: use engine=\"node\" for tools. First await tools.tool_describe({name:\"semantic_query\"}) for its input schema. List retained analysis ids with await tools.semantic_index({}). For entry/exit maps call tools.semantic_query({analysis:id,operation:\"flowmap\",from:{name:\"entryMethod\"},all:true}); inspect flowMap.nodes, edges, assumptions, complete and proof. Value trace: tools.semantic_trace({analysis:id,from:{kind:\"method\",name:\"entryMethod\",parameter:\"input\"},to:{kind:\"call\",name:\"exitCall\",argument:1},assumptions:[{expression:\"input < 0\",holds:false}],all:true}). Inspect sides[].data and sides[].control separately; Report exact assumptionEvaluation.status separately for each layer; do not infer one from the other. If state is running, poll the same tool with {job:result.job,waitMs:1000,all:true}; do not restart. Return only needed evidence plus view links; all:true expands the retained response, not analysis coverage or runtime proof.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "JavaScript (top-level await works)"
+          },
+          "global_context": {
+            "type": "string",
+            "description": "Persistent project id from global_context_open: tools, scripts, workspaces and files use this principal-owned cross-chat scope; current permissions still apply. files defaults to this project memory."
+          },
+          "context": {
+            "type": "string",
+            "description": "Context id from context_open: binds nearby files.list/search/read/readFile/readJson/write/writeJson/edit/remove helpers. Paths are relative to that folder. Read before overwriting; writes use saved revisions."
+          },
+          "title": {
+            "type": "string",
+            "description": "What it computes (shown above the code)"
+          },
+          "engine": {
+            "type": "string",
+            "enum": [
+              "node",
+              "quickjs"
+            ],
+            "default": "node",
+            "description": "QuickJS prototype supports pure transforms; Node also supports tools and direct fetch"
+          },
+          "all": {
+            "type": "boolean",
+            "description": "Full output; source limits apply."
+          }
+        },
+        "required": [
+          "code"
+        ]
+      }
+    }
+  ],
+  "schemaBytes": 3215,
+  "instructionDigest": "2782103d506adc66f53460ff85afd65b28ef7082e871d7345459e9eaa9be05bd",
+  "prompt": "For the retained SHOP/payments analysis, inspect the submit entry-to-exit map and trace its rebate parameter to argument 1 of save under the assumption that rebate < 0 is false. Return JSON {entry,exitCall,sinkExpression,controlAssumption,dataAssumption,behaviorVerified,mapComplete,evidenceViews}. Use exact assumption evaluation statuses from results. Include retained view links. Do not parse a new analysis.",
+  "finish": "turn-budget",
+  "checks": {
+    "mapRead": false,
+    "traceRead": false,
+    "entry": false,
+    "exit": false,
+    "sink": false,
+    "control": false,
+    "data": false,
+    "proof": false,
+    "coverage": false,
+    "views": false
+  },
+  "passed": false,
+  "transcript": [
+    {
+      "role": "system",
+      "content": "Use the offered tools to inspect retained semantic evidence. Discover tools/schemas when needed. Keep entry-to-exit maps separate from value flow and runtime proof. No writes, no network fetch from code. Return only JSON when asked."
+    },
+    {
+      "role": "user",
+      "content": "For the retained SHOP/payments analysis, inspect the submit entry-to-exit map and trace its rebate parameter to argument 1 of save under the assumption that rebate < 0 is false. Return JSON {entry,exitCall,sinkExpression,controlAssumption,dataAssumption,behaviorVerified,mapComplete,evidenceViews}. Use exact assumption evaluation statuses from results. Include retained view links. Do not parse a new analysis."
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0kep3y2o",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Retrieve the submit entry-to-exit map for SHOP/payments analysis\nconst result = await tools.semantic_query({\n  analysis: \"SHOP/payments\",\n  operation: \"flowmap\",\n  from: { name: \"submit\" },\n  all: true\n});\n\n// Extract the relevant information\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":220,\"error\":\"Identifier 'result' has already been declared\",\"output\":\"\",\"calls\":[],\"view\":\"http://127.0.0.1:4000/show/mwxoj30lcf4c2ccf38419b51cd\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "",
+      "tool_calls": [
+        {
+          "id": "call_0y94f11y",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Retrieve the submit entry-to-exit map for SHOP/payments analysis\nconst result = await tools.semantic_query({\n  analysis: \"SHOP/payments\",\n  operation: \"flowmap\",\n  from: { name: \"submit\" },\n  all: true\n});\n\n// Extract the relevant information\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":109,\"error\":\"Identifier 'result' has already been declared\",\"output\":\"\",\"calls\":[],\"view\":\"http://127.0.0.1:4000/show/mwxoj6a74a1b824ce26cb1b7bc\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I see the issue - I'm trying to declare `result` again in a new code block. Let me use the existing result from the previous query instead:",
+      "tool_calls": [
+        {
+          "id": "call_baja29zi",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Use the existing result from the previous query\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":117,\"error\":\"Cannot read properties of undefined (reading 'flowMap')\",\"output\":\"\",\"calls\":[],\"view\":\"http://127.0.0.1:4000/show/mwxoj9hyc8174c731c651f6362\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "The previous query didn't return the expected result structure. Let me try a different approach - I'll use the semantic_trace tool directly to trace the rebate parameter:",
+      "tool_calls": [
+        {
+          "id": "call_t0lc0v0s",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Trace the rebate parameter from submit to save argument 1\nconst traceResult = await tools.semantic_trace({\n  analysis: \"SHOP/payments\",\n  from: { kind: \"method\", name: \"submit\" },\n  to: { kind: \"call\", name: \"save\", argument: 1 },\n  assumptions: [{ expression: \"rebate < 0\", holds: false }],\n  all: true\n});\n\n// Extract the relevant information from the trace result\nconst flowMap = traceResult.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Trace rebate parameter from submit to save argument 1"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":120,\"error\":\"Unknown fixture analysis; use the retained id\",\"output\":\"\",\"calls\":[\"semantic_trace (failed) 4ms\"],\"view\":\"http://127.0.0.1:4000/show/mwxojd6dc23808375c211af714\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I need to use the retained analysis ID instead of the name. Let me first list the available analyses to find the correct ID:",
+      "tool_calls": [
+        {
+          "id": "call_qttl7ui7",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// List available semantic analyses to find the correct ID\nconst indexResult = await tools.semantic_index({});\n\n// Print the available analyses\ntext(\"Available Analyses:\", JSON.stringify(indexResult, null, 2));\n\n// Return the index result\nreturn indexResult;",
+              "engine": "node",
+              "title": "List available semantic analyses"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":true,\"ms\":114,\"output\":\"Available Analyses: {\\n  \\\"protocol\\\": \\\"dt.semantic/v1\\\",\\n  \\\"analyses\\\": [\\n    {\\n      \\\"id\\\": \\\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\\\",\\n      \\\"repo\\\": \\\"SHOP/payments\\\",\\n      \\\"sha\\\": \\\"1111111111111111111111111111111111111111\\\",\\n      \\\"revisionKey\\\": \\\"fixture\\\",\\n      \\\"sourceDigest\\\": \\\"synthetic\\\",\\n      \\\"language\\\": \\\"java\\\",\\n      \\\"coverage\\\": {\\n        \\\"complete\\\": false,\\n        \\\"origin\\\": \\\"synthetic-model-fixture\\\"\\n      }\\n    }\\n  ],\\n  \\\"total\\\": 1,\\n  \\\"view\\\": \\\"http://127.0.0.1:4000/show/mwxoje2f14ea7a36181e81b0d3\\\",\\n  \\\"format\\\": \\\"compact\\\",\\n  \\\"detail\\\": \\\"Full evidence is retained at view. Use format:\\\\\\\"full\\\\\\\" or narrow limit/maxPaths for original JSON.\\\"\\n}\",\"returned\":{\"protocol\":\"dt.semantic/v1\",\"analyses\":[{\"id\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"repo\":\"SHOP/payments\",\"sha\":\"1111111111111111111111111111111111111111\",\"revisionKey\":\"fixture\",\"sourceDigest\":\"synthetic\",\"language\":\"java\",\"coverage\":{\"complete\":false,\"origin\":\"synthetic-model-fixture\"}}],\"total\":1,\"view\":\"http://127.0.0.1:4000/show/mwxoje2f14ea7a36181e81b0d3\",\"format\":\"compact\",\"detail\":\"Full evidence is retained at view. Use format:\\\"full\\\" or narrow limit/maxPaths for original JSON.\"},\"calls\":[\"semantic_index 6ms\"],\"views\":[\"http://127.0.0.1:4000/show/mwxoje2f14ea7a36181e81b0d3\"],\"view\":\"http://127.0.0.1:4000/show/mwxoje2n1d372dd95b9f2f11ef\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "Now I have the correct analysis ID. Let me use it to retrieve the flowmap and trace the rebate parameter:",
+      "tool_calls": [
+        {
+          "id": "call_udzzm4wu",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Retrieve the submit entry-to-exit map for SHOP/payments analysis using the retained ID\nconst result = await tools.semantic_query({\n  analysis: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n  operation: \"flowmap\",\n  from: { name: \"submit\" },\n  all: true\n});\n\n// Extract the relevant information\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":118,\"error\":\"Identifier 'result' has already been declared\",\"output\":\"\",\"calls\":[],\"view\":\"http://127.0.0.1:4000/show/mwxojhmsc7016b2bebea1c29bc\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "I see the issue - I'm trying to declare `result` again in a new code block. Let me use the existing result from the previous query instead:",
+      "tool_calls": [
+        {
+          "id": "call_f3oqgb4g",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Use the existing result from the previous query\nconst flowMap = result.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Inspect SHOP/payments submit entry-to-exit map and trace rebate parameter"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":119,\"error\":\"Cannot read properties of undefined (reading 'flowMap')\",\"output\":\"\",\"calls\":[],\"view\":\"http://127.0.0.1:4000/show/mwxojkvr8e3b9f39b2c866d979\"}"
+    },
+    {
+      "role": "assistant",
+      "content": "The previous query didn't return the expected result structure. Let me try a different approach - I'll use the semantic_trace tool directly with the correct analysis ID:",
+      "tool_calls": [
+        {
+          "id": "call_ex0s2ngb",
+          "function": {
+            "index": 0,
+            "name": "code",
+            "arguments": {
+              "code": "// Trace the rebate parameter from submit to save argument 1 using the retained ID\nconst traceResult = await tools.semantic_trace({\n  analysis: \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\n  from: { kind: \"method\", name: \"submit\" },\n  to: { kind: \"call\", name: \"save\", argument: 1 },\n  assumptions: [{ expression: \"rebate < 0\", holds: false }],\n  all: true\n});\n\n// Extract the relevant information from the trace result\nconst flowMap = traceResult.flowMap;\n\n// Check if we have a complete map\nconst isComplete = flowMap.complete === true || flowMap.complete === \"true\";\n\n// Find the exit call for rebate parameter\nlet exitCall = null;\nlet sinkExpression = null;\nlet controlAssumption = null;\nlet dataAssumption = null;\nlet behaviorVerified = false;\n\n// Look for the trace of rebate to argument 1 of save\nfor (const node of flowMap.nodes) {\n  if (node.name === \"save\" && node.argument === 1) {\n    exitCall = node.name;\n    sinkExpression = node.expression;\n    \n    // Check assumptions\n    controlAssumption = node.controlAssumption;\n    dataAssumption = node.dataAssumption;\n    \n    // Check behavior verification\n    behaviorVerified = node.behaviorVerified || false;\n  }\n}\n\n// If no specific node found, look for edges related to rebate\nif (!exitCall) {\n  for (const edge of flowMap.edges) {\n    if (edge.from.name === \"submit\" && edge.to.name === \"save\") {\n      exitCall = edge.to.name;\n      sinkExpression = edge.expression;\n      \n      // Check assumptions on the edge\n      controlAssumption = edge.controlAssumption;\n      dataAssumption = edge.dataAssumption;\n      \n      behaviorVerified = edge.behaviorVerified || false;\n    }\n  }\n}\n\n// Prepare the result\nconst evidenceViews = [];\nif (flowMap.views) {\n  for (const view of flowMap.views) {\n    evidenceViews.push({\n      name: view.name,\n      link: view.link\n    });\n  }\n}\n\nconst finalResult = {\n  entry: \"submit\",\n  exitCall: exitCall || null,\n  sinkExpression: sinkExpression || null,\n  controlAssumption: controlAssumption || null,\n  dataAssumption: dataAssumption || null,\n  behaviorVerified: behaviorVerified,\n  mapComplete: isComplete,\n  evidenceViews: evidenceViews\n};\n\n// Print the result\ntext(\"Final Result:\", JSON.stringify(finalResult, null, 2));\n\n// Return the result\nreturn finalResult;",
+              "engine": "node",
+              "title": "Trace rebate parameter from submit to save argument 1"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_name": "code",
+      "content": "{\"ok\":false,\"ms\":269,\"error\":\"Cannot read properties of undefined (reading 'complete')\",\"output\":\"\",\"calls\":[\"semantic_trace 145ms\"],\"views\":[\"http://127.0.0.1:4000/show/mwxojos58c2b54ee80a9bf9e30\"],\"view\":\"http://127.0.0.1:4000/show/mwxojose6391543448af019000\"}"
+    }
+  ],
+  "completedAt": "2026-11-26T15:00:58.050Z",
+  "deliveredBytes": 2824
+}

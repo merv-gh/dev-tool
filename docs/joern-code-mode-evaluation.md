@@ -112,6 +112,39 @@ Both arms submitted the exact requested parameter, sink argument **2**, and comp
 
 The live task's own requested field `exitCall` also conflates an external graph boundary with the selected trace sink. That limits the interpretation of these failures: they establish correct retrieval with unreliable final field mapping/citations, not inability to query real dataflow. A better next protocol should request `traceSinkCall`, `argumentExpression`, `methodExits`, `externalCallBoundaries`, `mapView` and `traceView` explicitly. Returned sink fields should use `argumentExpression` and `callExpression` instead of generic `value` and `call`. This refinement is a recommendation, not a verified model improvement.
 
+## Qwen 4B follow-up
+
+The requested `qwen3.5:4b` run uses the SSH box and its existing Ollama 0.40.13 instance. The model advertises 4.2B parameters, Q4_K_M and digest `d8b0f5e9760cd1682034f292d7ef72ec46f432149be0df7574bf2d6e92e38c04`. It runs fully on an RTX 3080 Ti with a 32,768-token context. The earlier 2B runs used Q8_0 on a local CPU and a different runtime; these are comparisons of the tested setups, not a controlled parameter-count or latency study. See [environment metadata](benchmarks/semantic-model-environment-4b.json).
+
+For the two real Joern arms, prompts, tool schemas, inference settings and grader match the baseline. The typed pair also has identical adapter hashes. The brief baseline predates the gated typed extension (`3cb09da` to `3179125`); review of that diff confirms its brief schemas and output branch are unchanged despite the file hash changing. The harness change only adds `--endpoint` and records it. Each arm is one deterministic trial, not an estimated success rate. The ambiguous requested `exitCall` field is deliberately preserved for comparison.
+
+| Real Joern output variant | 2B result | 4B result |
+|---|---|---|
+| Assumption clarity | Correct requested trace; wrong exit field; one view | Requested `all:true` map (139,152 bytes), skipped the trace, returned a narrative and exhausted its output budget |
+| Typed exits and sinks | Correct requested trace; full call in value field; one view | Omitted sink argument **2**, so the adapter defaulted to **1** and returned `tenant`; returned wrong assumption-field shapes, but included both views |
+
+Neither 4B live arm passes the unchanged grader. The [brief transcript](benchmarks/semantic-real-joern-question-brief-4b.json) shows that merely offering `all` can draw the model toward unnecessary raw graph output. The [typed transcript](benchmarks/semantic-real-joern-question-typed-4b.json) shows a different problem: the system returned the wrong argument for the user's request because the model omitted the selector and the adapter silently defaulted it. This is an input-design failure worth fixing even though the underlying query faithfully honored the adapter's inputs.
+
+The nine synthetic arms were also repeated. Full reports and checks are linked from the [paired comparison](benchmarks/semantic-qwen-4b-comparison.json); prompts, instructions, schemas and settings match in all eleven pairs.
+
+| Synthetic arm | 2B baseline | 4B follow-up |
+|---|---|---|
+| Original code | Repeated unrelated queries | Invented evidence context; no semantic reads; claimed verification without proof |
+| Guided code | Invalid external tool names | Eight calls; variable redeclarations, wrong response shape, incomplete trace selector |
+| Wrapped code | Invalid external tool names | Eight retries; empty outer output with failed internal query receipts |
+| Minimal code | Retrieved list without returning it | Eight calls; repeatedly listed analyses but still used a repository name as an analysis id |
+| Direct semantic tools | Endpoint timeout | Eight repeats of the same `maxPaths` validation error |
+| Plain narrow tools | Right retrieval; wrong assumption status fields | Right retrieval; reported `gross - rebate` instead of the selected expression `payable`; status objects |
+| Question names only | Omitted requested trace assumption | Right retrieval and values; correct statuses inside objects |
+| Question + assumption clarity | Pass | Right retrieval and values; correct statuses inside objects |
+| Same, contradictory assumption | Pass | Right retrieval and values; correct contradictory/unresolved statuses inside objects |
+
+The unchanged strict grader records **0/11 for 4B versus 2/11 for 2B**. That number alone misrepresents the narrow-tool results: the prompt lists JSON keys but does not declare scalar types, and three 4B answers preserve the exact correct statuses under `.status` or `.evaluation`. A separately labeled, post-hoc shape-sensitivity check unwraps only those two fields and reruns the same grader: **3/11 versus 2/11**. Neither real Joern arm passes even that check. Original strict grades and raw answers remain unchanged. This small, confounded pilot does not establish a general model ranking.
+
+The useful finding is that 4B can navigate the narrow synthetic tools, including the contradictory condition, but it still needs a clearer answer schema and safer selector inputs for real graphs. The direct-tool validation loop also suggests errors should include the rejected value, allowed range and a valid retry example; `violates maximum` alone did not help this run recover.
+
+For the next adapter revision, explain that `all:true` retrieves raw retained evidence and recommend the compact default for navigation. Require an explicit argument position when the selected call has multiple arguments, or return the candidates and a clear request to select one. Do not silently substitute argument 1. Keep assumption evaluation statuses as dedicated scalar fields. These recommendations have not yet been tested as changes to this paired protocol.
+
 ## Recommendation
 
 Use one intent per tool, with names that make sense as questions: `who_uses`, `what_happens_from`, `where_value_flows`. Keep Joern as implementation/coverage metadata. Retain compatibility aliases without advertising duplicate names. Question-shaped naming should accompany narrow, forgiving inputs and a short explanation of how to read the result.
@@ -133,8 +166,20 @@ node dev/eval-semantic-code-model.cjs --arm question-brief --case contradiction 
 node --test test/semantic-code-model-eval.test.js test/semantic-flow-map.test.js test/semantic-path-trace.test.js test/semantic-query.test.js
 ```
 
-The harness requires local Ollama at `127.0.0.1:11434`. All data lives in a disposable `DT_HOME`. Raw fixture views are removed afterward; their URLs in transcripts no longer resolve. Captured full responses, delivered outputs and transcripts remain in [benchmark reports](benchmarks/semantic-question-brief-2b.json), with the [code projection](benchmarks/semantic-code-projection.json), [plain-name control](benchmarks/semantic-plain-focused-2b.json), [question-name control](benchmarks/semantic-question-focused-2b.json), and [original code trial](benchmarks/semantic-code-mode-2b.json). Failed exploratory runs are retained alongside them.
+The harness defaults to local Ollama at `127.0.0.1:11434`; pass `--endpoint http://127.0.0.1:<port>` to use another instance or an SSH tunnel. All data lives in a disposable `DT_HOME`. Raw fixture views are removed afterward; their URLs in transcripts no longer resolve. Captured full responses, delivered outputs and transcripts remain in [benchmark reports](benchmarks/semantic-question-brief-2b.json), with the [code projection](benchmarks/semantic-code-projection.json), [plain-name control](benchmarks/semantic-plain-focused-2b.json), [question-name control](benchmarks/semantic-question-focused-2b.json), and [original code trial](benchmarks/semantic-code-mode-2b.json). Failed exploratory runs are retained alongside them.
 
 The [contradictory-assumption transcript](benchmarks/semantic-question-brief-contradiction-2b.json) preserves the second successful synthetic scenario. The exporter fix and its generated bundle are the production changes; candidate tool registrations remain unchanged. Validation passed **47 focused tests**, **both real Joern tests**, build/handbook/state-machine/inventory checks, and documentation links. [CI on implementation head `3179125`](https://github.com/merv-gh/dev-tool/actions/runs/45840941192) passed the Node 22/24 full suites, Node 24 coverage gate and integration. The full suite was run remotely because this host has little free disk. Final evidence-capture refinements were also executed against the actual retained views.
 
 For actual Joern verification, configure `DT_SEMANTIC_LIVE_URL` and `DT_SEMANTIC_LIVE_TOKEN`, then run `test/semantic-flow-map.live.test.js` and `test/semantic-path-trace.live.test.js`. Those tests use real retained CPGs and an independently compiled behavioral oracle; they do not replace the model-navigation test.
+
+To repeat the remote 4B trials, forward the chosen remote Ollama port and pass its local endpoint (do not expose Ollama publicly):
+
+```sh
+ssh -N -L 127.0.0.1:21435:127.0.0.1:11435 marchme@192.168.1.148
+# In another terminal:
+node dev/eval-semantic-live-model.cjs --model qwen3.5:4b --endpoint http://127.0.0.1:21435 --shape brief --output /tmp/joern-brief-4b.json
+node dev/eval-semantic-live-model.cjs --model qwen3.5:4b --endpoint http://127.0.0.1:21435 --shape typed --output /tmp/joern-typed-4b.json
+node dev/eval-semantic-code-model.cjs --model qwen3.5:4b --endpoint http://127.0.0.1:21435 --arm question-brief --output /tmp/fixture-brief-4b.json
+```
+
+Live trials additionally require the retained verification session supplied by `--state`; its default is `/tmp/dt-joern-code-live-session.json`. That local state contains credentials and is deliberately excluded from the repository. The remote existing service was used after the temporary runtime could not bind its occupied port; no existing service was replaced or stopped. The downloaded runtime was not used for inference. No production tools or grader were changed for the 4B follow-up.
