@@ -4956,8 +4956,8 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 Enabled JavaScript API shapes (documentation only; do not paste type annotations):
 tools.which_analyses_exist({env?:"dev", versions?:boolean, workspace?:string, repo?:string, sha?:string, all?:boolean}) — Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown.
-tools.what_happens_from({env?:"dev", analysis:string, entry:string, parameter?:string, sink?:string, argument?:integer, assumptions?:Array<{expression:string, holds:boolean}>, job?:string, waitMs?:integer, all?:boolean}) — Map-only returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,nodeCount,controlEdgeCount,hasControlCycle,graphStructureComplete,mapComplete,behaviorVerified,mapView,proofLimits. Structural counts/cycles cover every retained graph row; they do not prove runtime behavior or full source coverage. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only.
-tools.where_value_flows({env?:"dev", analysis:string, entry:string, parameter:string, sink:string, argument:integer, assumptions?:Array<{expression:string, holds:boolean}>, job?:string, waitMs?:integer, all?:boolean}) — Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only.
+tools.what_happens_from({env?:"dev", analysis:string, entry:string, parameter?:string, sink?:string, argument?:integer, assumptions?:Array<{expression:string, holds:boolean}>, job?:string, waitMs?:integer, all?:boolean}) — For a combined map AND value trace, use this tool with parameter,sink,argument,assumptions: summary contains BOTH mapView and traceView plus expression/statuses. Map-only (omit trace inputs) returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,nodeCount,controlEdgeCount,hasControlCycle,graphStructureComplete,mapComplete,behaviorVerified,mapView,proofLimits. Structural counts/cycles cover every retained graph row; they do not prove runtime behavior or full source coverage. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only.
+tools.where_value_flows({env?:"dev", analysis:string, entry:string, parameter:string, sink:string, argument:integer, assumptions?:Array<{expression:string, holds:boolean}>, job?:string, waitMs?:integer, all?:boolean}) — Trace only; for a combined entry map AND value trace use what_happens_from instead. Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only.
 tools.result_read({id:string, path?:string, fields?:Array<string>, aggregate?:"count"|"sum"|"avg"|"min"|"max"|"summary", field?:string, where?:object, cursor?:string, max_bytes?:integer, all?:boolean}) — Returns {value,retainedComplete,sourceComplete,sourceCoverage,sourceView}. sourceComplete is upstream completeness proven; retainedComplete only concerns selected stored data. aggregate:"summary" + field + where computes all matching retained rows; returns value:{count,sum,avg,min,max} and retainedRows.
 
 Execute JavaScript in Node with built-in tools.NAME(args), not Java/Scala or Joern classes. tools/text are supplied; no import/require or direct file access. Return data explicitly: return await tools.NAME(args); expressions are not auto-returned. For Joern, reuse a supplied analysis id directly; never pass it to result_read or list analyses merely to read it. Describe what_happens_from, execute its flat contract, and return result.summary (including proofLimits and mapView/traceView). List which_analyses_exist only when the analysis id is unknown. Discover other capabilities with tools.tool_search({query:"action words"}) and contracts with tools.tool_describe({name:"tool_name"}). tools.list() is an array of TOOL metadata, not analysis records. For retained rows: const r=await tools.result_read({id,all:true}); compute/filter r.value.rows in JS or use result_read aggregate/where. Return only needed facts, r.sourceComplete and r.sourceView; retainedComplete/complete concern stored data only, never upstream completeness; printed data can be previewed. When the result answers the request, give a final answer, not another formatting cell. Cells are fresh; result/args/vars may be locals. context/global_context are opened file/project scopes, never analysis ids; omit unless known. Object/array results support .value only as a compatibility alias when no real value field exists. all:true expands available data inside code; model transport limits remain explicit.
@@ -17516,7 +17516,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "entry": {
       "type": "string",
-      "description": "Whole entry method name",
+      "description": "Exact method name from the user request; copy verbatim, never append entry/method labels",
       "minLength": 1
     },
     "parameter": {
@@ -17586,7 +17586,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 
 ### where_value_flows
 
-Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.
+Trace only: this tool does not create an entry-to-exit map. For a combined map and value trace use what_happens_from with parameter, sink, argument and assumptions. Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.
 
 Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
 
@@ -17632,7 +17632,7 @@ Workflow: [Code search, impact and Joern](README.md#joern) · Origin: built-in
     },
     "entry": {
       "type": "string",
-      "description": "Source method name",
+      "description": "Exact source method name, distinct from parameter; copy the user method name verbatim",
       "minLength": 1
     },
     "parameter": {

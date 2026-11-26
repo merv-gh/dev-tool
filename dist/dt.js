@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "785f82a76394ee13db28245fe176a8316d54d6635151a734ddc8f97a4d24b728",
+      sourceDigest: "41b5ca987b2ff902645422c78cc14ca42a751461885775dd355bfdd845b2fb01",
       machines: [
         {
           id: "IO.atomic-file",
@@ -73671,11 +73671,25 @@ var require_semantic_navigation = __commonJS({
         const retained = present(raw, { view: operation === "flowmap" ? "semantic-flow-map" : "semantic-path-trace", title: operation === "flowmap" ? "Entry to exits" : "Parameter to sink argument" });
         if (raw.error || raw.ready === false) return retained;
         const selected = summarize(retained);
-        if (!a.job && (raw.flowMap?.entries.length === 0 || (raw.gaps || []).some((g) => g.kind === "endpoint-not-found"))) {
-          const symbols = await S().query({ analysis: a.analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 });
-          selected.selection = { resolved: false, requestedEntry: a.entry, availableEntries: (symbols.results || []).map((m) => ({ name: m.name, signature: m.signature, file: m.file, line: m.line, parameters: m.parameters?.map((p) => ({ name: p.name, index: p.index })) })), candidatesTruncated: !!symbols.truncated };
+        if (raw.flowMap?.entries.length === 0 || (raw.gaps || []).some((g) => g.kind === "endpoint-not-found")) {
+          const analysis = a.analysis || raw.analyses?.[0]?.id, entry = a.entry || raw.request?.arguments?.from?.name;
+          const symbols = analysis ? await S().query({ analysis, env: a.env, operation: "symbols", kind: "method", limit: 20 }) : { results: [] };
+          const availableEntries = (symbols.results || []).map((m) => ({ name: m.name, signature: m.signature, file: m.file, line: m.line, parameters: m.parameters?.map((p) => ({ name: p.name, index: p.index })) }));
+          selected.selection = { resolved: false, requestedEntry: entry, availableEntries, candidatesTruncated: !!symbols.truncated };
           selected.entryCandidatesView = present(symbols, { title: "Retained method candidates" }).view;
-          selected.guidance = "An endpoint did not resolve. Read availableEntries and use the exact requested method/parameter name; retry the same tool with corrected selectors. Do not answer a flow question from unresolved endpoints.";
+          selected.ready = false;
+          selected.error = "No exact entry/parameter selection resolved. Available retained method names: " + [...new Set(availableEntries.map((m) => m.name))].join(", ") + ". Use the exact method name from the user request; do not append entry/method labels or replace it with the parameter name.";
+          delete selected.summary;
+          const stem = (s) => String(s || "").replace(/(?:[_ -]?entry|[_ -]?method)$/i, "").toLowerCase();
+          const matches = availableEntries.filter((m) => entry && m.name !== entry && stem(m.name) === stem(entry) || a.parameter && entry === a.parameter && m.parameters?.some((p) => p.name === a.parameter));
+          if (!a.job && matches.length === 1) {
+            const arguments_ = { ...a, entry: matches[0].name };
+            delete arguments_.all;
+            selected.selection.suggestedEntry = { name: matches[0].name, reason: "One retained method matches the mistaken entry label or owns the named parameter. Verify it against the user request before retrying." };
+            selected.retry = { tool: name, arguments: arguments_ };
+            selected.insideCodeRetry = { tool: "code", arguments: { code: "return await tools." + name + "(" + JSON.stringify(arguments_) + ");" } };
+          }
+          selected.guidance = "Selection failed, so no answer summary is available. Read selection.availableEntries and correct the exact requested method/parameter. A suggested retry is never executed automatically. Do not answer a flow question from unresolved endpoints.";
         }
         return a.all ? { ...retained, ...selected, proof: retained.proof, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
       }
@@ -73695,9 +73709,9 @@ var require_semantic_navigation = __commonJS({
           if (a.all) return common;
           return { ...common, analyses: (raw.analyses || []).map((x) => Object.fromEntries(["id", "repo", "sha", "ref", "workspace", "language", "state", "coverage"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))) };
         } },
-        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Return summary directly as the answer projection: it includes proofLimits with proof and sourceCoverage kept separate. Keep its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
-        { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
-      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true, codeHint: t.name === "which_analyses_exist" ? "Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown." : t.name === "what_happens_from" ? "Map-only returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,nodeCount,controlEdgeCount,hasControlCycle,graphStructureComplete,mapComplete,behaviorVerified,mapView,proofLimits. Structural counts/cycles cover every retained graph row; they do not prove runtime behavior or full source coverage. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only." : "Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only." }));
+        { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Return summary directly as the answer projection: it includes proofLimits with proof and sourceCoverage kept separate. Keep its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Exact method name from the user request; copy verbatim, never append entry/method labels"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
+        { name: "where_value_flows", description: "Trace only: this tool does not create an entry-to-exit map. For a combined map and value trace use what_happens_from with parameter, sink, argument and assumptions. Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Exact source method name, distinct from parameter; copy the user method name verbatim"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
+      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true, codeHint: t.name === "which_analyses_exist" ? "Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown." : t.name === "what_happens_from" ? "For a combined map AND value trace, use this tool with parameter,sink,argument,assumptions: summary contains BOTH mapView and traceView plus expression/statuses. Map-only (omit trace inputs) returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,nodeCount,controlEdgeCount,hasControlCycle,graphStructureComplete,mapComplete,behaviorVerified,mapView,proofLimits. Structural counts/cycles cover every retained graph row; they do not prove runtime behavior or full source coverage. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only." : "Trace only; for a combined entry map AND value trace use what_happens_from instead. Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only." }));
     };
     module2.exports.summarize = summarize;
     module2.exports.normalize = (name, args) => {
@@ -73845,7 +73859,7 @@ var require_code_result = __commonJS({
         const call = recentResults[i];
         if (call.tool !== "result_read") continue;
         const R = require_results(), sourceView = call.value?.sourceView, id = R.referenceId(sourceView), raw = id && R.load(id)?.data;
-        if (!raw?.flowMap || !Array.isArray(raw.flowMap.nodes) || !Array.isArray(raw.flowMap.methods)) continue;
+        if (!raw?.flowMap?.entries?.length || !Array.isArray(raw.flowMap.nodes) || !Array.isArray(raw.flowMap.methods)) continue;
         const summary = require_semantic_navigation().summarize({ ...raw, view: sourceView }).summary;
         let view;
         try {
@@ -73927,6 +73941,7 @@ var require_call_evidence = __commonJS({
       else if (/^bitbucket_pr_(status|wait)$/.test(tool) && payload.state) out2.execution = { kind: "review", status: payload.state === "build_failed" ? "failed" : payload.state };
       else if (tool === "files_archive" && payload.archived === true) out2.execution = { kind: "files", status: payload.sourceRemoved === true ? "archived" : "cleanup-failed" };
       else if (["files_delete", "workspace_delete"].includes(tool) && typeof payload.deleted === "boolean") out2.execution = { kind: "files", status: payload.deleted ? "deleted" : "cleanup-failed" };
+      else if (["what_happens_from", "where_value_flows"].includes(tool) && payload.selection?.resolved === false) out2.execution = { kind: "semantic-selection", status: "invalid" };
       else if (tool === "testdb_template_verify" && typeof payload.ok === "boolean") out2.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
       else if (tool === "testdb_gc" && Array.isArray(payload.failures)) out2.execution = { kind: "cleanup", status: payload.failures.length ? "cleanup-failed" : "done" };
       else if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out2.execution = { kind: "assertions", status: payload.outcome };
@@ -84024,7 +84039,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "785f82a76394ee13db28245fe176a8316d54d6635151a734ddc8f97a4d24b728";
+      if (true) return "41b5ca987b2ff902645422c78cc14ca42a751461885775dd355bfdd845b2fb01";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -96433,7 +96448,7 @@ var require_tools = __commonJS({
                   const outcome = require_call_outcome().classify(evidenceName, res);
                   const problem = outcome.failed || evidenceName === "js_run" && res?.error ? res?.error || res?.outcome || res?.state || "Tool reported a failed result" : null;
                   const resultError = problem ? String(typeof problem === "string" ? problem : JSON.stringify(problem)).slice(0, 2e3) : void 0;
-                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: true, ...resultError ? { resultError } : {} });
+                  calls.push({ tool: name, args, ms: Date.now() - t0, ok: true, ...resultError ? { resultError, ...res?.insideCodeRetry || res?.retry ? { retry: res.insideCodeRetry || res.retry } : {} } : {} });
                   recentResults.push({ tool: name, value: res });
                   if (recentResults.length > 3) recentResults.shift();
                   const evidenceView = res?.view || (evidenceName === "result_read" ? res?.sourceView : void 0);

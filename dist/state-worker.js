@@ -19,6 +19,7 @@ var require_call_evidence = __commonJS({
       else if (/^bitbucket_pr_(status|wait)$/.test(tool) && payload.state) out.execution = { kind: "review", status: payload.state === "build_failed" ? "failed" : payload.state };
       else if (tool === "files_archive" && payload.archived === true) out.execution = { kind: "files", status: payload.sourceRemoved === true ? "archived" : "cleanup-failed" };
       else if (["files_delete", "workspace_delete"].includes(tool) && typeof payload.deleted === "boolean") out.execution = { kind: "files", status: payload.deleted ? "deleted" : "cleanup-failed" };
+      else if (["what_happens_from", "where_value_flows"].includes(tool) && payload.selection?.resolved === false) out.execution = { kind: "semantic-selection", status: "invalid" };
       else if (tool === "testdb_template_verify" && typeof payload.ok === "boolean") out.execution = { kind: "assertions", status: payload.ok ? "passed" : "failed" };
       else if (tool === "testdb_gc" && Array.isArray(payload.failures)) out.execution = { kind: "cleanup", status: payload.failures.length ? "cleanup-failed" : "done" };
       else if (tool === "differential_check" && ["equivalent", "different"].includes(payload.outcome)) out.execution = { kind: "assertions", status: payload.outcome };

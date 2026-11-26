@@ -206,3 +206,21 @@ test('wrong semantic projections recover completed facts instead of inviting a s
   assert.equal(queries,before+1);
  }
 });
+
+test('unresolved selectors are explicit failures with retained candidates and optional suggested retries',async()=>{
+ const calls=[];
+ S.query=async a=>{calls.push(a);if(a.operation==='symbols')return {results:[{name:'invoice',parameters:[{name:'fee',index:1}]}]};return {operation:'flowmap',analyses:[{id:'pin'}],proof:{status:'unavailable',behaviorVerified:false},flowMap:{entries:[],methods:[],nodes:[],edges:[],complete:false},gaps:[{kind:'entry-not-found'}]};};
+ const r=await T.call('what_happens_from',{analysis:'pin',entry:'invoice_entry',all:true});
+ assert.equal(r.ready,false);assert.equal(r.summary,undefined);assert.equal(r.selection.resolved,false);
+ assert.equal(r.selection.suggestedEntry.name,'invoice');assert.equal(r.retry.arguments.entry,'invoice');
+ assert.equal(calls.filter(a=>a.operation!=='symbols').length,1,'suggestion does not execute another source query');
+ const code=await T.call('code',{code:"return await tools.what_happens_from({analysis:'pin',entry:'invoice_entry'});"});
+ assert.equal(code.toolErrors[0].kind,'tool-result');
+ assert.match(code.toolErrors[0].error,/No exact entry/);
+ assert.match(code.toolErrors[0].retry.arguments.code,/"entry":"invoice"/);
+ assert.doesNotMatch(code.guidance,/give the final answer/);
+ const polled=await T.call('what_happens_from',{job:'retained-job'});
+ assert.equal(polled.ready,false);assert.equal(polled.summary,undefined);
+ assert.equal(polled.selection.availableEntries[0].name,'invoice','job polling also retains candidate recovery');
+ assert.equal(require('../lib/call-evidence').classify('where_value_flows',{selection:{resolved:false}}).failed,true);
+});
