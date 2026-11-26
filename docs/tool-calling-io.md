@@ -75,3 +75,39 @@ node cli.js tool result_read '{"id":"RESULT_ID"}' --all
 ```
 
 Exact tool names in `tool_search` return only that capability, including with `all:true`; non-exact requests include the specialized content-search directory.
+
+## Discovery handoff and retained-data calculations
+
+Exact-name `tool_search` matches include the complete `inputSchema` and direct `tool_execute` guidance. The optional `tool_describe` route remains available. Discovery never runs the returned capability. For a search with only a required `query`, a mistaken input such as `tool_search({query:"script_search invoice"})` returns the explicit proposed call `tool_execute({name:"script_search",arguments:{query:"invoice"}})`; it does not search script data itself. This interpretation applies only to enabled tools in the requested group. No repeat-detection history or cross-session state is involved.
+
+Use `result_read` to compute over retained rows instead of doing arithmetic over a preview:
+
+```json
+{"id":"RESULT_ID","aggregate":"sum","field":"value"}
+```
+
+`aggregate` accepts `count`, `sum`, `avg`, `min`, or `max`. `count` counts rows and takes no `field`; other operations require an exact top-level numeric field. `path` selects an array and defaults to `/rows` when the retained root has a rows array. Every retained row is processed in one call; `all:true` remains accepted but is unnecessary for the small aggregate response. The result includes the operation, numeric value, processed row count, source coverage, and a raw-data read reference.
+
+For inspection or model reasoning, project only relevant fields:
+
+```json
+{"id":"RESULT_ID","fields":["id","value"],"all":true}
+```
+
+Projection includes every retained row and fails if a requested field is absent. Ordinary chat output limits still apply without `all:true`; the exact projected result remains recoverable. Projection and aggregation cannot be combined, and neither accepts a pagination cursor. Existing raw reads and JSON-text pagination remain available.
+
+`retainedComplete:true` in projection/aggregation receipts means the selected retained data was fully processed. Legacy raw reads keep `complete` and now include `completeScope` to distinguish retained values or JSON bytes from source coverage. `sourceCoverage.provenComplete` remains false when source completeness is unproven; `sourceCoverage.status` separately reports `partial` or `unknown`; it never certifies that the original query covered the entire source. Source truncation, gaps and omitted retained data remain visible even when selecting only `/rows`. An aggregate over partial source data is a total of retained rows, not a total of the unavailable source.
+
+Numeric operations reject null, missing, nonnumeric, nonfinite and unsafe integer values, plus overflowing intermediate totals, instead of coercing or dropping rows. Arithmetic uses JavaScript numbers, not arbitrary-precision decimal math. Empty-array `sum`/`count` return zero; `avg`/`min`/`max` return null. Use `code` with an explicit precision policy for decimal-sensitive calculations.
+
+When a script-oriented capability query has a clear leading `script_search` match, discovery offers an explicit call using the content words from that query. Generic request words such as “find the saved script for” are removed from the proposed content query; no saved script data is read until that call executes. Exact schemas and enabled-tool/group filtering still apply.
+
+For a numeric single-field projection, `next` offers a sum call with the actual retained id, resolved array path and field. A mistaken path such as `/rows/value` is normalized to `/rows` only when the last component agrees with the single projected field or aggregate field. The response reports `normalizedFrom`. Raw JSON-pointer reads remain strict, and mismatched or nonterminal components still fail.
+
+`script_get` includes a derived `requiredParams` name list beside its exact definition, so parameter-inspection tasks can answer without repeatedly re-reading the same nested schema.
+
+Compacted row previews may also include `modelContext.numericSummary`: sums computed over every retained row, never over the visible sample. It summarizes at most four numeric non-ID columns with names up to 40 characters, and only for arrays of at most 100,000 rows. A column with any missing, nonnumeric, unsafe or overflowing value is excluded. The summary names its scope and row count, does not prove source completeness, and is omitted if it cannot fit the response budget. The same calculation implementation serves explicit aggregate calls. Original rows remain available through the retained result reference.
+
+For small-model script inspection, select the `scripts-read` client profile. It exposes only `script_search` and `script_get` as native tools, avoiding the general discovery dispatcher. It adds no permissions and exposes no script execution tool. The everyday `direct` profile also includes `script_get` beside script search/list/run.
+
+OpenAPI selection: `/openapi/scripts-read.json`, or `tools.profile` / `DT_TOOL_PROFILE` for the default OpenAPI schema. MCP keeps its existing all-tools listing; MCP clients must select the two native tools explicitly when using this focused approach.

@@ -1,6 +1,6 @@
 {
   "protocol": "dt.release-inventory/v1",
-  "sourceDigest": "c2583b4fc2bbc78eb6c8b87e348b501468631346a0a66f803a93de77d1710cb2",
+  "sourceDigest": "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
   "tools": [
     {
       "name": "find",
@@ -428,6 +428,7 @@
       "resultContract": false,
       "referenceTests": [
         "test/confluence.test.js",
+        "test/task-context.test.js",
         "test/task-conversation.test.js",
         "test/task-harness-ui.test.js",
         "test/task-harness.test.js",
@@ -631,6 +632,18 @@
       "integrationReferences": []
     },
     {
+      "name": "script_search",
+      "group": "scripts",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/result-operations.test.js",
+        "test/tool-output.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "script_collection",
       "group": "scripts",
       "origin": "built-in",
@@ -651,6 +664,7 @@
       "referenceTests": [
         "test/api-workflows.test.js",
         "test/collection-persistence.test.js",
+        "test/result-operations.test.js",
         "test/scripts.test.js"
       ],
       "integrationReferences": []
@@ -697,6 +711,7 @@
         "test/call-outcome.test.js",
         "test/collection-persistence.test.js",
         "test/collections.test.js",
+        "test/global-context.test.js",
         "test/scripts.test.js",
         "test/task-harness.test.js",
         "test/workbench-explorer.test.js"
@@ -719,6 +734,7 @@
         "test/diagrams.test.js",
         "test/dist.test.js",
         "test/files-delete.test.js",
+        "test/global-context.test.js",
         "test/impact-readiness.test.js",
         "test/inline-views.test.js",
         "test/project-context.test.js",
@@ -791,6 +807,8 @@
       "referenceTests": [
         "test/code.test.js",
         "test/page-primitives.test.js",
+        "test/test-selection-inputs.test.js",
+        "test/tool-output.test.js",
         "test/ui-page-model.test.js",
         "test/views.test.js",
         "test/workspace-publication.test.js"
@@ -1137,9 +1155,11 @@
       "resultContract": false,
       "referenceTests": [
         "test/code-search-fallback.test.js",
+        "test/global-context.test.js",
         "test/person-mutations.test.js",
         "test/task-model-evaluation.test.js",
         "test/test-leases-model.test.js",
+        "test/tool-output.test.js",
         "test/workbench.test.js",
         "test/workflows.test.js",
         "test/workspace-retention.test.js"
@@ -1336,6 +1356,7 @@
         "test/test-leases-model.test.js",
         "test/testdata.live.test.js",
         "test/tool-contracts.test.js",
+        "test/tool-output.test.js",
         "test/workbench-explorer-ui.test.js",
         "test/workbench-explorer.test.js",
         "test/workflows.test.js",
@@ -1359,6 +1380,9 @@
       "resultContract": false,
       "referenceTests": [
         "test/chat-context.test.js",
+        "test/result-operations.test.js",
+        "test/tool-io-model-eval.test.js",
+        "test/tool-output.test.js",
         "test/webui-context.test.js"
       ],
       "integrationReferences": []
@@ -2154,6 +2178,82 @@
       "integrationReferences": []
     },
     {
+      "name": "job_get",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/workspace-program.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_create",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [],
+      "integrationReferences": []
+    },
+    {
+      "name": "workspace_program",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/workspace-program.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "global_context_open",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/global-context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "global_context_find",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/global-context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "global_context_get",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/global-context.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "global_context_call",
+      "group": "context",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/global-context.test.js",
+        "test/workspace-program.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
       "name": "capability_map",
       "group": "catalog",
       "inputSchema": true,
@@ -2416,7 +2516,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/access.test.js"
+        "test/access.test.js",
+        "test/global-context.test.js"
       ],
       "integrationReferences": []
     },
@@ -2427,7 +2528,8 @@
       "inputSchema": true,
       "resultContract": false,
       "referenceTests": [
-        "test/access.test.js"
+        "test/access.test.js",
+        "test/global-context.test.js"
       ],
       "integrationReferences": []
     },
@@ -2694,6 +2796,53 @@
         "test/semantic-flow-map.live.test.js",
         "test/semantic.live.test.js"
       ]
+    },
+    {
+      "name": "data_index",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/data-lineage.test.js",
+        "test/dist.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "data_readers",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/data-lineage.test.js",
+        "test/dist.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "data_writers",
+      "group": "pg",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/data-lineage.test.js"
+      ],
+      "integrationReferences": []
+    },
+    {
+      "name": "data_trace",
+      "group": "code",
+      "origin": "built-in",
+      "inputSchema": true,
+      "resultContract": false,
+      "referenceTests": [
+        "test/data-lineage.test.js",
+        "test/dist.test.js"
+      ],
+      "integrationReferences": []
     },
     {
       "name": "semantic_ports",
@@ -3108,7 +3257,9 @@
         "test/ci-iteration.test.js",
         "test/files-delete.test.js",
         "test/model-discovery-eval.test.js",
+        "test/result-operations.test.js",
         "test/tool-contracts.test.js",
+        "test/tool-output.test.js",
         "test/trace-discovery.test.js",
         "test/webui-context.test.js",
         "test/workbench-discovery.test.js",
@@ -3124,7 +3275,9 @@
       "resultContract": false,
       "referenceTests": [
         "test/model-discovery-eval.test.js",
+        "test/result-operations.test.js",
         "test/tool-contracts.test.js",
+        "test/tool-output.test.js",
         "test/trace-discovery-eval.test.js",
         "test/trace-discovery.test.js",
         "test/webui-context.test.js",
@@ -3144,8 +3297,10 @@
         "test/fixture-runtime-bridge.test.js",
         "test/model-discovery-eval.test.js",
         "test/node-targets.test.js",
+        "test/result-operations.test.js",
         "test/task-model-evaluation.test.js",
         "test/tool-contracts.test.js",
+        "test/tool-output.test.js",
         "test/trace-discovery-eval.test.js",
         "test/webui-context.test.js",
         "test/workbench-model-eval.test.js",
@@ -3969,6 +4124,7 @@
     "code",
     "code-cell",
     "collection-report",
+    "data-lineage",
     "diagram",
     "differential",
     "impact",

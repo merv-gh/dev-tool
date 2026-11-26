@@ -508,7 +508,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_search
 
-Discover tools and specialized searches by action (saved scripts: script_search). Read exact inputs with tool_describe.
+Discover capabilities, not data. Exact names return inputSchema; next call tool_execute. Saved scripts: script_search.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -520,12 +520,12 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
   "properties": {
     "query": {
       "type": "string",
-      "description": "Task/action or exact tool name; object names alone do not search code",
+      "description": "Action or exact tool name; not a business-data search",
       "maxLength": 4000
     },
     "group": {
       "type": "string",
-      "description": "Optional tool category (context/views/code/consul), never an object/ticket. Omit if unsure."
+      "description": "Optional category, e.g. code or context; omit if unsure."
     },
     "limit": {
       "type": "integer",
@@ -536,7 +536,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     },
     "max_bytes": {
       "type": "integer",
-      "description": "JSON response budget; full oversized result in view",
+      "description": "Preview byte budget; overflow retained in view",
       "default": 4096,
       "minimum": 2048,
       "maximum": 16384
@@ -558,7 +558,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_describe
 
-Read one enabled tool’s exact schema, required fields and guidance before tool_execute. Grants stay unchanged.
+Read an enabled tool’s input schema and execution guidance. Grants stay unchanged.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -589,7 +589,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
 
 ### tool_execute
 
-Call a described tool with exact arguments and normal permissions, validation and tracing. Preserves native views; cannot dispatch discovery recursively.
+Execute an enabled tool with its inputSchema and normal grants. Call discovery tools directly.
 
 Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: built-in
 
@@ -606,7 +606,7 @@ Workflow: [Indices, freshness and exact versions](README.md#indices) · Origin: 
     "arguments": {
       "type": "object",
       "additionalProperties": true,
-      "description": "Arguments conforming to tool_describe inputSchema"
+      "description": "Object matching the target inputSchema"
     },
     "all": {
       "type": "boolean",
@@ -4657,7 +4657,7 @@ Workflow: [Scripts, collections and long calculations](README.md#automation) · 
 
 ### script_search
 
-Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids for script_get or script_run. Use tool_search to discover other specialized searches.
+Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.
 
 Workflow: [Scripts, collections and long calculations](README.md#automation) · Origin: built-in
 
@@ -11230,7 +11230,7 @@ Workflow: [Capture and replay a minimal failing state](README.md#reproduce) · O
 
 ### result_read
 
-Read retained tool/view data without rerunning its action. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.
+Read, project or aggregate retained data without rerunning its action. For arithmetic use aggregate (sum/count/avg/min/max) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation; sourceCoverage.provenComplete separately states whether source completeness is proven. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.
 
 Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin: built-in
 
@@ -11246,7 +11246,34 @@ Workflow: [Contexts, nearby files and handoffs](README.md#task-memory) · Origin
     },
     "path": {
       "type": "string",
-      "description": "RFC 6901 JSON pointer; empty reads the root"
+      "description": "RFC 6901 JSON pointer; empty reads the root, or /rows for projection/aggregation"
+    },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      },
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "description": "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate."
+    },
+    "aggregate": {
+      "type": "string",
+      "enum": [
+        "count",
+        "sum",
+        "avg",
+        "min",
+        "max"
+      ],
+      "description": "Compute over the full retained array, never its preview. Numeric operations require field; count counts rows."
+    },
+    "field": {
+      "type": "string",
+      "description": "Exact numeric row field for sum/avg/min/max; omit for count"
     },
     "cursor": {
       "type": "string",

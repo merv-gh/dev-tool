@@ -6,7 +6,7 @@ async function checks(T, home, toolSettings = {}) {
   assert.equal(K.sync('guide').ok, true);
   const discovered = await T.call('tool_search', { query: 'knowledge_entity', limit: 3 });
   assert.equal(discovered.tools[0].name, 'knowledge_entity');
-  const described = await T.call('tool_describe', discovered.tools[0].next.arguments);
+  const described = await T.call('tool_describe', { name: discovered.tools[0].name });
   assert.ok(described.inputSchema.required.includes('id'));
   let invalid;
   try { await T.call('tool_execute', { name: described.name, arguments: { id: 42, env: 'staging' } }); }
@@ -43,7 +43,7 @@ async function checks(T, home, toolSettings = {}) {
       const start = performance.now();
       const post = async (name, input) => { const res = await fetch(base + '/api/tool/' + name, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) }); assert.equal(res.status, 200); return (await res.json()).result; };
       const search = await post('tool_search', { query: 'knowledge_entity', limit: 3 });
-      const describe = await post('tool_describe', search.tools[0].next.arguments);
+      const describe = await post('tool_describe', { name: search.tools[0].name });
       const executed = await post('tool_execute', { name: describe.name, arguments: { id: 'table:orders:public.orders', env: 'dev' } });
       assert.equal(executed.env, 'dev'); durations.push(performance.now() - start);
     }

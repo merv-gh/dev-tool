@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6",
+      sourceDigest: "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee",
       machines: [
         {
           id: "IO.atomic-file",
@@ -79149,6 +79149,121 @@ var require_tools_code = __commonJS({
   }
 });
 
+// lib/result-operations.js
+var require_result_operations = __commonJS({
+  "lib/result-operations.js"(exports2, module2) {
+    var invalid = (message) => Object.assign(Error(message), { code: "DT_CONTEXT_ARGUMENT", statusCode: 400 });
+    function calculate(rows, aggregate, field) {
+      let answer = aggregate === "count" ? rows.length : aggregate === "sum" ? 0 : null;
+      for (let i = 0; aggregate !== "count" && i < rows.length; i++) {
+        const row = rows[i], n = row && typeof row === "object" && Object.hasOwn(row, field) ? row[field] : void 0;
+        if (typeof n !== "number" || !Number.isFinite(n) || Number.isInteger(n) && !Number.isSafeInteger(n)) throw invalid(`Field ${field} must be a finite, safe number in every retained row; invalid row ${i}. Missing/null/string values are not silently skipped`);
+        if (aggregate === "min") answer = answer === null ? n : Math.min(answer, n);
+        else if (aggregate === "max") answer = answer === null ? n : Math.max(answer, n);
+        else answer = (answer ?? 0) + n;
+        if (!Number.isFinite(answer) || Number.isInteger(answer) && !Number.isSafeInteger(answer)) throw invalid("Aggregate exceeds safe numeric precision; use code with explicit precision");
+      }
+      if (aggregate === "avg" && rows.length) answer /= rows.length;
+      return answer;
+    }
+    function numericSummary(rows) {
+      if (!Array.isArray(rows) || !rows.length || rows.length > 1e5 || !rows[0] || typeof rows[0] !== "object" || Array.isArray(rows[0])) return;
+      const fields = [];
+      for (const field of Object.keys(rows[0])) {
+        if (fields.length === 4) break;
+        if (field.length > 40 || /^(?:id|.*(?:_id|Id|ID))$/.test(field) || typeof rows[0][field] !== "number") continue;
+        try {
+          fields.push([field, { sum: calculate(rows, "sum", field) }]);
+        } catch {
+        }
+      }
+      if (fields.length) return { scope: "all-retained-rows", rows: rows.length, sourceCompleteProven: false, fields: Object.fromEntries(fields) };
+    }
+    module2.exports = { calculate, numericSummary };
+  }
+});
+
+// lib/tool-output.js
+var require_tool_output = __commonJS({
+  "lib/tool-output.js"(exports2, module2) {
+    var ALL = { type: "boolean", description: "Full output; source limits apply." };
+    var canonicalName = (name) => name === "search_tools" ? "tool_search" : name;
+    function full(value, depth = 0) {
+      if (depth < 3 && value && typeof value === "object" && !Array.isArray(value)) {
+        for (const key of ["result", "value"]) if (value[key] && typeof value[key] === "object") value = { ...value, [key]: full(value[key], depth + 1) };
+      }
+      if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.view !== "string") return value;
+      const id = value.view.match(/\/(?:show|view|logs|pr|files)\/([a-z0-9]+)(?:[?#]|$)/)?.[1];
+      const record = id && require_results().load(id);
+      if (!record) return value;
+      if (Array.isArray(record.rows)) {
+        if (Array.isArray(value.rows) && value.rows.length >= record.rows.length) return value;
+        return { ...value, rows: record.rows, ...record.truncated ? { truncated: true } : {} };
+      }
+      if (record.kind === "view" && record.data && typeof record.data === "object") {
+        if (Array.isArray(record.data)) return { ...value, data: record.data };
+        const result = { ...value, ...record.data, view: value.view };
+        for (const key of ["omitted", "previewTruncated", "summaryTruncated", "moreFailures", "moreParts", "shown"]) if (!Object.hasOwn(record.data, key)) delete result[key];
+        if (value.outputBudgetBytes && !Object.hasOwn(record.data, "truncated")) delete result.truncated;
+        return result;
+      }
+      return value;
+    }
+    function facts(value) {
+      const reasons = /* @__PURE__ */ new Set(), omissions = /* @__PURE__ */ new Set();
+      const seen = /* @__PURE__ */ new Set();
+      function visit(v, depth = 0) {
+        if (!v || typeof v !== "object" || depth > 8 || seen.has(v)) return;
+        seen.add(v);
+        if (Array.isArray(v)) {
+          for (const item of v) visit(item, depth + 1);
+          return;
+        }
+        if (depth < 3 && typeof v.view === "string") {
+          const id = v.view.match(/\/show\/([a-z0-9]+)(?:[?#]|$)/)?.[1], record = id && require_results().load(id), data = record?.data;
+          if (data && typeof data === "object" && !Array.isArray(data) && Object.keys(data).some((k) => data[k] !== void 0 && (v[k] === void 0 || Array.isArray(data[k]) && Array.isArray(v[k]) && data[k].length > v[k].length))) omissions.add("retained-details");
+        }
+        if (v.truncated === true || v.previewTruncated === true || v.summaryTruncated === true) reasons.add("source-or-tool-limit");
+        if (v.sourceCoverage?.status === "partial") for (const reason of v.sourceCoverage.limits?.length ? v.sourceCoverage.limits : ["incomplete-source"]) reasons.add(reason);
+        if (v.complete === false && !v.completeScope || v.traversalComplete === false) reasons.add("incomplete-source");
+        if (v.completeScope === "retained-json-bytes" && !v.complete) omissions.add("retained-json-bytes");
+        if ((v.nextCursor || v.continuation) && !v.completeScope) reasons.add("more-pages");
+        if (Number.isFinite(v.totalHits) && Number.isFinite(v.total) && v.totalHits > v.total) reasons.add("query-limit");
+        if (v.omitted && Object.values(v.omitted).some((n) => typeof n === "number" && n > 0)) omissions.add("tool-preview");
+        for (const key of ["rows", "results", "nodes", "edges", "fields", "tools", "scripts", "matches", "samples", "usedBy", "uses"]) {
+          const n = v[key]?.length;
+          const total = key === "rows" || key === "results" || key === "tools" || key === "scripts" || key === "matches" ? v.total : v[key + "Total"];
+          if (Array.isArray(v[key]) && Number.isFinite(total) && total > n) omissions.add(key);
+        }
+        if (Number.isFinite(v.shown) && Number.isFinite(v.total) && v.shown < v.total) omissions.add("items");
+        if (Number.isFinite(v.lines) && Number.isFinite(v.to) && (v.to < v.lines || v.from > 1)) omissions.add("lines");
+        for (const [k, x] of Object.entries(v)) {
+          if (/^(moreFailures|moreParts|usedByTotal)$/.test(k) && x > (k === "usedByTotal" ? v.usedBy?.length || 0 : 0)) omissions.add(k);
+          if (typeof x === "string" && /\[(?:\d+ more chars|preview)\]|\.\.\. \(cut\)|… \(\d+ chars\)/.test(x)) omissions.add("text");
+          if (!["modelContext", "view", "read", "next", "inputSchema", "resultSchema"].includes(k)) visit(x, depth + 1);
+        }
+      }
+      visit(value);
+      return { reasons: [...reasons], omissions: [...omissions] };
+    }
+    function annotate(original, delivered, { all = false } = {}) {
+      const { reasons, omissions } = facts(original);
+      const compacted = !!delivered?.modelContext?.compacted;
+      const retainedReceipt = original?.retainedComplete === true || !!original?.completeScope;
+      const output = {
+        status: compacted || !retainedReceipt && reasons.includes("source-or-tool-limit") ? "truncated" : omissions.length || reasons.includes("more-pages") ? "part" : "all",
+        source: reasons.length ? "partial" : "unknown",
+        ...reasons.length ? { limits: reasons } : {},
+        ...omissions.length ? { omitted: omissions } : {},
+        ...all ? { requestedAll: true } : {}
+      };
+      const value = delivered && typeof delivered === "object" && !Array.isArray(delivered) ? delivered : { result: delivered };
+      return { ...value, modelContext: { ...value.modelContext, output } };
+    }
+    module2.exports = { ALL, canonicalName, full, facts, annotate };
+  }
+});
+
 // lib/chat-context.js
 var require_chat_context = __commonJS({
   "lib/chat-context.js"(exports2, module2) {
@@ -79234,7 +79349,7 @@ var require_chat_context = __commonJS({
         saveError = require_redact().clean(error.message);
       }
       const id = stored?.split("/").pop();
-      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "complete", "truncated", "nextCursor", "gaps", "proof", "cleanupErrors", "total", "view"];
+      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "gaps", "proof", "cleanupErrors", "total", "view"];
       const ordered = value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries([...priority.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !priority.includes(k))]) : null;
       const out2 = {
         ...ordered ? short(ordered) : { preview: short(value) },
@@ -79242,10 +79357,16 @@ var require_chat_context = __commonJS({
           compacted: true,
           originalBytes,
           budgetBytes: limit,
+          ...Array.isArray(value?.rows) ? { retainedRows: value.rows.length } : {},
           ...id ? { resultId: id, read: { tool: "result_read", arguments: { id } }, evidenceView: stored } : { evidenceSaved: false, saveError },
-          guidance: "Preview only. Read a JSON pointer with result_read (tool_execute if not listed), or aggregate pages inside code. Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output."
+          guidance: "Preview only; these rows are not the dataset. For arithmetic use result_read with aggregate (sum/count/avg/min/max) and field over all retained rows. Source gaps do not prevent calculations on retained rows; such totals cover retained rows only. For inspection use fields and all=true, or read a JSON pointer (tool_execute if not listed). Save constraints, progress and evidence with context_write. The original tool already ran; do not repeat an action to recover output."
         }
       };
+      const numericSummary = require_result_operations().numericSummary(value?.rows);
+      if (numericSummary) {
+        out2.modelContext.numericSummary = numericSummary;
+        if (bytes(out2.modelContext) > limit) delete out2.modelContext.numericSummary;
+      }
       if (!out2.view && stored) out2.view = stored;
       for (const key of Object.keys(out2).filter((k) => !["modelContext", "view", "id", "job", "state", "status", "ok", "outcome", "workspace", "executionId"].includes(k)).reverse()) {
         if (bytes(out2) <= limit) break;
@@ -79255,7 +79376,12 @@ var require_chat_context = __commonJS({
       if (bytes(out2) > limit) return { modelContext: out2.modelContext, ...stored ? { view: stored } : {} };
       return out2;
     }
-    function read({ id, path: path3 = "", cursor, max_bytes, all = false }) {
+    function read({ id, path: path3 = "", cursor, max_bytes, all = false, fields, aggregate, field }) {
+      const requestedPath = path3;
+      const transform = fields !== void 0 || aggregate !== void 0;
+      if (transform && cursor) throw invalid("Projection/aggregation reads all retained rows; omit cursor");
+      if (fields !== void 0 && aggregate !== void 0) throw invalid("Choose fields or aggregate, not both");
+      if (field !== void 0 && aggregate === void 0) throw invalid("field requires aggregate");
       if (typeof path3 !== "string" || path3.length > 2e3 || path3 && !path3.startsWith("/")) throw invalid("path must be an RFC 6901 JSON pointer, such as /rows/0");
       const meta = require_results().toolMeta(id);
       let value, backing;
@@ -79264,20 +79390,47 @@ var require_chat_context = __commonJS({
         if (!record || record.toolResponse) throw missing();
         backing = record.kind === "view" ? record.data : { rows: record.rows, total: record.total, truncated: record.truncated };
         value = backing;
-      } else if (path3 || all) {
+      } else if (path3 || all || transform) {
         const record = require_results().load(id);
         if (!record) throw missing();
-        value = record.data;
+        value = backing = record.data;
       }
-      if (path3) for (const raw of path3.slice(1).split("/")) {
+      if (transform && !path3 && !Array.isArray(value) && Array.isArray(value?.rows)) path3 = "/rows";
+      const pointer = path3 ? path3.slice(1).split("/") : [];
+      for (const [index, raw] of pointer.entries()) {
         if (/~(?![01])/.test(raw)) throw invalid("Invalid JSON pointer escape");
         const key = raw.replace(/~1/g, "/").replace(/~0/g, "~");
-        if (!value || typeof value !== "object" || !Object.hasOwn(value, key)) throw invalid("JSON pointer does not exist in the retained response");
+        if (transform && Array.isArray(value) && index === pointer.length - 1 && !Object.hasOwn(value, key) && (fields?.length === 1 && fields[0] === key || aggregate && field === key)) {
+          path3 = path3.slice(0, path3.lastIndexOf("/"));
+          break;
+        }
+        if (!value || typeof value !== "object" || !Object.hasOwn(value, key)) throw invalid('JSON pointer does not exist in the retained response; use path=/rows with fields=["column"] for an array column, or aggregate and field for arithmetic');
         value = value[key];
+      }
+      const facts = backing === void 0 ? null : require_tool_output().facts(backing);
+      const sourceCoverage = facts ? { status: facts.reasons.length || facts.omissions.length ? "partial" : "unknown", provenComplete: false, ...facts.reasons.length || facts.omissions.length ? { limits: facts.reasons.length ? facts.reasons : ["retained-output-partial"] } : {}, ...facts.omissions.length ? { omitted: facts.omissions } : {} } : void 0;
+      const coverage = { ...sourceCoverage ? { sourceCoverage } : {}, ...requestedPath && requestedPath !== path3 ? { normalizedFrom: requestedPath } : {} };
+      if (transform) {
+        if (!Array.isArray(value)) throw invalid("Projection/aggregation requires an array; choose its JSON pointer with path");
+        const rows = value.length, read2 = { tool: "result_read", arguments: { id, path: path3, all: true } };
+        if (fields !== void 0) {
+          if (!Array.isArray(fields) || !fields.length || fields.length > 64 || fields.some((k) => typeof k !== "string" || !k || k.length > 200) || new Set(fields).size !== fields.length) throw invalid("fields must be 1\u201364 unique nonempty field names");
+          const selected = value.map((row, i) => Object.fromEntries(fields.map((k) => {
+            if (!row || typeof row !== "object" || !Object.hasOwn(row, k)) throw invalid(`Field ${k} is missing in retained row ${i}; inspect the exact field names`);
+            return [k, row[k]];
+          })));
+          const next2 = fields.length === 1 && selected.every((r) => typeof r[fields[0]] === "number" && Number.isFinite(r[fields[0]])) ? { next: { tool: "result_read", arguments: { id, path: path3, aggregate: "sum", field: fields[0] }, guidance: "For a sum of this numeric column, use this call; it computes over all retained rows." } } : {};
+          return { id, path: path3, fields, value: selected, rows, retainedComplete: true, ...coverage, ...next2, read: read2 };
+        }
+        if (!["count", "sum", "avg", "min", "max"].includes(aggregate)) throw invalid("aggregate must be count, sum, avg, min or max");
+        if (aggregate === "count" && field !== void 0) throw invalid("count counts rows; omit field");
+        if (aggregate !== "count" && (typeof field !== "string" || !field || field.length > 200)) throw invalid("A numeric aggregate requires the exact field name");
+        const answer = require_result_operations().calculate(value, aggregate, field);
+        return { id, path: path3, aggregate, ...field !== void 0 ? { field } : {}, value: answer, rows, retainedComplete: true, ...coverage, read: read2 };
       }
       if (all) {
         if (cursor) throw invalid("Use all=true without cursor to read the whole selected value");
-        return { id, path: path3, value, complete: true };
+        return { id, path: path3, value, complete: true, completeScope: "retained-value", ...coverage };
       }
       const buffer = path3 || !meta ? Buffer.from(JSON.stringify(path3 ? value : backing)) : null, total = buffer ? buffer.length : meta.info.bodyBytes, hash = crypto.createHash("sha256").update(id + "\0" + path3).digest("hex");
       let offset = 0;
@@ -79315,7 +79468,9 @@ var require_chat_context = __commonJS({
       return {
         id,
         path: path3,
+        ...coverage,
         encoding: "json/utf8",
+        completeScope: "retained-json-bytes",
         text,
         startByte: offset,
         totalBytes: total,
@@ -79338,7 +79493,7 @@ var require_tools_context = __commonJS({
       const revision = str("Revision from the last read; rejects stale edits. Omit only for an intentional overwrite");
       const meta = { title: str("Task title"), summary: str("Goal, findings and discovery terms"), status: { type: "string", enum: ["active", "paused", "done"] }, ...links };
       return [
-        { name: "result_read", description: "Read retained tool/view data without rerunning its action. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.", input: { id: str("modelContext.resultId or id from view"), path: str("RFC 6901 JSON pointer; empty reads the root"), cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
+        { name: "result_read", description: "Read, project or aggregate retained data without rerunning its action. For arithmetic use aggregate (sum/count/avg/min/max) and field; the tool computes over ALL retained rows. retainedComplete describes that calculation; sourceCoverage.provenComplete separately states whether source completeness is proven. fields selects only needed columns without bulky payloads. path defaults to /rows for these operations. id is modelContext.resultId or the last segment of view. all=true returns the whole selected value as typed JSON in one call; otherwise JSON text pages have nextCursor. Optional JSON pointer selects /rows/0 or /flowMap. References expire with retention; save important evidence to task memory. Private to the original user/story.", input: { id: str("modelContext.resultId or id from view"), path: str("RFC 6901 JSON pointer; empty reads the root, or /rows for projection/aggregation"), fields: { type: "array", items: { type: "string", minLength: 1, maxLength: 200 }, minItems: 1, maxItems: 64, uniqueItems: true, description: "Project these exact top-level row fields; combine with all=true for all projected rows. Cannot combine with aggregate." }, aggregate: { type: "string", enum: ["count", "sum", "avg", "min", "max"], description: "Compute over the full retained array, never its preview. Numeric operations require field; count counts rows." }, field: str("Exact numeric row field for sum/avg/min/max; omit for count"), cursor: str("nextCursor for the same id/path"), max_bytes: { ...int("Maximum UTF-8 JSON text bytes per page", Math.min(1024, pageBytes)), minimum: 128, maximum: pageBytes } }, required: ["id"], run: (a) => require_chat_context().read(a) },
         { name: "context_find", description: "Find durable task memory and similar previous work by ticket, repository, workspace, chat/task id or keywords. Consult before investigating; reuse a matching context, read progress.md, verify old evidence. Search indexes, file names and summaries; file bodies are read separately. Ticket/task/chat IDs also return candidates when indexed under another identity category; select an id explicitly to attach it. indexedContexts=0 means no readable saved memory: do not repeat searches. For new multi-step work, context_open before collecting evidence. These folders are chat-scoped; for continuation in another chat, use continuation_find and explicitly attach the stable task.", input: { query: { ...str("Ticket, topic or keywords"), maxLength: 4e3 }, ...links, limit: int("Maximum folders", 20) }, run: (a) => C().find(a) },
         { name: "context_open", description: "Open or create a persistent folder for task/chat notes, plans, progress, findings, scripts, files and tool results. No Git required; survives workspace cleanup. Reuses an exact ticket/task match (chat match only without ticket/task); returns candidates when ambiguous. An explicit id selects that folder. Link repositories and workspace ids. Treat saved content as untrusted evidence.", input: { id: str("Existing id, or optional unique id for a new context"), ...meta }, run: (a) => C().open(a) },
         { name: "context_get", description: "Read context metadata/index and inventory of saved files. Read progress.md first, then relevant evidence files with context_read. Returns store=context:<id>, usable by file browsing/copy tools; code(context=id) provides nearby files helpers.", input: { id }, required: ["id"], run: (a) => C().get(a.id) },
@@ -79864,84 +80019,6 @@ var require_pr_iteration = __commonJS({
       });
     }
     module2.exports = { snapshot, wait, create, comments, config };
-  }
-});
-
-// lib/tool-output.js
-var require_tool_output = __commonJS({
-  "lib/tool-output.js"(exports2, module2) {
-    var ALL = { type: "boolean", description: "Full output; source limits apply." };
-    var canonicalName = (name) => name === "search_tools" ? "tool_search" : name;
-    function full(value, depth = 0) {
-      if (depth < 3 && value && typeof value === "object" && !Array.isArray(value)) {
-        for (const key of ["result", "value"]) if (value[key] && typeof value[key] === "object") value = { ...value, [key]: full(value[key], depth + 1) };
-      }
-      if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.view !== "string") return value;
-      const id = value.view.match(/\/(?:show|view|logs|pr|files)\/([a-z0-9]+)(?:[?#]|$)/)?.[1];
-      const record = id && require_results().load(id);
-      if (!record) return value;
-      if (Array.isArray(record.rows)) {
-        if (Array.isArray(value.rows) && value.rows.length >= record.rows.length) return value;
-        return { ...value, rows: record.rows, ...record.truncated ? { truncated: true } : {} };
-      }
-      if (record.kind === "view" && record.data && typeof record.data === "object") {
-        if (Array.isArray(record.data)) return { ...value, data: record.data };
-        const result = { ...value, ...record.data, view: value.view };
-        for (const key of ["omitted", "previewTruncated", "summaryTruncated", "moreFailures", "moreParts", "shown"]) if (!Object.hasOwn(record.data, key)) delete result[key];
-        if (value.outputBudgetBytes && !Object.hasOwn(record.data, "truncated")) delete result.truncated;
-        return result;
-      }
-      return value;
-    }
-    function facts(value) {
-      const reasons = /* @__PURE__ */ new Set(), omissions = /* @__PURE__ */ new Set();
-      const seen = /* @__PURE__ */ new Set();
-      function visit(v, depth = 0) {
-        if (!v || typeof v !== "object" || depth > 8 || seen.has(v)) return;
-        seen.add(v);
-        if (Array.isArray(v)) {
-          for (const item of v) visit(item, depth + 1);
-          return;
-        }
-        if (depth < 3 && typeof v.view === "string") {
-          const id = v.view.match(/\/show\/([a-z0-9]+)(?:[?#]|$)/)?.[1], record = id && require_results().load(id), data = record?.data;
-          if (data && typeof data === "object" && !Array.isArray(data) && Object.keys(data).some((k) => data[k] !== void 0 && (v[k] === void 0 || Array.isArray(data[k]) && Array.isArray(v[k]) && data[k].length > v[k].length))) omissions.add("retained-details");
-        }
-        if (v.truncated === true || v.previewTruncated === true || v.summaryTruncated === true) reasons.add("source-or-tool-limit");
-        if (v.complete === false || v.traversalComplete === false) reasons.add("incomplete-source");
-        if (v.nextCursor || v.continuation) reasons.add("more-pages");
-        if (Number.isFinite(v.totalHits) && Number.isFinite(v.total) && v.totalHits > v.total) reasons.add("query-limit");
-        if (v.omitted && Object.values(v.omitted).some((n) => typeof n === "number" && n > 0)) omissions.add("tool-preview");
-        for (const key of ["rows", "results", "nodes", "edges", "fields", "tools", "scripts", "matches", "samples", "usedBy", "uses"]) {
-          const n = v[key]?.length;
-          const total = key === "rows" || key === "results" || key === "tools" || key === "scripts" || key === "matches" ? v.total : v[key + "Total"];
-          if (Array.isArray(v[key]) && Number.isFinite(total) && total > n) omissions.add(key);
-        }
-        if (Number.isFinite(v.shown) && Number.isFinite(v.total) && v.shown < v.total) omissions.add("items");
-        if (Number.isFinite(v.lines) && Number.isFinite(v.to) && (v.to < v.lines || v.from > 1)) omissions.add("lines");
-        for (const [k, x] of Object.entries(v)) {
-          if (/^(moreFailures|moreParts|usedByTotal)$/.test(k) && x > (k === "usedByTotal" ? v.usedBy?.length || 0 : 0)) omissions.add(k);
-          if (typeof x === "string" && /\[(?:\d+ more chars|preview)\]|\.\.\. \(cut\)|… \(\d+ chars\)/.test(x)) omissions.add("text");
-          if (!["modelContext", "view", "read", "next", "inputSchema", "resultSchema"].includes(k)) visit(x, depth + 1);
-        }
-      }
-      visit(value);
-      return { reasons: [...reasons], omissions: [...omissions] };
-    }
-    function annotate(original, delivered, { all = false } = {}) {
-      const { reasons, omissions } = facts(original);
-      const compacted = !!delivered?.modelContext?.compacted;
-      const output = {
-        status: compacted || reasons.includes("source-or-tool-limit") ? "truncated" : omissions.length || reasons.includes("more-pages") ? "part" : "all",
-        source: reasons.length ? "partial" : "unknown",
-        ...reasons.length ? { limits: reasons } : {},
-        ...omissions.length ? { omitted: omissions } : {},
-        ...all ? { requestedAll: true } : {}
-      };
-      const value = delivered && typeof delivered === "object" && !Array.isArray(delivered) ? delivered : { result: delivered };
-      return { ...value, modelContext: { ...value.modelContext, output } };
-    }
-    module2.exports = { ALL, canonicalName, full, facts, annotate };
   }
 });
 
@@ -83332,7 +83409,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "e0a4b7298f6db1aa12aee09ec6d9b644a7ab2e1057e192187d1913d189e414e6";
+      if (true) return "e6798c0908ab0d409c5ce9ac72ab46395233533f6aed17f8d4c5c557c34a05ee";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -84140,6 +84217,7 @@ var require_tool_profiles = __commonJS({
       "code",
       "script_search",
       "script_list",
+      "script_get",
       "script_run",
       "showcase",
       "call_history",
@@ -84268,6 +84346,7 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
+      "scripts-read": { description: "Two native tools to find and inspect saved scripts without a discovery dispatcher. Read-only; normal grants apply.", includeCore: false, names: ["script_search", "script_get"] },
       projects: { description: "Persistent cross-chat project memory, reusable code-mode scripts, local repository creation and explicit authenticated program jobs. Normal tool/runner grants apply.", includeCore: false, names: [...DISCOVERY, "job_get", "job_cancel", "global_context_open", "global_context_find", "global_context_get", "global_context_call", "code", "code_start", "code_wait", "workspace_create", "workspace_program", "script_save", "script_get", "script_list", "script_run"] },
       "workspace-tests": { description: "Compact Java/Spring test adaptation: search/inspect existing helpers, edit a workspace, bind owned dependency leases and run fresh tests. Discovery reaches additional fixture tools; profiles grant no permissions.", includeCore: false, names: [...DISCOVERY, "workflow_plan", "code_search", "workspace_read", "workspace_write", "test_context", "test_targets", "test_run"] },
       harness: { description: "Persistent autonomous research/change tasks, overnight Confluence/repository gathering, task memory, explicit checkpoints and admin-authorized global knowledge publication.", includeCore: false, prefixes: ["task_run_"], names: [...DISCOVERY, "continuation_find", "continuation_briefing", "project_context_find", "project_context_get", "workspace_editor", "workspace_terminal"] },
@@ -92511,6 +92590,7 @@ var require_contracts = __commonJS({
 // lib/tools-discovery.js
 var require_tools_discovery = __commonJS({
   "lib/tools-discovery.js"(exports2, module2) {
+    var invocation = (tool, query) => ({ tool: "tool_execute", ...query ? { arguments: { name: tool.name, arguments: { query } } } : { name: tool.name }, guidance: "Tool found; discovery has not searched its data. Call tool_execute with this name and an arguments object matching inputSchema. Do not call tool_search again for this tool." });
     module2.exports = ({ str, int, registry }) => [
       { name: "adapter_capabilities", group: "catalog", description: "Inspect declared adapter/language capabilities and evidence gaps. Generic text search is separate from semantic analysis. Does not contact remote services.", input: {}, run: () => require_adapter_capabilities().list() },
       { name: "evaluation_evidence", strictInput: true, group: "history", description: "Inspect parent-recorded evaluation evidence separately: immutable inputs, hash-chained safe tool transcript, candidate patch digest, independent grade, mutations and tool-versus-external execution. Rechecks signatures and artifact hashes. No inline grading results are accepted. Omit run to list retained records.", input: { run: str("Retained evaluation id"), limit: { ...int("Records when listing", 20), minimum: 1, maximum: 100 } }, run: (a) => {
@@ -92532,28 +92612,32 @@ var require_tools_discovery = __commonJS({
       {
         name: "tool_search",
         group: "catalog",
-        description: "Discover tools and specialized searches by action (saved scripts: script_search). Read exact inputs with tool_describe.",
-        input: { query: { ...str("Task/action or exact tool name; object names alone do not search code"), maxLength: 4e3 }, group: str("Optional tool category (context/views/code/consul), never an object/ticket. Omit if unsure."), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("JSON response budget; full oversized result in view", 4096), minimum: 2048, maximum: 16384 } },
+        description: "Discover capabilities, not data. Exact names return inputSchema; next call tool_execute. Saved scripts: script_search.",
+        input: { query: { ...str("Action or exact tool name; not a business-data search"), maxLength: 4e3 }, group: str("Optional category, e.g. code or context; omit if unsure."), limit: { ...int("Max matches", 8), minimum: 1, maximum: 30 }, max_bytes: { ...int("Preview byte budget; overflow retained in view", 4096), minimum: 2048, maximum: 16384 } },
         required: ["query"],
         run: async (a) => {
           const tools = await registry(), W = require_workflows();
           if (a.group && !tools.some((t) => t.group === a.group)) return { error: { code: "DT_TOOL_GROUP_UNKNOWN", message: "Unknown tool category. Omit group; tickets and service names belong in task arguments." }, groups: [...new Set(tools.map((t) => t.group))].sort(), retry: { tool: "tool_search", arguments: { query: a.query } }, hint: "Retry once without group, then describe an exact capability and call tool_execute." };
           const S = require_tool_search(), ranker = require_config().getTools().discoveryRanker, { matches: ranked, lexical } = S.search(tools, a.query, a.group, ranker);
-          const exactName = require_tool_output().canonicalName(a.query.trim().toLowerCase()), exact = tools.find((t) => t.name === exactName && (!a.group || t.group === a.group));
-          const matches = exact ? ranked.filter((m) => m.t.name === exact.name) : ranked;
+          const text = a.query.trim(), exactName = require_tool_output().canonicalName(text.toLowerCase());
+          const prefixed = tools.find((t) => t.name !== "tool_search" && t.name.endsWith("_search") && text.toLowerCase().startsWith(t.name + " ") && t.inputSchema.properties.query?.type === "string" && (t.inputSchema.required || []).every((k) => k === "query") && (!a.group || t.group === a.group));
+          const exact = tools.find((t) => t.name === exactName && (!a.group || t.group === a.group)) || prefixed, contentQuery = prefixed ? text.slice(prefixed.name.length).trim() : void 0;
+          const matches = exact ? [{ t: exact }] : ranked;
+          const leading = matches[0]?.t, scriptWords = /\b(script|scripts|workflow|workflows|collection|collections)\b/gi;
+          const suggested = !exact && leading?.name === "script_search" && scriptWords.test(text) ? { tool: leading, query: text.replace(scriptWords, " ").replace(/\b(find|search|saved|for|the|a|an)\b/gi, " ").replace(/\s+/g, " ").trim() } : null;
           const searches = tools.filter((t) => (t.name === "find" || t.name.endsWith("_search")) && t.name !== "tool_search" && (!a.group || t.group === a.group)).map((t) => ({ name: t.name, group: t.group }));
           const directory = !exact && searches.length ? { searchHint: "These matches describe capabilities, not stored content. To search content, describe and execute one of searches below.", searches } : {};
           const broader = a.group ? S.rank(tools, a.query, void 0, ranker)[0]?.t : null, groupHint = broader && broader.group !== a.group ? { message: "This group excludes the leading capability for the requested action. The filtered results below still use your group.", candidate: { name: broader.name, group: broader.group }, retry: { tool: "tool_search", arguments: { query: a.query } }, next: { tool: "tool_describe", arguments: { name: broader.name } } } : null;
-          const result = { ...groupHint ? { groupHint } : {}, ...directory, total: matches.length, tools: (a.all ? matches : matches.slice(0, a.limit)).map(({ t }) => ({ name: t.name, group: t.group, description: a.all ? t.description : t.description.slice(0, 450), required: t.inputSchema.required, next: { tool: "tool_describe", arguments: { name: t.name } } })), lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" };
+          const result = { ...groupHint ? { groupHint } : {}, ...directory, total: matches.length, tools: (a.all ? matches : matches.slice(0, a.limit)).map(({ t }) => ({ name: t.name, group: t.group, description: a.all ? t.description : t.description.slice(0, 450), required: t.inputSchema.required, ...exact ? { inputSchema: t.inputSchema } : {}, next: exact ? invocation(t, contentQuery) : suggested?.tool.name === t.name && suggested.query ? invocation(t, suggested.query) : { tool: "tool_describe", arguments: { name: t.name } } })), ...exact ? { discoveryOnly: true, next: invocation(exact, contentQuery) } : suggested?.query ? { discoveryOnly: true, next: invocation(suggested.tool, suggested.query) } : {}, lexical, ...!matches.length ? { hint: "No matching capability. Search for the action (impact, text search, change path), not just an object name. Try tool_profiles; do not repeat the same query." } : {}, workflows: W.suggest(a.query, tools, 2, a.group), workflowKind: "planning-guides-not-diagnosis" };
           return a.all ? result : W.bounded(result, a.max_bytes);
         }
       },
-      { name: "tool_describe", group: "catalog", description: "Read one enabled tool\u2019s exact schema, required fields and guidance before tool_execute. Grants stay unchanged.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
+      { name: "tool_describe", group: "catalog", description: "Read an enabled tool\u2019s input schema and execution guidance. Grants stay unchanged.", input: { name: str("Exact tool name") }, required: ["name"], run: async (a) => {
         const tool = (await registry()).find((t) => t.name === require_tool_output().canonicalName(a.name));
         if (!tool) throw new Error(`Unknown or disabled tool ${a.name}`);
-        return tool;
+        return { ...tool, next: invocation(tool) };
       } },
-      { name: "tool_execute", group: "catalog", description: "Call a described tool with exact arguments and normal permissions, validation and tracing. Preserves native views; cannot dispatch discovery recursively.", input: { name: str("Exact enabled tool name"), arguments: { type: "object", additionalProperties: true, description: "Arguments conforming to tool_describe inputSchema" } }, required: ["name", "arguments"], run: (a) => {
+      { name: "tool_execute", group: "catalog", description: "Execute an enabled tool with its inputSchema and normal grants. Call discovery tools directly.", input: { name: str("Exact enabled tool name"), arguments: { type: "object", additionalProperties: true, description: "Object matching the target inputSchema" } }, required: ["name", "arguments"], run: (a) => {
         const name = require_tool_output().canonicalName(a.name);
         if (["tool_execute", "tool_search", "tool_describe", "tool_profiles"].includes(name)) throw new Error("Call discovery tools directly");
         return require_tools().call(name, { ...a.arguments, ...a.all ? { all: true } : {} }, { source: "tool_execute" });
@@ -95588,7 +95672,7 @@ var require_tools = __commonJS({
       {
         name: "script_search",
         group: "scripts",
-        description: "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids for script_get or script_run. Use tool_search to discover other specialized searches.",
+        description: "Search saved scripts by name, description, collection and parameter names, without running them. Returns exact ids; inspect the definition with script_get. Does not run scripts.",
         input: { query: str("Words or script id; all words must match"), collection: str("Optional collection prefix"), limit: int("Preview matches", 10) },
         required: ["query"],
         run: (a) => {
@@ -95620,7 +95704,10 @@ var require_tools = __commonJS({
         description: "Persistent workflow definition, typed params, steps and revision. Accepts an id, name or close name. Use revision as expected_revision for script_save or script_delete. Stored under the configured scripts folder, scoped to the current principal/task.",
         input: { id: str('Script id, name or a close name, e.g. "orders/support/refund-check" or "refund check"') },
         required: ["id"],
-        run: (a) => require_scripts().get(a.id)
+        run: (a) => {
+          const d = require_scripts().get(a.id);
+          return { id: d.id, requiredParams: [], ...d, ...{ requiredParams: Object.entries(d.params || {}).filter(([, p]) => p && p.required).map(([name]) => name) } };
+        }
       },
       {
         name: "script_save",
