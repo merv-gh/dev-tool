@@ -325,6 +325,22 @@ test('result_read accepts owned local view URLs without accepting a foreign look
  await assert.rejects(T().call('result_read',{id:'https://foreign.example/show/'+R.referenceId(view),all:true}));
 });
 
+test('selected graph recovery derives structural facts from the same owned source',async()=>{
+ const R=require('../lib/results'),sourceView=R.saveView('semantic-flow-map',{flowMap:{complete:false,entries:['m'],methods:[{entry:'m',name:'run'}],nodes:[{id:'a',kind:'entry',changes:[]},{id:'b',kind:'return',changes:[]}],edges:[{from:'a',to:'b',kind:'control'},{from:'b',to:'a',kind:'control'}]},proof:{runtime:'unknown',behaviorVerified:false},gaps:[]});
+ const failed=await T().call('code',{code:'const r=await tools.result_read({id:'+JSON.stringify(sourceView)+',path:"/flowMap",all:true});return r.value.graph.nodes.length;'});
+ assert.equal(failed.ok,false);
+ assert.match(failed.diagnostic.message,/result.value itself/);
+ assert.equal(failed.diagnostic.availableResult.summary.hasControlCycle,true);
+ assert.equal(failed.diagnostic.availableResult.summary.nodeCount,2);
+ assert.equal(failed.diagnostic.availableResult.sourceView,sourceView);
+ const recovered=await T().call('code',failed.diagnostic.retry.arguments);
+ assert.equal(recovered.returned.hasControlCycle,true);
+ assert.equal(recovered.returned.behaviorVerified,false);
+ const denied=await require('../lib/access').run({principalId:'not-the-owner',storyId:'elsewhere',multiUser:true,role:'user'},()=>T().call('code',{code:'return await tools.result_read({id:'+JSON.stringify(sourceView)+',all:true});'}));
+ assert.equal(denied.ok,false);
+ assert.equal(denied.diagnostic,undefined,'recovery cannot inspect another actor source');
+});
+
 test('the code schema advertises enabled call shapes without granting or leaking hidden capabilities',async()=>{
  const schema=(await T().schemas({profile:'code'}))[0];
  assert.match(schema.description,/tools.what_happens_from/);

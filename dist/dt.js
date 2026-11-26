@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "a94956fd5ddb4adf7c8487a653eabab1bc63ac9c99754b7834499afd688f5312",
+      sourceDigest: "785f82a76394ee13db28245fe176a8316d54d6635151a734ddc8f97a4d24b728",
       machines: [
         {
           id: "IO.atomic-file",
@@ -72038,37 +72038,53 @@ var require_global_context = __commonJS({
   }
 });
 
-// lib/semantic-claims.js
-var require_semantic_claims = __commonJS({
-  "lib/semantic-claims.js"(exports2, module2) {
-    var proofFields = /* @__PURE__ */ new Set(["kind", "status", "feasibility", "runtime", "behaviorVerified"]);
-    function limits(raw) {
-      return { ...raw?.flowMap ? { mapComplete: raw.flowMap.complete ?? null } : {}, proof: Object.fromEntries([...proofFields].filter((k) => raw?.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])), sourceCoverage: { complete: raw?.flowMap?.complete ?? null, truncated: !!raw?.truncated, gapCount: (raw?.gaps || []).length } };
-    }
-    function verify(value, sources = {}) {
-      const available = Object.fromEntries(Object.entries(sources).filter(([, v]) => v).map(([k, v]) => [k, limits(v)])), issues = [];
-      let checkedFields = 0;
-      function walk(v, path3 = "", scope = null, inProof = false, inCoverage = false, depth = 0) {
-        if (!v || typeof v !== "object" || depth > 12 || issues.length >= 32) return;
-        for (const [k, x] of Object.entries(v).slice(0, 100)) {
-          const nextScope = ["map", "entryMap"].includes(k) ? "map" : ["trace", "valueTrace"].includes(k) ? "trace" : scope;
-          const p = path3 + "/" + k.replace(/~/g, "~0").replace(/\//g, "~1");
-          const candidates = nextScope ? available[nextScope] ? [available[nextScope]] : [] : Object.values(available);
-          let observed;
-          if (["feasibility", "runtime", "behaviorVerified"].includes(k) || (inProof || /\/(?:proofLimits|entryMap|valueTrace|map|trace)$/.test(path3)) && proofFields.has(k)) observed = candidates.map((s) => s.proof[k]).filter((x2) => x2 !== void 0);
-          else if (k === "mapComplete") observed = candidates.map((s) => s.mapComplete).filter((x2) => x2 !== void 0);
-          else if (inCoverage && ["complete", "truncated", "gapCount"].includes(k)) observed = candidates.map((s) => s.sourceCoverage[k]);
-          if (observed?.length) {
-            checkedFields++;
-            if (!observed.some((actual) => JSON.stringify(actual) === JSON.stringify(x))) issues.push({ path: p, reported: x, observed: [...new Set(observed)] });
-          }
-          walk(x, p, nextScope, k === "proof", k === "sourceCoverage", depth + 1);
+// lib/graph-structure.js
+var require_graph_structure = __commonJS({
+  "lib/graph-structure.js"(exports2, module2) {
+    function summarize(nodes = [], edges = []) {
+      const control = edges.filter((e) => e.kind === "control"), adj = /* @__PURE__ */ new Map(), color = /* @__PURE__ */ new Map();
+      let complete = true;
+      for (const n of nodes) {
+        if (typeof n.id !== "string" || adj.has(n.id)) {
+          complete = false;
+          continue;
         }
+        adj.set(n.id, []);
       }
-      walk(value);
-      return { valid: issues.length === 0, checkedFields, issues, observed: Object.fromEntries(Object.entries(available).map(([k, v]) => [k === "map" ? "entryMap" : "valueTrace", v])) };
+      for (const e of control) {
+        if (!adj.has(e.from) || !adj.has(e.to)) {
+          complete = false;
+          continue;
+        }
+        adj.get(e.from).push(e.to);
+      }
+      let cycle = false;
+      for (const start of adj.keys()) {
+        if (color.has(start)) continue;
+        const stack = [[start, 0]];
+        color.set(start, 1);
+        while (stack.length && !cycle) {
+          const frame = stack.at(-1), neighbors = adj.get(frame[0]);
+          if (frame[1] === neighbors.length) {
+            color.set(frame[0], 2);
+            stack.pop();
+            continue;
+          }
+          const next = neighbors[frame[1]++];
+          if (color.get(next) === 1) {
+            cycle = true;
+            break;
+          }
+          if (!color.has(next)) {
+            color.set(next, 1);
+            stack.push([next, 0]);
+          }
+        }
+        if (cycle) break;
+      }
+      return { nodeCount: nodes.length, controlEdgeCount: control.length, hasControlCycle: cycle ? true : complete ? false : null, graphStructureComplete: complete };
     }
-    module2.exports = { verify, limits };
+    module2.exports = { summarize };
   }
 });
 
@@ -73588,7 +73604,7 @@ var require_semantic_navigation = __commonJS({
         const selectedEntries = m.methods.filter((x) => m.entries.includes(x.entry)).map((x) => ({ name: x.name, file: x.file, line: x.line }));
         const methodExits = m.nodes.filter((n) => ["return", "throw", "exit"].includes(n.kind)).map(locate), externalCallBoundaries = m.nodes.filter((n) => n.exit).map((n) => ({ ...locate(n), boundary: n.exit }));
         const decisions = m.nodes.filter((n) => n.kind === "decision").map(locate), changes = m.nodes.flatMap((n) => (n.changes || []).map((c) => ({ ...c, file: c.file ?? n.file, line: c.line ?? n.line })));
-        const summary2 = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view, proofLimits };
+        const summary2 = { ...selectedEntries.length === 1 ? { entry: selectedEntries[0].name } : {}, decisionCount: decisions.length, changeCount: changes.length, methodExitCount: methodExits.length, externalCallBoundaryCount: externalCallBoundaries.length, ...require_graph_structure().summarize(m.nodes, m.edges), behaviorVerified: raw.proof?.behaviorVerified === true, mapComplete: m.complete, mapView: raw.view, proofLimits };
         return {
           evidenceType: "entry-map",
           mapView: raw.view,
@@ -73681,7 +73697,7 @@ var require_semantic_navigation = __commonJS({
         } },
         { name: "what_happens_from", description: "Map an entry method: decisions, changes, method exits and external call boundaries. To answer a combined map and value-flow question, also provide parameter, sink, argument and assumptions; returns entryMap and valueTrace separately with both mapView and traceView. A sink argument is never guessed. Return summary directly as the answer projection: it includes proofLimits with proof and sourceCoverage kept separate. Keep its mapView/traceView links even for counts-only questions; unmatchedAssumptions identifies declarations to correct from observedPredicates. Poll the returned job. Static evidence, not runtime proof; omit all for compact navigation.", input: { ...scope, entry: text("Whole entry method name"), ...traceInputs, ...observation }, inputRules: { ...required(["analysis", "entry"]), else: { required: ["analysis", "entry"], if: { anyOf: [{ required: ["parameter"] }, { required: ["sink"] }, { required: ["argument"] }] }, then: { required: ["parameter", "sink", "argument"] } } }, run: (a) => query("what_happens_from", "flowmap", a) },
         { name: "where_value_flows", description: "Trace an entry parameter to an explicitly selected one-based sink argument. argument is required: never guess argument 1. Pass literal user predicates in assumptions (array or one expression/holds object). Returns summary with selected argumentExpression, exact statuses, traceView and proofLimits (proof and sourceCoverage are separate); selectedSinks retains source positions and argument indexes; mixed statuses retain per-path checks. Static evidence, not runtime proof. Omit all for compact navigation.", input: { ...scope, entry: text("Source method name"), ...traceInputs, ...observation }, inputRules: required(["analysis", "entry", "parameter", "sink", "argument"]), run: (a) => query("where_value_flows", "trace", a) }
-      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true, codeHint: t.name === "which_analyses_exist" ? "Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown." : t.name === "what_happens_from" ? "Map-only returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,mapComplete,behaviorVerified,mapView,proofLimits. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only." : "Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only." }));
+      ].map((t) => ({ ...t, group: "semantic", origin: "built-in", strictInput: true, codeHint: t.name === "which_analyses_exist" ? "Returns {analyses:[{id,repo,sha,workspace}],total}; metadata only. Use only when the requested analysis identity is unknown." : t.name === "what_happens_from" ? "Map-only returns {summary,mapView}; summary has entry,decisionCount,changeCount,methodExitCount,externalCallBoundaryCount,nodeCount,controlEdgeCount,hasControlCycle,graphStructureComplete,mapComplete,behaviorVerified,mapView,proofLimits. Structural counts/cycles cover every retained graph row; they do not prove runtime behavior or full source coverage. With all:true, graph is flowMap:{nodes:[{id,kind}],edges:[{from,to,kind}]}, never entryMap.graph. Combined map/trace additionally returns entryMap,valueTrace and flat trace fields in summary. Return summary unchanged for summary questions. Poll with job only." : "Returns {summary,selectedSinks}; summary has entry,traceSinkCall,argumentExpression,controlAssumptionStatus,dataAssumptionStatus,behaviorVerified,traceView,proofLimits. traceView is a URL string, never an object or array. Return summary unchanged. Static runtime/feasibility are unknown. Poll with job only." }));
     };
     module2.exports.summarize = summarize;
     module2.exports.normalize = (name, args) => {
@@ -73721,6 +73737,40 @@ var require_semantic_navigation = __commonJS({
       if (Array.isArray(out2.assumptions)) out2.assumptions = out2.assumptions.map((a) => a && typeof a === "object" && !Array.isArray(a) && typeof a.holds === "string" && /^(true|false)$/i.test(a.holds.trim()) ? { ...a, holds: a.holds.trim().toLowerCase() === "true" } : a);
       return out2;
     };
+  }
+});
+
+// lib/semantic-claims.js
+var require_semantic_claims = __commonJS({
+  "lib/semantic-claims.js"(exports2, module2) {
+    var proofFields = /* @__PURE__ */ new Set(["kind", "status", "feasibility", "runtime", "behaviorVerified"]);
+    function limits(raw) {
+      return { ...raw?.flowMap ? { mapComplete: raw.flowMap.complete ?? null } : {}, proof: Object.fromEntries([...proofFields].filter((k) => raw?.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])), sourceCoverage: { complete: raw?.flowMap?.complete ?? null, truncated: !!raw?.truncated, gapCount: (raw?.gaps || []).length } };
+    }
+    function verify(value, sources = {}) {
+      const available = Object.fromEntries(Object.entries(sources).filter(([, v]) => v).map(([k, v]) => [k, limits(v)])), issues = [];
+      let checkedFields = 0;
+      function walk(v, path3 = "", scope = null, inProof = false, inCoverage = false, depth = 0) {
+        if (!v || typeof v !== "object" || depth > 12 || issues.length >= 32) return;
+        for (const [k, x] of Object.entries(v).slice(0, 100)) {
+          const nextScope = ["map", "entryMap"].includes(k) ? "map" : ["trace", "valueTrace"].includes(k) ? "trace" : scope;
+          const p = path3 + "/" + k.replace(/~/g, "~0").replace(/\//g, "~1");
+          const candidates = nextScope ? available[nextScope] ? [available[nextScope]] : [] : Object.values(available);
+          let observed;
+          if (["feasibility", "runtime", "behaviorVerified"].includes(k) || (inProof || /\/(?:proofLimits|entryMap|valueTrace|map|trace)$/.test(path3)) && proofFields.has(k)) observed = candidates.map((s) => s.proof[k]).filter((x2) => x2 !== void 0);
+          else if (k === "mapComplete") observed = candidates.map((s) => s.mapComplete).filter((x2) => x2 !== void 0);
+          else if (inCoverage && ["complete", "truncated", "gapCount"].includes(k)) observed = candidates.map((s) => s.sourceCoverage[k]);
+          if (observed?.length) {
+            checkedFields++;
+            if (!observed.some((actual) => JSON.stringify(actual) === JSON.stringify(x))) issues.push({ path: p, reported: x, observed: [...new Set(observed)] });
+          }
+          walk(x, p, nextScope, k === "proof", k === "sourceCoverage", depth + 1);
+        }
+      }
+      walk(value);
+      return { valid: issues.length === 0, checkedFields, issues, observed: Object.fromEntries(Object.entries(available).map(([k, v]) => [k === "map" ? "entryMap" : "valueTrace", v])) };
+    }
+    module2.exports = { verify, limits };
   }
 });
 
@@ -73791,6 +73841,20 @@ var require_code_result = __commonJS({
         const graphRead = id ? { tool: "result_read", arguments: { id, path: "/flowMap", all: true } } : void 0;
         return { message: "Source evidence was already retrieved. The cell projection may be incorrect. Reuse the original selected summary below; proofLimits keeps proof and sourceCoverage separate. Do not rerun the completed source query to fix formatting. For graph calculations use graphRead; its value has nodes:[{id,kind}] and edges:[{from,to,kind}]. Declare calculation variables in this fresh cell.", availableResult: { tool: call.tool, summary: value.summary, path: path3, read: { tool: "result_read", arguments: args }, ...graphRead ? { graphRead } : {} }, retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } };
       }
+      for (let i = recentResults.length - 1; i >= 0; i--) {
+        const call = recentResults[i];
+        if (call.tool !== "result_read") continue;
+        const R = require_results(), sourceView = call.value?.sourceView, id = R.referenceId(sourceView), raw = id && R.load(id)?.data;
+        if (!raw?.flowMap || !Array.isArray(raw.flowMap.nodes) || !Array.isArray(raw.flowMap.methods)) continue;
+        const summary = require_semantic_navigation().summarize({ ...raw, view: sourceView }).summary;
+        let view;
+        try {
+          view = R.saveTool("retained_map_summary", JSON.stringify({ summary, sourceView }));
+        } catch {
+        }
+        const args = view ? { id: R.referenceId(view), path: "/summary", all: true } : null;
+        return { message: "The selected graph is result.value itself: use result.value.nodes and result.value.edges, not result.value.graph. The summary below was computed from this same full retained graph. If it answers the request, answer now. Do not rerun discovery or source queries; static graph facts do not prove runtime behavior.", availableResult: { tool: call.tool, summary, sourceView, summaryScope: "derived-from-retained-graph", read: args ? { tool: "result_read", arguments: args } : null, graphRead: { tool: "result_read", arguments: { id, path: "/flowMap", all: true } } }, ...args ? { retry: { tool: "code", arguments: { code: "return (await tools.result_read(" + JSON.stringify(args) + ")).value;" } } } : {} };
+      }
     };
     module2.exports.diagnostic = (error, recentResults = [], receipts = []) => {
       if (error && /Cannot read properties of undefined|cannot read property|is not defined/i.test(error)) {
@@ -73828,7 +73892,7 @@ var require_code_result = __commonJS({
       for (const source of Object.values(sources)) {
         if (source.flowMap && (!Array.isArray(source.flowMap.nodes) || !Array.isArray(source.flowMap.methods))) continue;
         const summary = require_semantic_navigation().summarize(source).summary;
-        for (const object of [value, value?.summary]) if (object && typeof object === "object") for (const field of ["entry", "decisionCount", "changeCount", "methodExitCount", "externalCallBoundaryCount", "traceSinkCall", "argumentExpression", "controlAssumptionStatus", "dataAssumptionStatus"]) {
+        for (const object of [value, value?.summary]) if (object && typeof object === "object") for (const field of ["entry", "decisionCount", "changeCount", "methodExitCount", "externalCallBoundaryCount", "nodeCount", "controlEdgeCount", "hasControlCycle", "graphStructureComplete", "traceSinkCall", "argumentExpression", "controlAssumptionStatus", "dataAssumptionStatus"]) {
           if (Object.hasOwn(object, field) && Object.hasOwn(summary, field) && JSON.stringify(object[field]) !== JSON.stringify(summary[field])) facts.push({ field, reported: object[field], observed: summary[field] });
         }
       }
@@ -83960,7 +84024,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "a94956fd5ddb4adf7c8487a653eabab1bc63ac9c99754b7834499afd688f5312";
+      if (true) return "785f82a76394ee13db28245fe176a8316d54d6635151a734ddc8f97a4d24b728";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
