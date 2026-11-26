@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "766402f22ff330dcbeb95bb853a99ab175e2cb7246165b1e6533dd467d04d2fe",
+      sourceDigest: "cbc909d1c0276097e0b5569261bd9c856cbe413e89bb971560aec1e1e90cadda",
       machines: [
         {
           id: "IO.atomic-file",
@@ -73703,7 +73703,7 @@ var require_semantic_navigation = __commonJS({
           common.next = { insideCodeCall: "tools.tool_describe", arguments: { name: "what_happens_from" }, code: 'return await tools.tool_describe({name:"what_happens_from"});' };
           common.guidance = "Read analyses[] (not value[]). Analyses have been listed. Do not repeat this listing. Choose the requested analyses[].id and inspect the next schema, then query it using analysis:id.";
           if (!records.length) {
-            common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions } };
+            common.next = { tool: "which_analyses_exist", insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions } };
             common.guidance = Object.keys(filters).length ? "No retained analysis matches these exact filters. Inspect the unfiltered retained list; do not invent an id or parse a new revision without an indexing request." : "No retained analyses are available. Report the missing evidence and inspect semantic configuration/indexing capabilities; do not invent a map or trace.";
           }
           if (!records.length && Object.keys(filters).length) {
@@ -73711,7 +73711,11 @@ var require_semantic_navigation = __commonJS({
             if (mismatches.length) {
               const { field, peers } = mismatches[0];
               common.filterMismatch = { field, requested: filters[field], candidates: peers.slice(0, 10).map((x) => Object.fromEntries(["id", "repo", "sha", "workspace", "language"].filter((k) => x[k] !== void 0).map((k) => [k, x[k]]))), candidatesTruncated: peers.length > 10, meaning: "Other retained identities matching the remaining filters, NOT matches for the requested revision. Verify against the user request before selecting an id." };
-              common.next = { insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions, ...Object.fromEntries(Object.entries(filters).filter(([k]) => k !== field)) } };
+              common.next = { tool: "which_analyses_exist", insideCodeCall: "tools.which_analyses_exist", arguments: { env: a.env, versions, ...Object.fromEntries(Object.entries(filters).filter(([k]) => k !== field)) } };
+              common.ready = false;
+              common.error = "Exact identity filter mismatch for " + field + ". No analysis selected. Use retry to inspect candidates without that filter, verify the requested revision, then reuse its id.";
+              common.retry = { tool: "which_analyses_exist", arguments: { ...common.next.arguments } };
+              common.insideCodeRetry = { tool: "code", arguments: { code: "return await tools.which_analyses_exist(" + JSON.stringify(common.next.arguments) + ");" } };
               common.guidance = "No retained analysis matches these exact filters. Exact identity filter mismatch. Inspect filterMismatch candidates and copy the actual requested identity verbatim; do not repeat the unchanged failed filters. Candidates are metadata, not a map/trace and not proof of the requested revision.";
             }
           }
@@ -84066,7 +84070,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "766402f22ff330dcbeb95bb853a99ab175e2cb7246165b1e6533dd467d04d2fe";
+      if (true) return "cbc909d1c0276097e0b5569261bd9c856cbe413e89bb971560aec1e1e90cadda";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -85003,7 +85007,7 @@ var require_tool_profiles = __commonJS({
       "tool_execute"
     ];
     var PROFILES = {
-      "semantic-read": { description: "Four read-only Joern question tools: discover retained analyses, map entry behavior, trace a value, and inspect or aggregate retained evidence. Reuse supplied analysis ids. Prefer ready summaries; copy evidence URLs and literal predicates exactly. Static evidence does not verify runtime behavior. Normal grants apply.", includeCore: false, names: ["which_analyses_exist", "what_happens_from", "where_value_flows", "result_read"] },
+      "semantic-read": { description: 'Four read-only Joern question tools: discover retained analyses, map entry behavior, trace a value, and inspect or aggregate retained evidence. Reuse supplied analysis ids; otherwise discover once. Combined map AND trace: call what_happens_from with analysis,entry,parameter,sink,argument,assumptions. Use ready summaries and copy their requested fields, evidence URLs and literal predicates exactly. If a fact/link is missing, query it; never invent it. Follow explicit retry arguments after a failed identity lookup instead of repeating unchanged filters. For filtered row calculations, pass where to result_read with aggregate:"summary" and the numeric field; value.count is matched rows, retainedRows is the input count before filtering. Static evidence does not verify runtime behavior. Normal grants apply.', includeCore: false, names: ["which_analyses_exist", "what_happens_from", "where_value_flows", "result_read"] },
       "code-semantic": { description: "Question-shaped retained Joern tools plus code for composition and calculation. Native discovery is available; normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe", "result_read", "which_analyses_exist", "what_happens_from", "where_value_flows"] },
       "code-discovery": { description: "Native capability search and schema discovery; execute queries and calculations inside code. Normal grants apply.", includeCore: false, names: ["code", "tool_search", "tool_describe"] },
       code: { description: "One outer code tool; discover and invoke enabled tools inside JavaScript. Profiles never grant extra permissions.", includeCore: false, names: ["code"] },

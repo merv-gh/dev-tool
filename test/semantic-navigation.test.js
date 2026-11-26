@@ -230,7 +230,8 @@ test('mismatched identity discovery shows authorized alternatives without preten
  S.index=async()=>({analyses:[{id:'wanted',repo:'DEMO/service',sha:'abcdef',language:'java'},{id:'other',repo:'OTHER/repo',sha:'123456'}],total:2});
  const r=await T.call('which_analyses_exist',{repo:'DEMO/service',sha:'abdef'});
  assert.equal(r.total,0);assert.deepEqual(r.analyses,[]);
- assert.equal(r.filterMismatch.field,'sha');assert.equal(r.filterMismatch.requested,'abdef');
+ assert.equal(r.filterMismatch.field,'sha');
+ assert.equal(r.ready,false);assert.match(r.error,/No analysis selected/);assert.equal(r.retry.tool,'which_analyses_exist');assert.equal(r.retry.arguments.sha,undefined);assert.deepEqual(r.retry.arguments,r.next.arguments);assert.match(r.insideCodeRetry.arguments.code,/tools.which_analyses_exist/);assert.equal(r.filterMismatch.requested,'abdef');
  assert.deepEqual(r.filterMismatch.candidates,[{id:'wanted',repo:'DEMO/service',sha:'abcdef',language:'java'}]);
  assert.equal(r.next.arguments.sha,undefined);assert.equal(r.next.arguments.repo,'DEMO/service');
  assert.match(r.guidance,/do not repeat the unchanged/);
