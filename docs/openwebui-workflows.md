@@ -31,6 +31,8 @@ For testers, connect a model to `openapi/tester.json` (or set `DT_TOOL_PROFILE=t
 
 | OpenAPI path | Starting workflow |
 | --- | --- |
+| `openapi/semantic-read.json` | Four retained Joern question/read tools; recommended for the measured Qwen 4B workload ([research and limits](code-joern-reliability.md)) |
+| `openapi/code-semantic.json` | Joern question tools plus code and native discovery for composition |
 | `openapi/direct.json` | Everyday tools by name; discovery for the rest (default) |
 | `openapi/tester.json` | Testing by name: `checks`, test data and scratch databases, scenarios, API and UI capture, scripts and suites, workspace tests |
 | `openapi/lean.json` | Four discovery tools; retrieve each capability on request |
@@ -126,3 +128,5 @@ Local queries bound entities, relationship hops, edges, excerpts and result coun
 Truncation and unknown names stay explicit. For a larger independently operated
 index, route selected `knowledge_*` tools to a worker using the same versioned
 transport instead of embedding its database choices in the client.
+
+For a focused MCP connection, use `/mcp?profile=semantic-read`; bare `/mcp` keeps all enabled tools. Initialization instructions match that connection profile. Open WebUI setup installs the selected profile guidance while retaining existing user instructions; `/api/prompt?profile=semantic-read` exposes the same prompt. Profiles select discovery, never permissions.

@@ -1,6 +1,6 @@
 # Tool output and test selection
 
-All tool schemas accept the same optional boolean: **`all`**. For MCP/OpenAPI chat calls, `all:true` returns the full available response in one call, bypassing the chat byte preview. Tables and reports expand their retained backing data where available. Existing `format:"full"` options remain compatible; `all` is preferred.
+All tool schemas accept the same optional boolean: **`all`**. For MCP/OpenAPI chat calls, `all:true` requests the full available response in one call. It bypasses the ordinary preview when the result fits the model context budget. Oversized replies still have an explicit `modelContext.requestedAllLimited` receipt and `output.status:"truncated"`; their retained data remains accessible inside code or through the raw API. Tables and reports expand their retained backing data where available. Existing `format:"full"` options remain compatible; `all` is preferred.
 
 This controls presentation, not operational scope. It does not remove SQL limits, source/query safety caps, graph traversal limits, missing data, or result expiry. It never automatically retries actions or starts another query to recover old output.
 
@@ -26,7 +26,7 @@ Recover an existing result without repeating the original call:
 {"id":"RESULT_ID","path":"/rows/0","max_bytes":1024}
 ```
 
-These are `result_read` arguments. `id` accepts `modelContext.resultId` or the last segment of a table/report `view` URL. `all:true` returns typed JSON under `value`. Otherwise, the existing JSON-text pages and `nextCursor` contract apply. Do not combine `all:true` with a cursor. Ownership and retention checks apply to both modes. A retained result cannot recover data that an upstream system never supplied or an earlier tool stage did not retain.
+These are `result_read` arguments. `id` accepts `modelContext.resultId`, an owned local view URL, or the last segment of that URL. A foreign URL is not treated as a local result. `all:true` returns typed JSON under `value`. Otherwise, the existing JSON-text pages and `nextCursor` contract apply. Do not combine `all:true` with a cursor. Ownership and retention checks apply to both modes. A retained result cannot recover data that an upstream system never supplied or an earlier tool stage did not retain.
 
 ## Search discovery
 
@@ -86,7 +86,7 @@ Use `result_read` to compute over retained rows instead of doing arithmetic over
 {"id":"RESULT_ID","aggregate":"sum","field":"value"}
 ```
 
-`aggregate` accepts `count`, `sum`, `avg`, `min`, or `max`. `count` counts rows and takes no `field`; other operations require an exact top-level numeric field. `path` selects an array and defaults to `/rows` when the retained root has a rows array. Every retained row is processed in one call; `all:true` remains accepted but is unnecessary for the small aggregate response. The result includes the operation, numeric value, processed row count, source coverage, and a raw-data read reference.
+`aggregate` accepts `count`, `sum`, `avg`, `min`, `max`, or `summary`. `summary` returns `{count,sum,avg,min,max}` together; an optional typed equality filter such as `where:{group:"target"}` applies both count and numeric operations to every matching retained row. `count` counts rows and takes no `field`; other operations require an exact top-level numeric field. `path` selects an array and defaults to `/rows` when the retained root has a rows array. Every retained row is processed in one call; `all:true` remains accepted but is unnecessary for the small aggregate response. The result includes the operation, numeric value, processed row count, source coverage, and a raw-data read reference.
 
 For inspection or model reasoning, project only relevant fields:
 
@@ -94,9 +94,9 @@ For inspection or model reasoning, project only relevant fields:
 {"id":"RESULT_ID","fields":["id","value"],"all":true}
 ```
 
-Projection includes every retained row and fails if a requested field is absent. Ordinary chat output limits still apply without `all:true`; the exact projected result remains recoverable. Projection and aggregation cannot be combined, and neither accepts a pagination cursor. Existing raw reads and JSON-text pagination remain available.
+Projection includes every retained row and fails if a requested field is absent. Chat output limits apply, including the explicit model context ceiling for oversized `all:true` replies; the exact projected result remains recoverable. Projection and aggregation cannot be combined, and neither accepts a pagination cursor. Existing raw reads and JSON-text pagination remain available.
 
-`retainedComplete:true` in projection/aggregation receipts means the selected retained data was fully processed. Legacy raw reads keep `complete` and now include `completeScope` to distinguish retained values or JSON bytes from source coverage. `sourceCoverage.provenComplete` remains false when source completeness is unproven; `sourceCoverage.status` separately reports `partial` or `unknown`; it never certifies that the original query covered the entire source. Source truncation, gaps and omitted retained data remain visible even when selecting only `/rows`. An aggregate over partial source data is a total of retained rows, not a total of the unavailable source.
+`retainedComplete:true` in full-read/projection/aggregation receipts means the selected retained data was fully processed. `sourceComplete` is the short alias of `sourceCoverage.provenComplete`; it never follows from retained completeness. Legacy raw reads keep `complete` and now include `completeScope` to distinguish retained values or JSON bytes from source coverage. `sourceCoverage.provenComplete` remains false when source completeness is unproven; `sourceCoverage.status` separately reports `partial` or `unknown`; it never certifies that the original query covered the entire source. Source truncation, gaps and omitted retained data remain visible even when selecting only `/rows`. An aggregate over partial source data is a total of retained rows, not a total of the unavailable source.
 
 Numeric operations reject null, missing, nonnumeric, nonfinite and unsafe integer values, plus overflowing intermediate totals, instead of coercing or dropping rows. Arithmetic uses JavaScript numbers, not arbitrary-precision decimal math. Empty-array `sum`/`count` return zero; `avg`/`min`/`max` return null. Use `code` with an explicit precision policy for decimal-sensitive calculations.
 
@@ -110,4 +110,21 @@ Compacted row previews may also include `modelContext.numericSummary`: sums comp
 
 For small-model script inspection, select the `scripts-read` client profile. It exposes only `script_search` and `script_get` as native tools, avoiding the general discovery dispatcher. It adds no permissions and exposes no script execution tool. The everyday `direct` profile also includes `script_get` beside script search/list/run.
 
-OpenAPI selection: `/openapi/scripts-read.json`, or `tools.profile` / `DT_TOOL_PROFILE` for the default OpenAPI schema. MCP keeps its existing all-tools listing; MCP clients must select the two native tools explicitly when using this focused approach.
+OpenAPI selection: `/openapi/scripts-read.json`, or `tools.profile` / `DT_TOOL_PROFILE` for the default OpenAPI schema. MCP defaults to its existing all-tools listing; use /mcp?profile=scripts-read to select the same two native tools.
+
+## Exact snapshots and semantic evidence
+
+Host-call receipts use `readScope:"tool-response"` for an exact saved response. Their `sourceView` separately links the underlying owned evidence. A complete read of that snapshot can still contain a source preview; follow its source bridge for the original retained graph/data. Receipt storage failure is explicit, with `readScope:"source-evidence"` when only that fallback remains. Business fields named `view`, `complete` or `truncated` do not turn stored payloads into presentation instructions.
+
+The question-shaped Joern tools are `which_analyses_exist`, `what_happens_from` and `where_value_flows`. Map-only and combined map/trace calls have distinct documented shapes. Their selected summaries retain literal assumptions, separate map/trace links, proof limits and source coverage. Structural node/control-edge counts and cycle presence describe the entire retained graph; they do not establish runtime feasibility or exhaustive source coverage.
+
+An unresolved endpoint returns `ready:false`, an explicit error, retained method candidates and, when available, a suggested retry. It does not provide a zero-count answer summary. Discovery identity mismatches retain strict filters while showing separately labelled alternatives; they never silently select another revision. Completed queries are not rerun to repair a local projection or field-access error.
+
+| Before | Current output/access |
+|---|---|
+| `all:true` could be described as unconditional chat expansion | Explicit `requestedAllLimited`, truncation status, retained id and raw read when the context budget applies |
+| `complete:true` could be confused with complete source data | Separate `retainedComplete`, `completeScope`, `sourceComplete` and `sourceCoverage` |
+| A nested receipt could replace its read id and boolean proof flags with placeholder text | Usable raw-read arguments and typed proof leaves survive the preview |
+| A missing method could look like an empty map with zero counts | Failed selection, method candidates, optional suggested retry, and no answer summary |
+
+See the [Joern/Qwen evaluation](code-joern-reliability.md) for actual paired output sizes, before/after examples, model failures, raw transcripts and the limits of the measured interfaces.

@@ -1,0 +1,18 @@
+{
+  "key": "drain",
+  "entry": "drain",
+  "parameter": "amount",
+  "sink": "commit",
+  "argument": 1,
+  "predicate": "amount < 0",
+  "expectedExpression": "rest",
+  "repo": "DEMO/drain-transfer",
+  "sha": "cefc867fbf53fcfb22ed440afbe0fd425df08f07",
+  "language": "java",
+  "oracle": {
+    "beforeFailed": true,
+    "afterPassed": true,
+    "beforeStderr": "Exception in thread \"main\" java.lang.AssertionError: wrong drained value\n\tat DrainProbe.main(DrainProbe.java:1)\n",
+    "afterStdout": "OK drain\n"
+  }
+}

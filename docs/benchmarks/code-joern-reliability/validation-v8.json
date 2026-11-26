@@ -1,0 +1,44 @@
+{
+  "protocol": "dt.code-joern-reliability-validation/v1",
+  "implementationCommit": "ac611194cfa901e75b65ff5b43e5ff3c990b5d89",
+  "sourceDigest": "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede",
+  "runtimeVersions": {
+    "node24": "v24.22.0",
+    "node22": "v22.23.5"
+  },
+  "suites": [
+    {
+      "file": "full-tests-v8-shipping-node24.log",
+      "tests": 1502,
+      "passed": 1436,
+      "failed": 0,
+      "skipped": 66,
+      "sha256": "f8a006a5aa57d56b8df5b5c65eede588e4a5ad70d585602f2140fbc3e5d6707b"
+    },
+    {
+      "file": "full-tests-v8-shipping-node22.log",
+      "tests": 1502,
+      "passed": 1436,
+      "failed": 0,
+      "skipped": 66,
+      "sha256": "cf49b8ba93d4da866f7a7230a8c47dc4a5e8276cf5d616729796fd7d33ed630f"
+    }
+  ],
+  "live": {
+    "file": "pinned-live-tests.log",
+    "tests": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0,
+    "sha256": "b01f909502cd0531571f65c699029070967c90210433636ac63e4c481fce4268"
+  },
+  "liveScope": "Pinned Joern 4.0.564 Java/JS/loops/line selectors/budgets/ownership with independent runtime oracles; worker and query scripts unchanged afterward.",
+  "gates": [
+    "build:check",
+    "handbook --check",
+    "state-machines --check (88 families/105 charts)",
+    "docs-check (7 registered files/168 links)",
+    "release-inventory --check",
+    "git diff --check"
+  ]
+}

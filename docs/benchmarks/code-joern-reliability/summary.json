@@ -1,6 +1,6 @@
 {
   "protocol": "dt.code-joern-reliability-summary/v1",
-  "meaning": "Development cohorts, not independent A/B samples. Separate primary evidence/fact grades from strict bare JSON. Native-v7 is a targeted follow-up, not another 24-case matrix. See raw transcripts/index for exact prompts, tool scope and settings.",
+  "meaning": "Development cohorts, not independent A/B estimates or a production failure-rate estimate. Raw historical grades are preserved. New v4 navigation grading additionally checks structured proof claims. Joint development matrices comprise 24 original cases and 27 transfer/structural cases; a narrow perfect sample does not establish joint reliability; scope and runtime settings are in the raw transcripts.",
   "cohorts": {
     "native-v4": {
       "name": "native-v4",
@@ -1272,6 +1272,4955 @@
           "seed": 42
         }
       ]
+    },
+    "code-v9": {
+      "name": "code-v9",
+      "runs": 8,
+      "passed": 4,
+      "strictPassed": 3,
+      "calls": 51,
+      "sourceDigests": [
+        "ee14d3cb35e90e22d52c73c40beadcee193b85bdbd55856b7e9404f5c4ba61e2"
+      ],
+      "commits": [
+        "4f90fa113e928ea1edd5550505f71392cdc839ef"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v9-aggregate-99.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "count",
+            "sum",
+            "retainedRows",
+            "sourceCompleteness",
+            "view"
+          ]
+        },
+        {
+          "file": "code-v9-combined-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v9-contradiction-99.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v9-dispatch-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v9-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v9-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v9-aggregate-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v9-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v9-contradiction-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v9-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 7,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v9-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v9-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v10-thinking-greedy": {
+      "name": "code-v10-thinking-greedy",
+      "runs": 8,
+      "passed": 4,
+      "strictPassed": 4,
+      "calls": 38,
+      "sourceDigests": [
+        "15f19ea71c591fae498b2b3ecf9ff63c9e99f047e891c92d6591a08b5db3f203"
+      ],
+      "commits": [
+        "e13b8b50fd5d0c5e44055041351c9ba2393f46d8"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v10-thinking-greedy-aggregate-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "sourceCompleteness"
+          ]
+        },
+        {
+          "file": "code-v10-thinking-greedy-aggregate-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "sourceCompleteness"
+          ]
+        },
+        {
+          "file": "code-v10-thinking-greedy-contradiction-99.json.gz",
+          "finish": "output-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v10-thinking-greedy-dispatch-42.json.gz",
+          "finish": "output-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v10-thinking-greedy-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v10-thinking-greedy-aggregate-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v10-thinking-greedy-aggregate-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v10-thinking-greedy-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 6,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v10-thinking-greedy-contradiction-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 0,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v10-thinking-greedy-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 9,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v10-thinking-greedy-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 8,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v10-thinking-greedy-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 7,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v10-thinking": {
+      "name": "code-v10-thinking",
+      "runs": 8,
+      "passed": 6,
+      "strictPassed": 2,
+      "calls": 51,
+      "sourceDigests": [
+        "15f19ea71c591fae498b2b3ecf9ff63c9e99f047e891c92d6591a08b5db3f203"
+      ],
+      "commits": [
+        "e13b8b50fd5d0c5e44055041351c9ba2393f46d8"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v10-thinking-combined-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v10-thinking-dispatch-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v10-thinking-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v10-thinking-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 9,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v10-thinking-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v10-thinking-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v10-thinking-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v10-thinking-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 8,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v10-thinking-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v10-thinking-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "control-v10-direct": {
+      "name": "control-v10-direct",
+      "runs": 8,
+      "passed": 7,
+      "strictPassed": 7,
+      "calls": 25,
+      "sourceDigests": [
+        "15f19ea71c591fae498b2b3ecf9ff63c9e99f047e891c92d6591a08b5db3f203"
+      ],
+      "commits": [
+        "670b58627e53f11ef504f28628a7e7303b6c6a2f"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "control-v10-direct-discover-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "reportedProofClaims"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "control-v10-direct-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "control-v10-direct-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "control-v10-direct-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "control-v10-direct-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "control-v10-direct-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "control-v10-direct-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 5,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "control-v10-direct-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "control-v10-direct-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v11-direct": {
+      "name": "code-v11-direct",
+      "runs": 8,
+      "passed": 8,
+      "strictPassed": 8,
+      "calls": 10,
+      "sourceDigests": [
+        "2bb8cdaf24c045a4b9e8caf34891f0a32d86f7911296fbc7d9c77514687026d4"
+      ],
+      "commits": [
+        "560066b1515373874bfa7fff7426c71a0f1b5e7d"
+      ],
+      "anyDirty": false,
+      "failures": [],
+      "trials": [
+        {
+          "file": "code-v11-direct-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-direct-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v11-direct-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v11-direct-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v11-direct-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v11-direct-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-direct-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-direct-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v11-thinking-greedy": {
+      "name": "code-v11-thinking-greedy",
+      "runs": 8,
+      "passed": 6,
+      "strictPassed": 4,
+      "calls": 23,
+      "sourceDigests": [
+        "2bb8cdaf24c045a4b9e8caf34891f0a32d86f7911296fbc7d9c77514687026d4"
+      ],
+      "commits": [
+        "560066b1515373874bfa7fff7426c71a0f1b5e7d"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v11-thinking-greedy-discover-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v11-thinking-greedy-dispatch-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "reportedProofClaims"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v11-thinking-greedy-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-thinking-greedy-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v11-thinking-greedy-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v11-thinking-greedy-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v11-thinking-greedy-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v11-thinking-greedy-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-thinking-greedy-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-thinking-greedy-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v11-thinking": {
+      "name": "code-v11-thinking",
+      "runs": 8,
+      "passed": 5,
+      "strictPassed": 2,
+      "calls": 30,
+      "sourceDigests": [
+        "2bb8cdaf24c045a4b9e8caf34891f0a32d86f7911296fbc7d9c77514687026d4"
+      ],
+      "commits": [
+        "560066b1515373874bfa7fff7426c71a0f1b5e7d"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v11-thinking-aggregate-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "count",
+            "sum",
+            "retainedRows",
+            "sourceCompleteness",
+            "view"
+          ]
+        },
+        {
+          "file": "code-v11-thinking-combined-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceRead",
+            "control",
+            "traceView",
+            "reportedProofClaims"
+          ]
+        },
+        {
+          "file": "code-v11-thinking-dispatch-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "reportedProofClaims"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v11-thinking-aggregate-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-thinking-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v11-thinking-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v11-thinking-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v11-thinking-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v11-thinking-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-thinking-dispatch-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v11-thinking-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "code-v12-direct": {
+      "name": "code-v12-direct",
+      "runs": 24,
+      "passed": 21,
+      "strictPassed": 21,
+      "calls": 33,
+      "sourceDigests": [
+        "2bb8cdaf24c045a4b9e8caf34891f0a32d86f7911296fbc7d9c77514687026d4"
+      ],
+      "commits": [
+        "560066b1515373874bfa7fff7426c71a0f1b5e7d"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v12-direct-map-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v12-direct-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v12-direct-map-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v12-direct-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-dispatch-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-dispatch-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-map-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-map-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-quote-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-quote-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v12-direct-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "code-v12-direct-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v12-direct-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        }
+      ]
+    },
+    "code-v13-direct": {
+      "name": "code-v13-direct",
+      "runs": 24,
+      "passed": 24,
+      "strictPassed": 24,
+      "calls": 34,
+      "sourceDigests": [
+        "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b"
+      ],
+      "commits": [
+        "92ea4418a7beed2bcd1f2d9ca6f0e0535b485b64"
+      ],
+      "anyDirty": false,
+      "failures": [],
+      "trials": [
+        {
+          "file": "code-v13-direct-aggregation-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-aggregation-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-aggregation-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-dispatch-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-dispatch-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-dispatch-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-quote-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-quote-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-quote-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v13-direct-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "code-v13-direct-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v13-direct-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        }
+      ]
+    },
+    "code-v14-direct": {
+      "name": "code-v14-direct",
+      "runs": 27,
+      "passed": 17,
+      "strictPassed": 17,
+      "calls": 99,
+      "sourceDigests": [
+        "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b"
+      ],
+      "commits": [
+        "d7258c03982a8e557d0d15e8585b94d0de8d8c5f"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v14-direct-allocation-cycle-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-allocation-cycle-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-allocation-trace-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "argument",
+            "control",
+            "data",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-billing-cycle-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-billing-cycle-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-billing-discover-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-billing-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-drain-cycle-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-drain-cycle-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v14-direct-drain-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v14-direct-allocation-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-allocation-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-allocation-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v14-direct-allocation-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v14-direct-allocation-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-allocation-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-allocation-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-allocation-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-allocation-trace-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-billing-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v14-direct-billing-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v14-direct-billing-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-billing-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-billing-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-billing-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v14-direct-drain-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v14-direct-drain-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-drain-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-drain-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v14-direct-drain-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v14-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        }
+      ]
+    },
+    "code-v15-direct": {
+      "name": "code-v15-direct",
+      "runs": 6,
+      "passed": 0,
+      "strictPassed": 0,
+      "calls": 46,
+      "sourceDigests": [
+        "a94956fd5ddb4adf7c8487a653eabab1bc63ac9c99754b7834499afd688f5312"
+      ],
+      "commits": [
+        "891a906f4c3059981d47d98aad9bbad21f253870"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v15-direct-allocation-cycle-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v15-direct-allocation-cycle-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v15-direct-billing-cycle-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v15-direct-billing-cycle-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v15-direct-drain-cycle-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage"
+          ]
+        },
+        {
+          "file": "code-v15-direct-drain-cycle-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v15-direct-allocation-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v15-direct-allocation-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v15-direct-billing-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v15-direct-billing-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v15-direct-drain-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v15-direct-drain-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "cycle",
+          "seed": 7
+        }
+      ]
+    },
+    "code-v16-direct": {
+      "name": "code-v16-direct",
+      "runs": 51,
+      "passed": 33,
+      "strictPassed": 32,
+      "calls": 126,
+      "sourceDigests": [
+        "785f82a76394ee13db28245fe176a8316d54d6635151a734ddc8f97a4d24b728"
+      ],
+      "commits": [
+        "3b46e91c5d26b9233007d041bcbac32513eca289"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v16-direct-allocation-combined-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-allocation-combined-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-allocation-combined-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-allocation-contradiction-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-allocation-discover-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-allocation-trace-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceRead",
+            "entry",
+            "control",
+            "data",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-billing-contradiction-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-billing-cycle-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-billing-cycle-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-aggregate-99.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "count",
+            "sum",
+            "retainedRows",
+            "sourceCompleteness",
+            "view",
+            "read"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-combined-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-combined-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-combined-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-trace-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-trace-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-core-trace-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceView"
+          ]
+        },
+        {
+          "file": "code-v16-direct-drain-contradiction-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "reportedProofClaims"
+          ]
+        },
+        {
+          "file": "code-v16-direct-drain-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v16-direct-allocation-combined-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-allocation-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-allocation-combined-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-allocation-contradiction-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-allocation-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-allocation-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-allocation-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-allocation-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-allocation-trace-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-billing-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-billing-contradiction-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-billing-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-billing-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 5,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-billing-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-billing-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-aggregate-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-core-combined-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-core-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-combined-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-core-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-core-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-core-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-core-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 9,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-core-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 6,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 9,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-core-trace-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-core-trace-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-core-trace-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "trace",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-dispatch-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-dispatch-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-dispatch-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-drain-contradiction-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v16-direct-drain-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-drain-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-drain-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-drain-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v16-direct-quote-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v16-direct-quote-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        }
+      ]
+    },
+    "native-v17-direct": {
+      "name": "native-v17-direct",
+      "runs": 51,
+      "passed": 43,
+      "strictPassed": 41,
+      "calls": 74,
+      "sourceDigests": [
+        "41b5ca987b2ff902645422c78cc14ca42a751461885775dd355bfdd845b2fb01"
+      ],
+      "commits": [
+        "6ec3d593ef0a0e04522547dd00e6b17de3c4b721"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "native-v17-direct-allocation-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-billing-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-core-map-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-core-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-core-map-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-drain-cycle-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-drain-discover-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "native-v17-direct-drain-map-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "decisions",
+            "changes",
+            "methodExits",
+            "externalBoundaries",
+            "coverage",
+            "mapView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "native-v17-direct-allocation-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-allocation-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-allocation-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-allocation-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-allocation-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-allocation-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-allocation-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-allocation-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-allocation-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-billing-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-billing-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-billing-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-billing-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-billing-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-billing-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-core-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-core-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-core-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-core-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-core-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-core-map-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-core-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-map-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-core-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-core-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-core-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-dispatch-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-dispatch-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-dispatch-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-drain-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v17-direct-drain-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-drain-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-drain-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-drain-map-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v17-direct-quote-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v17-direct-quote-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        }
+      ]
+    },
+    "code-v17-direct": {
+      "name": "code-v17-direct",
+      "runs": 8,
+      "passed": 7,
+      "strictPassed": 7,
+      "calls": 11,
+      "sourceDigests": [
+        "41b5ca987b2ff902645422c78cc14ca42a751461885775dd355bfdd845b2fb01"
+      ],
+      "commits": [
+        "6ec3d593ef0a0e04522547dd00e6b17de3c4b721"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v17-direct-dispatch-combined-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceRead",
+            "control",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v17-direct-core-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v17-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v17-direct-core-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v17-direct-core-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v17-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v17-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v17-direct-dispatch-combined-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v17-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "native-v18-direct": {
+      "name": "native-v18-direct",
+      "runs": 51,
+      "passed": 48,
+      "strictPassed": 46,
+      "calls": 64,
+      "sourceDigests": [
+        "172f25c98820f09d2b532ee7cac777c669d2ae42702e4c75396b0a25e41faefd"
+      ],
+      "commits": [
+        "8b2e72bd8b7b4ca425db549a60ea13837e9f8871"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "native-v18-direct-billing-combined-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v18-direct-drain-cycle-42.json.gz",
+          "finish": "output-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        },
+        {
+          "file": "native-v18-direct-drain-cycle-7.json.gz",
+          "finish": "output-budget",
+          "failedChecks": [
+            "mapRead",
+            "entry",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "proof",
+            "coverage",
+            "mapView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "native-v18-direct-allocation-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-allocation-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-allocation-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-allocation-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-allocation-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-allocation-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-allocation-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-allocation-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-allocation-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-billing-combined-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-billing-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-billing-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-billing-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-billing-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-billing-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-core-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-core-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-core-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-core-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-core-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-core-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-core-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-core-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-core-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-core-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-dispatch-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-dispatch-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-dispatch-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-drain-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "native-v18-direct-drain-cycle-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 0,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-drain-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 0,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-drain-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-drain-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "native-v18-direct-quote-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "native-v18-direct-quote-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        }
+      ]
+    },
+    "code-v18-direct": {
+      "name": "code-v18-direct",
+      "runs": 8,
+      "passed": 6,
+      "strictPassed": 6,
+      "calls": 15,
+      "sourceDigests": [
+        "172f25c98820f09d2b532ee7cac777c669d2ae42702e4c75396b0a25e41faefd"
+      ],
+      "commits": [
+        "8b2e72bd8b7b4ca425db549a60ea13837e9f8871"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "code-v18-direct-core-aggregate-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "retainedRows"
+          ]
+        },
+        {
+          "file": "code-v18-direct-core-combined-7.json.gz",
+          "finish": "output-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "code-v18-direct-core-aggregate-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "code-v18-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "code-v18-direct-core-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "code-v18-direct-core-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 0,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "code-v18-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "code-v18-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "code-v18-direct-dispatch-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 5,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "code-v18-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        }
+      ]
+    },
+    "questions-v19-direct": {
+      "name": "questions-v19-direct",
+      "runs": 51,
+      "passed": 44,
+      "strictPassed": 43,
+      "calls": 118,
+      "sourceDigests": [
+        "766402f22ff330dcbeb95bb853a99ab175e2cb7246165b1e6533dd467d04d2fe"
+      ],
+      "commits": [
+        "fa0fec3f76b7a73847b22da022e3a58048dd4b7f"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "questions-v19-direct-allocation-discover-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "traceRead",
+            "argument",
+            "control",
+            "data",
+            "traceView"
+          ]
+        },
+        {
+          "file": "questions-v19-direct-core-aggregate-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "count",
+            "sum"
+          ]
+        },
+        {
+          "file": "questions-v19-direct-core-aggregate-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "count",
+            "sum"
+          ]
+        },
+        {
+          "file": "questions-v19-direct-dispatch-combined-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "questions-v19-direct-dispatch-combined-7.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "questions-v19-direct-dispatch-combined-99.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "questions-v19-direct-drain-discover-42.json.gz",
+          "finish": "turn-budget",
+          "failedChecks": [
+            "mapRead",
+            "traceRead",
+            "entry",
+            "sink",
+            "argument",
+            "control",
+            "data",
+            "proof",
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "questions-v19-direct-allocation-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-allocation-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-allocation-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-allocation-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-allocation-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-allocation-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-allocation-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-allocation-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-allocation-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-billing-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-billing-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-billing-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-billing-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-billing-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-billing-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-aggregate-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-core-aggregate-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": false,
+          "calls": 6,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-core-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-core-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-core-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-core-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-core-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-core-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-core-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-core-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-core-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-core-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-dispatch-combined-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-dispatch-combined-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-dispatch-combined-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-drain-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v19-direct-drain-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-drain-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-drain-discover-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 10,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-drain-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v19-direct-quote-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v19-direct-quote-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        }
+      ]
+    },
+    "questions-v20-direct": {
+      "name": "questions-v20-direct",
+      "runs": 51,
+      "passed": 47,
+      "strictPassed": 47,
+      "calls": 78,
+      "sourceDigests": [
+        "cbc909d1c0276097e0b5569261bd9c856cbe413e89bb971560aec1e1e90cadda"
+      ],
+      "commits": [
+        "99deb2e9b090f06c07837cd7662748abe2ff410b"
+      ],
+      "anyDirty": false,
+      "failures": [
+        {
+          "file": "questions-v20-direct-core-aggregate-42.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "count",
+            "sum"
+          ]
+        },
+        {
+          "file": "questions-v20-direct-core-aggregate-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "count",
+            "sum"
+          ]
+        },
+        {
+          "file": "questions-v20-direct-core-discover-99.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "coverage",
+            "mapView",
+            "traceView"
+          ]
+        },
+        {
+          "file": "questions-v20-direct-drain-cycle-7.json.gz",
+          "finish": "assistant-finished",
+          "failedChecks": [
+            "mapRead",
+            "nodes",
+            "controlEdges",
+            "cycle",
+            "coverage",
+            "mapView"
+          ]
+        }
+      ],
+      "trials": [
+        {
+          "file": "questions-v20-direct-allocation-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-allocation-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-allocation-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-allocation-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-allocation-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-allocation-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-allocation-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-allocation-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-allocation-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-billing-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-billing-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-billing-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-billing-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-billing-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-billing-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-aggregate-42.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-aggregate-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-core-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-core-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-core-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-core-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-core-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-discover-99.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-core-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-core-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-core-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-core-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-core-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-dispatch-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-dispatch-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-dispatch-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-drain-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v20-direct-drain-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-drain-cycle-7.json.gz",
+          "passed": false,
+          "strictPassed": false,
+          "calls": 3,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-drain-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-drain-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v20-direct-quote-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v20-direct-quote-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        }
+      ]
+    },
+    "questions-v21-direct": {
+      "name": "questions-v21-direct",
+      "runs": 51,
+      "passed": 51,
+      "strictPassed": 51,
+      "calls": 80,
+      "sourceDigests": [
+        "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c"
+      ],
+      "commits": [
+        "3fa650eedc7e16b20df467b544b4b8b08dc342dd"
+      ],
+      "anyDirty": false,
+      "failures": [],
+      "trials": [
+        {
+          "file": "questions-v21-direct-allocation-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-allocation-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-allocation-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-allocation-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-allocation-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-allocation-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-allocation-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-allocation-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-allocation-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-billing-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-billing-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-billing-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-billing-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-billing-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-billing-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-billing-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-billing-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-billing-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-aggregate-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-core-aggregate-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-aggregate-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-core-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-core-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-core-contradiction-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-core-contradiction-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-core-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-core-discover-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-discover-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "discover",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-core-map-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-core-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-map-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 2,
+          "case": "map",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-core-trace-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-core-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-core-trace-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-dispatch-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-dispatch-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-dispatch-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-drain-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-drain-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-drain-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-drain-contradiction-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "contradiction",
+          "seed": 99
+        },
+        {
+          "file": "questions-v21-direct-drain-cycle-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-drain-cycle-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 4,
+          "case": "cycle",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-drain-discover-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 3,
+          "case": "discover",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-drain-map-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "map",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-drain-trace-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "trace",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-quote-combined-42.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 42
+        },
+        {
+          "file": "questions-v21-direct-quote-combined-7.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 7
+        },
+        {
+          "file": "questions-v21-direct-quote-combined-99.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "combined",
+          "seed": 99
+        }
+      ]
+    },
+    "questions-v21-extra-direct": {
+      "name": "questions-v21-extra-direct",
+      "runs": 3,
+      "passed": 3,
+      "strictPassed": 3,
+      "calls": 3,
+      "sourceDigests": [
+        "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c"
+      ],
+      "commits": [
+        "3fa650eedc7e16b20df467b544b4b8b08dc342dd"
+      ],
+      "anyDirty": false,
+      "failures": [],
+      "trials": [
+        {
+          "file": "questions-v21-extra-direct-aggregate-1001.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 1001
+        },
+        {
+          "file": "questions-v21-extra-direct-aggregate-123.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 123
+        },
+        {
+          "file": "questions-v21-extra-direct-aggregate-13.json.gz",
+          "passed": true,
+          "strictPassed": true,
+          "calls": 1,
+          "case": "aggregate",
+          "seed": 13
+        }
+      ]
     }
   },
   "codeV8DirtyExplanation": {
@@ -1279,5 +6228,5 @@
     "changes": "Generated sourceDigest and lib/tools.js consumer line only; no executable source or harness changes during the cohort. Raw dirty flags are preserved.",
     "patch": "generated-catalog-at-code-v8.patch"
   },
-  "recommendedSurface": "code-semantic for Qwen 4B; code-only still has budget failures"
+  "recommendedSurface": "semantic-read for the tested retained-evidence workload; code-semantic for additional composition"
 }

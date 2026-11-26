@@ -45,7 +45,7 @@ The new `scripts-read` profile exposes `script_search` and `script_get` directly
 
 This is a deliberate interface/profile experiment, not a same-schema comparison. The task text, generic system instruction, model weights, sampling and limits match the earlier script task; the native runner omits the unrelated workspace setup. The [native-profile transcript](benchmarks/script-native-profile-2b.json) includes the actual profile-selected schemas and final answer. It requires both an executed definition read and the correct emitted id/parameter names to pass.
 
-Select `/openapi/scripts-read.json`, or set `tools.profile` / `DT_TOOL_PROFILE` to `scripts-read` for the default OpenAPI schema. MCP retains its existing all-tools listing; a MCP client needs to expose the two native tools explicitly. The default `direct` profile now also includes `script_get`. Profiles select exposed schemas and never grant permissions.
+Select `/openapi/scripts-read.json`, or set `tools.profile` / `DT_TOOL_PROFILE` to `scripts-read` for the default OpenAPI schema. MCP defaults to its existing all-tools listing; the current server also supports /mcp?profile=scripts-read for the same focused tools. The default `direct` profile now also includes `script_get`. Profiles select exposed schemas and never grant permissions.
 
 ### Lean-dispatcher limitation
 

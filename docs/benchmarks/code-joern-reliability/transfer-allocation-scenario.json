@@ -1,0 +1,18 @@
+{
+  "key": "allocation",
+  "entry": "allocate",
+  "parameter": "rejected",
+  "sink": "append",
+  "argument": 4,
+  "predicate": "rejected < 0 || rejected > capacity",
+  "expectedExpression": "remaining",
+  "repo": "DEMO/allocation-transfer",
+  "sha": "57674811651e18b34a7bd70c407268a76d59226c",
+  "language": "java",
+  "oracle": {
+    "beforeFailed": true,
+    "afterPassed": true,
+    "beforeStderr": "Exception in thread \"main\" java.lang.AssertionError: wrong allocation\n\tat AllocationProbe.main(AllocationProbe.java:1)\n",
+    "afterStdout": "OK allocation\n"
+  }
+}

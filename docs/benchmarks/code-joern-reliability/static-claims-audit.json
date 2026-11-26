@@ -1,0 +1,4785 @@
+{
+  "protocol": "dt.structured-static-claims-audit/v1",
+  "scope": "Retrospective structured-JSON claims only; raw grades unchanged. No check of arbitrary free-form prose. Only exact original evidence URLs are used.",
+  "verifierDigest": "fc255f8a46ced5affc69ba7dfd544d52b062d81b306f7fceea77cfd8eb73545a",
+  "records": [
+    {
+      "file": "allowlist-v1-combined-7.json.gz",
+      "sha256": "b97a411739913576f3727181d06f2c5edec0478b8e6b8a8e5d3ca8f940fe4e37",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "allowlist-v2-combined-7.json.gz",
+      "sha256": "24aa7be1f580bcd7d2965efcd3e3abe9c741d9bc50e0cec1bf5a4804e6ebab44",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "allowlist-v2-contradiction-99.json.gz",
+      "sha256": "a2dedc4b979c01e4066b061b93fcb6980284ea2a5f3da648237433dd03185a44",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "allowlist-v2-quote-42.json.gz",
+      "sha256": "a2b02ea7b9e62844bf0fa9449111d0029eca3ced02165e2cb40bc75215503d01",
+      "originalPassed": true,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "allowlist-v3-discover-42.json.gz",
+      "sha256": "177bd00d9fa2f35a4d52c2ec4e9b9942e025224e65a4f6c9e28e6f3a99640905",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "allowlist-v3-quote-42.json.gz",
+      "sha256": "75b7a9b385667337ad15711c7fb08caa5c3309588daaad8c5c59b4f8ab362284",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v10-thinking-contradiction-99.json.gz",
+      "sha256": "c0e5dbf8b4e9e2c5e115175343ba1e752f4f346b97510d5f1bfde709a344ba60",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v10-thinking-discover-42.json.gz",
+      "sha256": "345a7552840946d805338b501b1d4b5c143ab6687e26a8aedf985c034650028b",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v10-thinking-greedy-combined-7.json.gz",
+      "sha256": "46cd209cd36d1cd12068c3061e52e0f0fb8d43412c0763599489ca992328f40b",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v10-thinking-greedy-discover-42.json.gz",
+      "sha256": "07f7d161c335f7bc069ca80f1cdc618517a53f812ece26238f409c28a876e3b3",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v10-thinking-greedy-quote-42.json.gz",
+      "sha256": "3a5c12ec80ffd7e7bee9dbe8d200058e0eddcc35e63012397f6ad03dd8230f8a",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v10-thinking-quote-42.json.gz",
+      "sha256": "6b4bc72248485e5982dfc82929ca55170ce22d4076b6b7f68d9f5f7117fe3089",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-direct-combined-7.json.gz",
+      "sha256": "954b5ba5d86f49a0d17256a7a696a396dfefa5845135891121f2b774667538b3",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-direct-contradiction-99.json.gz",
+      "sha256": "10218d921d95f53677a5ea63f8f81dc56966574192b26a0a3dc79b7fe45fd102",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-direct-discover-42.json.gz",
+      "sha256": "97da775437b6d233bd14788ac2049fd961dc765a01e173307d6355dcf4bf436c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-direct-dispatch-42.json.gz",
+      "sha256": "17b1f93707c0e38207188b34dbbeefabb90b0720e02a44b62468f2bcad5690f6",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-direct-quote-42.json.gz",
+      "sha256": "5b9e74c273601a2a7a054cc693f54246cd47b352ebf569f133668f0b2206f2a9",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-combined-7.json.gz",
+      "sha256": "1eede4ef20a51d726d7ec43f467c616d41c5273746b10cbc218eab59d126d0ec",
+      "originalPassed": false,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/proof/kind",
+          "reported": "unknown",
+          "observed": [
+            "entry-exit-state-map"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/status",
+          "reported": "unknown",
+          "observed": [
+            "partial-static-map"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/behaviorVerified",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/complete",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": "unknown",
+          "observed": [
+            7
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/kind",
+          "reported": "unknown",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/status",
+          "reported": "unknown",
+          "observed": [
+            "inconclusive"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/behaviorVerified",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": "unknown",
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/truncated",
+          "reported": "unknown",
+          "observed": [
+            true
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": "unknown",
+          "observed": [
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "file": "code-v11-thinking-contradiction-99.json.gz",
+      "sha256": "320c618ec56d12ef372bb4fefb9bd10f6018b026a20e7c2b5b8ac9953b71cb7e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-discover-42.json.gz",
+      "sha256": "7fa9847c57150dcc25d61798beb439f84c195ee1c82f0f10253de1cf81db7855",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-dispatch-42.json.gz",
+      "sha256": "637c68feda0a5bd5e1ce475a21f9c26ce0dd80343ac83815cb32aef47dfb7057",
+      "originalPassed": false,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": true,
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": 1,
+          "observed": [
+            6
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/kind",
+          "reported": "value-flow-trace",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/status",
+          "reported": "partial-static-trace",
+          "observed": [
+            "single-revision"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": false,
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/truncated",
+          "reported": true,
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": 1,
+          "observed": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "file": "code-v11-thinking-greedy-combined-7.json.gz",
+      "sha256": "2945e87ac5024b1a77297f645f71e0710df5c36a7d9d5105137c1a8bd1c74ec1",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-greedy-contradiction-99.json.gz",
+      "sha256": "4ffb1640d4b6d1dfcbc029f65fe4c489008778f3ca2f12ae8a790850364b7aff",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-greedy-discover-42.json.gz",
+      "sha256": "42263b59eb9c391510cd4c42417de1055076a18746fd265e0f2023159da10400",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-greedy-dispatch-42.json.gz",
+      "sha256": "9d0564eeecc34b08fdcc35f813cecb6dba24ed5dbb8d45d6a1d512187f3777a9",
+      "originalPassed": false,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/proof/behaviorVerified",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/complete",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": "unknown",
+          "observed": [
+            6
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/kind",
+          "reported": "entry-exit-state-map",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/status",
+          "reported": "partial-static-map",
+          "observed": [
+            "single-revision"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/behaviorVerified",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": "unknown",
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/truncated",
+          "reported": "unknown",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": "unknown",
+          "observed": [
+            6
+          ]
+        }
+      ]
+    },
+    {
+      "file": "code-v11-thinking-greedy-quote-42.json.gz",
+      "sha256": "0ee44d92a61b85195fd85b82a6e3a8f09ebd6b49f24a61bc5edaa8725848fe7e",
+      "originalPassed": true,
+      "checkedFields": 4,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v11-thinking-quote-42.json.gz",
+      "sha256": "d18015ac17102f4eb44f370d42dff44f0b05a03fa8f186423f9f91bb1ac596c5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-combined-42.json.gz",
+      "sha256": "168345ae6e5ce8e141f16a49dc3748e4867464516d0ed45c5e787bc238789bf4",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-combined-7.json.gz",
+      "sha256": "1c01d6722baa3bff7951f0602291109587123fcb74fed449d1b7a8ade5abd59a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-combined-99.json.gz",
+      "sha256": "d1d8d26092f389fff1fb915acb06e98446e660717df37592804017d623ecfbfc",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-contradiction-42.json.gz",
+      "sha256": "573edb8750370481547f0d915a5eab8b1ea695636b6be33ad03e21254f695c32",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-contradiction-7.json.gz",
+      "sha256": "406c3c19b268322efb9484efb2a4c8f445d413adcda4c7d7c3fa447db8c23bd7",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-contradiction-99.json.gz",
+      "sha256": "6463c5abe78a4b9ff57a997035898c59b1a1567657fb91bc40dd43f29875b6d2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-discover-42.json.gz",
+      "sha256": "83100513a50d66aedf65c174bf81f402462fe35b209ce22248aa68be15408922",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-discover-7.json.gz",
+      "sha256": "103d430c68779e2594cdb7d0b29707f19d712704f4c2bc0e500971fa7adad776",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-discover-99.json.gz",
+      "sha256": "2066dc4d18b22639146606cfaf0fef094f98b5619a004f113e4fc7ad1e1fc54b",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-dispatch-42.json.gz",
+      "sha256": "69326e1fbfb69c8c9d03b35b38eafbffac2f08be9cea28f60dfc6e9f967b2959",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-dispatch-7.json.gz",
+      "sha256": "8762b817e214983f41de84c5758e5376b22de5e45ba9ba620946ed9bbe6aa366",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-dispatch-99.json.gz",
+      "sha256": "609d5dc10b6279af7d17914429c2ef142bb9936fc0143ef6ad89239ce6bfe249",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-map-42.json.gz",
+      "sha256": "604c9fc34a8e5db3a1e31a96963018602a6a2dd73f783f81e8543597f7c71e11",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-map-7.json.gz",
+      "sha256": "86d7a2cf835c452b4a4f61b3e46aa62b3faeec1b6f87b2110b28cb0612c0e6b0",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-map-99.json.gz",
+      "sha256": "e1efd5eba15c934f54517cb50216e57ab1db30f1d839615a5ab03b3f34616334",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-quote-42.json.gz",
+      "sha256": "e36701edac4a6932456032a7acc28b3d73e11913c261aa2c6588f86d1f2ab4d7",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-quote-7.json.gz",
+      "sha256": "2920242901afe9f13b729ddbf61ecdb82ec10a7855db91fca7fb19e9cfae6100",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-quote-99.json.gz",
+      "sha256": "0f309abbe62b23dc08e96e45d824f38efa9cd9a23985a4d823f647eb9aafc9b4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-trace-42.json.gz",
+      "sha256": "f3fdc286452ffc7c2d774e9cfcae9b6dd9085226abb94677360495ee1685cd71",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-trace-7.json.gz",
+      "sha256": "bd09f4874dfca3c0c352a691f4db3e209d6426987ac1c02053a6364c24047b7b",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v12-direct-trace-99.json.gz",
+      "sha256": "e11d7b1f803c9004af5a19b60716adb572df25c2109af07c5200b2fc8d9bd16e",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-combined-42.json.gz",
+      "sha256": "6b43dc0fffb07c709b4ca22769c4339465fc64fe5356351d9e28dc9408c67585",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-combined-7.json.gz",
+      "sha256": "370028f02881d2ff2a1593e846b3d16ab511d09a65b67ae8214b5f6e4c002fb3",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-combined-99.json.gz",
+      "sha256": "7ffb8b38e47a9f2947ba39f4de53999f2b22ad1727b3605a423e5eff81d53196",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-contradiction-42.json.gz",
+      "sha256": "ef218af38a0378864010d49536b0ad0d03950d9b298542a95390f3144b8e09bf",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-contradiction-7.json.gz",
+      "sha256": "4754f7a0d200d59011ebce4dbdd6d488a7c39fb80c37072828ffcea84dd21e8d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-contradiction-99.json.gz",
+      "sha256": "123e30272185a3c2f53a2f2271e20164e5d6116a0ddad653d78cc83e42718f1c",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-discover-42.json.gz",
+      "sha256": "b8e591865789766ce627acaeaca4f468d593952cc8544cea650e9c986c77b85d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-discover-7.json.gz",
+      "sha256": "da8f0311795a85b80226369fab8d9ebd8f69504ba9721104afd7cea7a0e14f28",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-discover-99.json.gz",
+      "sha256": "6b38c05c500408cfe386ddd78fde34aa2f9153621dd686830c77e49dda98f4c2",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-dispatch-42.json.gz",
+      "sha256": "e640cf69010a8e6158aa33488e08c00845bd553f3fd8dc28176f71501226eb91",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-dispatch-7.json.gz",
+      "sha256": "41214cf2dac578af664b6b00ac8405c8f559b43582743180c97b7765f6699149",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-dispatch-99.json.gz",
+      "sha256": "d5bbd5faa3a7f36b3cd798b3c7ed45f6aedcc9980e3d05650470c0efdf42405f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-map-42.json.gz",
+      "sha256": "8c86cb3d7140980a5f8d7bafddb0f965e218b21fa19f9090fa7ecf9de03c34e5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-map-7.json.gz",
+      "sha256": "9979f83ef7f64ee19e1c9839acbb2a9f8a2ad0873ff3d679cc0560c7f3e34aff",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-map-99.json.gz",
+      "sha256": "64b7499058e8ef9b79c898d4bc7d166f6e1c8cce17dd7b733147c17e49d4667c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-quote-42.json.gz",
+      "sha256": "55448dfce8781acc2b95202c808ef540560f6c94432a08e4a19467b746e8d7d4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-quote-7.json.gz",
+      "sha256": "47a6767e4d8cb8fda4ec0db41cd1e1d34e182ffe065beeea05d027d64a7f7ae9",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-quote-99.json.gz",
+      "sha256": "82433bee741f2cc2f67435a6590dd068941509574bbcabbf874c8950cfc5d72a",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-trace-42.json.gz",
+      "sha256": "16090d0213fa01f20359ba41fb19b484c6b37a464f6f908a8a1e494a7674afb3",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-trace-7.json.gz",
+      "sha256": "b18dcf781cde38411792c70fa0c9a49246d1a21162849d497f1671b73787b1c9",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v13-direct-trace-99.json.gz",
+      "sha256": "1bbbf3a260af9cd0b41603f510f23de15f023c8c5e14fa900952a09d51b8923d",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-combined-42.json.gz",
+      "sha256": "6135b8d89c5ef72a5c9060cdcd4afb6a81f229bb82760327c975f65291ce3e17",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-combined-7.json.gz",
+      "sha256": "58b4de8d587a370775f16e14dfd679e079c5e216dba59c59262507a18e1ffbbe",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-combined-99.json.gz",
+      "sha256": "c598d8242488e59f491ce9ce2b3cec9dfefabc53d1d6d0313c87e127e8899df5",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-contradiction-99.json.gz",
+      "sha256": "461f0356ade2f7be72190beef702a41c5b50cd2d1453c5ee4a51b8fd4d571ee6",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-cycle-42.json.gz",
+      "sha256": "637601e24172b01f209f12375b1ccdc05c137f156d12728db361dcbfdd7916ad",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-cycle-7.json.gz",
+      "sha256": "9939a2ef5b69cbf2e3147e15edeb6a8bfbcfb2693068a895d6c7f23dd3fddfe8",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-discover-42.json.gz",
+      "sha256": "8c76f90a2a76e6d9651597e44dfe565d7013f15f55f02610c8c7288788239275",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-map-7.json.gz",
+      "sha256": "a7f26308d0b4e3c8eef7899d32367daf4cf43163a06ffb37a36a6123088b8e18",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-allocation-trace-7.json.gz",
+      "sha256": "639c9e93baab57d4ebbafaae97cb7d226c286754b9ea1ca30f5b3eb3f91bcb7f",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-combined-42.json.gz",
+      "sha256": "d552a5fde867b3c5071237620884fd8c7ae0c587c727e4231ae1037a726b9e30",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-combined-7.json.gz",
+      "sha256": "9051dd6089cf3c81cb7284dee777fea400b18e1ad4979a7708ae32dc28825d49",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-combined-99.json.gz",
+      "sha256": "c706e693d52fc5960229711dc41e2d155a441a6e8b444419338c18371f460b31",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-contradiction-99.json.gz",
+      "sha256": "18cab7fe667449840bec94f2ef649fb080acaca391390e0db3733d63fa341925",
+      "originalPassed": true,
+      "checkedFields": 4,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-cycle-7.json.gz",
+      "sha256": "42a8771d0c82475b30c34296c45031f08e905a02791b4ca2b1799c21793f77a4",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-discover-42.json.gz",
+      "sha256": "f57cd6ed9fe6f82a22b7054fa729ab52a3eb64475e5249b77e9262b4204bda41",
+      "originalPassed": false,
+      "checkedFields": 10,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-map-7.json.gz",
+      "sha256": "af12bb7ae0df561fabf579bec36631065d0f558e20d89f0daf70d811ed86a4a5",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-billing-trace-7.json.gz",
+      "sha256": "dc936b4328d56859fb81429b2c6f53775b5c2b3f099c6fad7c32c18806683ef3",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-combined-42.json.gz",
+      "sha256": "d12378d05e7878ee964834fbf815e62a0f7433a452ac289fc409629ea5d66842",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-combined-7.json.gz",
+      "sha256": "60de9b09799621130759ec5e40bd082a9ea07fc9c5fb18286112700258a6d08a",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-combined-99.json.gz",
+      "sha256": "7560570361e6613d25acfd7cf456713b303671fb232cbd197b0b0c360d5e71f3",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-contradiction-99.json.gz",
+      "sha256": "0d7e1579214e67e64d4a449fb27e7eecd9cdc3a79b0afb9cad6fd0794f2e69bc",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-discover-42.json.gz",
+      "sha256": "b07bbde771fc44b9aed5737263c20dcd17a390bf95827a22c83f0f8d40fcd51b",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-map-7.json.gz",
+      "sha256": "71b9b58f7d9c70394a19af3e20d5dd4ddd3d39017e58c1a4796551b5556822b5",
+      "originalPassed": false,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v14-direct-drain-trace-7.json.gz",
+      "sha256": "d6886b5e95e32de2d6e82fad02c1ef8aaee459f9aafe3c043cb8f2a705129197",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v15-direct-allocation-cycle-7.json.gz",
+      "sha256": "d599d0267ac5270773d70867707e58c75ab281d5a0e5144a62e6e534152ec7b1",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v15-direct-billing-cycle-42.json.gz",
+      "sha256": "86cbd4abf290cd4008b419caeb12036c671d81994960b975719af73a239efc13",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v15-direct-billing-cycle-7.json.gz",
+      "sha256": "fee8f09c20dc89e118ac052c25e9bce94b70a542a941a4ce41cf30b7288caef4",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v15-direct-drain-cycle-42.json.gz",
+      "sha256": "63d6bccafdaec4f48b44d645f98633a14cda64ff45a8c5813c012dae19b43bf0",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v15-direct-drain-cycle-7.json.gz",
+      "sha256": "c64e2a8323a2c36f363f7e2316edbe65fa3a516f8742ba19fe3711b51ff4fbc7",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-combined-42.json.gz",
+      "sha256": "17a2f69d8b202d808a6c5a86c57edfb881fd6b0f7ef2c89fa681217c5270d135",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-combined-7.json.gz",
+      "sha256": "153bb29a672f70b84b6895a00fd010027249d68283bf0c84e8d0d4a8c09dd7f9",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-combined-99.json.gz",
+      "sha256": "93fbe474b5c7bcfad841571c46f5a9229145b28c7f32aff45d004220a6d20d48",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-contradiction-99.json.gz",
+      "sha256": "0530f22cd21b2e0213984ad9248e4449458df873ae584c780d8984b5516cadfa",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-cycle-42.json.gz",
+      "sha256": "30b5f80fddd5c02b41b43d547d05851f160ef4fa87940f0e5cb5638b5d324fba",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-cycle-7.json.gz",
+      "sha256": "ccf5b60e3e117b486fdbd7bb593578f12bdb8ec8b2e83739b3813aec1acfe01f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-discover-42.json.gz",
+      "sha256": "b4243037f06dfea03ed7e5cec41d0b4a7ebf9eb6fe74390f3d335538f32c531f",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-map-7.json.gz",
+      "sha256": "b617ff3dfb7b75ecf75a072d1ed1f4c351c2fe18bb5cf400d1978f2ec56028c1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-allocation-trace-7.json.gz",
+      "sha256": "bf9b1205ad25b3de52c001f1141e7c9017f81af5583bcbf56f66d568f555e9f5",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-combined-42.json.gz",
+      "sha256": "ac7c4cb3233641fc25d5f78e573760deb30b1c60f35374c7f9d02ed86d18da4e",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-combined-7.json.gz",
+      "sha256": "9bedbcaafac02acbc35c35bbc7b4882359c90a71a5b55dd7cd5267f358b1f8aa",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-combined-99.json.gz",
+      "sha256": "8cc5142706c9d2fff63de29249e9d3b952f24d10cbd78eef839dd79b4a986a46",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-contradiction-99.json.gz",
+      "sha256": "d48b5a637f13e85d85dfd6c3b8164ce1ffd8b7302c1cb92665e340550baaa08c",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-cycle-42.json.gz",
+      "sha256": "7698fad4d222c0b9455b4c79b65adc7066995892325887126da26eea6319d40a",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-cycle-7.json.gz",
+      "sha256": "968d7a9f26500140e5ebe4e1bd6789ef54c2bf9946e36d017a6b1539470afbe7",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-discover-42.json.gz",
+      "sha256": "d74ccd9e5c6b034ee04cf056224c66309e775481b7e6d0691cd12bbb496a97b5",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-map-7.json.gz",
+      "sha256": "39d48809d26c016327d3f8b1205127a7aa8154516a65b56c94288640ace085d7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-billing-trace-7.json.gz",
+      "sha256": "28abebdfe68aea0c7ffe4164aece746079ecdcf5942c4a28d4c8e4d767127744",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-combined-42.json.gz",
+      "sha256": "c9a0c94e9cdf9dad6cb37c08999eb362b84242b2e69ef3fb0eb7e24faf2867b1",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-combined-7.json.gz",
+      "sha256": "2bf102b886eb814b1bdeb8fbc49bf8702519ec2e050cc8258a35009a0b5b7434",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-combined-99.json.gz",
+      "sha256": "df3d31a430fd87587949967dbfbfc8ca41d680be3d1a8a8e49236feb7548b15b",
+      "originalPassed": false,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-contradiction-42.json.gz",
+      "sha256": "11d3903bcb06dda9e9c5fae760fb2158deb5258e9da62ca9bc9ff115113d6e24",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-contradiction-7.json.gz",
+      "sha256": "96a2f3cab28cad58cf9dc7d4611d33d9f8c88c51209cd7f7a7062707292be5e4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-contradiction-99.json.gz",
+      "sha256": "919f48e8bef915e8b0d555259eb32faff6fe0d62353d5ae793e5fc122a43787f",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-discover-42.json.gz",
+      "sha256": "560abfb8119d63460c78ad22cd753e60824e0bf16a645385ea898142204d8109",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-discover-7.json.gz",
+      "sha256": "140b436fd70660762a9a23d097cdcf7a7456f6c0a5bc17fc004aaa4e476f0f73",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-discover-99.json.gz",
+      "sha256": "59af718a75f99c59e6dadae283ab51c24713a1043229b57ced79e589ddcec1b3",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-map-42.json.gz",
+      "sha256": "f31bfb8d2b98799d64ddc53702e18a027d607a9882c1bb7e1a20546846286063",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-map-7.json.gz",
+      "sha256": "c022e60f772e5f6a9d00e64110e82f89e4f1a9b8d4c4086b5c19c3d136c9d8fb",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-map-99.json.gz",
+      "sha256": "70645f9aee8142c3cf6f850f809864eea2d6e3d91dfe28a5fb2dfe9e4afbedff",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-trace-42.json.gz",
+      "sha256": "0ac9cd4acb2354a09391bd7eac0182b6cb822d7fead941b62c017a65f43e22b1",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-trace-7.json.gz",
+      "sha256": "c88ea9d9774907580e339f4985cef9c4665593d1b165c14a8e9b567b1387a8f4",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-core-trace-99.json.gz",
+      "sha256": "ce1ff2bedd68011de7972d3133ec4c196ea7517c3d6ad20dea0f631400e1d2ff",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-dispatch-combined-42.json.gz",
+      "sha256": "53f6cd3be99e57b61501cd17be89130f86cc42ab2456a0f1bcce2e8424ddd2d6",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-dispatch-combined-7.json.gz",
+      "sha256": "cd2f9aeb48aaa3d3c3e93e7be798e109c64df6cb64ae38375d21ea13f82ff862",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-dispatch-combined-99.json.gz",
+      "sha256": "664f14d81d247924f327eb3c36996fcc67da4a1353696cfbd6de685624f48434",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-combined-42.json.gz",
+      "sha256": "d8eada516291651e2cd90982a83a11f415753ecca27b524f140da5077443af2f",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-combined-7.json.gz",
+      "sha256": "d4d1dd8b10b6a4693e11953d66fd2d19694fd8591601c37318351d78720295df",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-combined-99.json.gz",
+      "sha256": "e5a3efdca1d67689ce617c9657933a12b9e1cc92ac89d11446437e05adf7688a",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-contradiction-99.json.gz",
+      "sha256": "7d45a2983debd10ef861bed5008647d8eeb3b864e0712634fbe702bfa5f5583e",
+      "originalPassed": false,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": "[details in result_read]",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": "[details in result_read]",
+          "observed": [
+            4
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/status",
+          "reported": "[details in result_read]",
+          "observed": [
+            "partial-static-map"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/kind",
+          "reported": "[details in result_read]",
+          "observed": [
+            "entry-exit-state-map"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/feasibility",
+          "reported": "[details in result_read]",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/runtime",
+          "reported": "[details in result_read]",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/behaviorVerified",
+          "reported": "[details in result_read]",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": "[details in result_read]",
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/truncated",
+          "reported": "[details in result_read]",
+          "observed": [
+            true
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": "[details in result_read]",
+          "observed": [
+            5
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/status",
+          "reported": "[details in result_read]",
+          "observed": [
+            "inconclusive"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/kind",
+          "reported": "[details in result_read]",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/feasibility",
+          "reported": "[details in result_read]",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/runtime",
+          "reported": "[details in result_read]",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/behaviorVerified",
+          "reported": "[details in result_read]",
+          "observed": [
+            false
+          ]
+        }
+      ]
+    },
+    {
+      "file": "code-v16-direct-drain-cycle-42.json.gz",
+      "sha256": "d7cf9417f934be4d7fff36a6a45b1f10e608619d437f8e9defd80c5005daa8b1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-cycle-7.json.gz",
+      "sha256": "8173f3e2e30c891067c337ec910db058e06fec950c7bf2aabaf1823aa3abea35",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-discover-42.json.gz",
+      "sha256": "f1edbe59fbeb877cabcbdccdc301dcee962536dadb887db0ba56b2884b439c93",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-map-7.json.gz",
+      "sha256": "9f6e74fc4087c2443d9035ca2affe5caee6f5380eaf5e727ef5478f9f2653c38",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-drain-trace-7.json.gz",
+      "sha256": "94f2cdbce93e99a7136b9b520405ef1be036af2207dd0156ee36d3a788282604",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-quote-combined-42.json.gz",
+      "sha256": "ca47f70de00997ed7eaa254fa3a6369e7be90ef49c53f3ea2b1c046b4fcb5587",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-quote-combined-7.json.gz",
+      "sha256": "69118ffab4b20cc6bcc46d5ddcc9ecd2d6e44a0cb97077bbe23ceec4b605837f",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v16-direct-quote-combined-99.json.gz",
+      "sha256": "b60554a822dcf3d53e0c8dffb8b2226be7ba60c29ccbec51105b5cef85657daf",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v17-direct-core-combined-7.json.gz",
+      "sha256": "f6d5bb30047f2c2d48b79f7629f39b5c31f6c7c0d54b0a1b4649dc45e3a8b31a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v17-direct-core-contradiction-99.json.gz",
+      "sha256": "b1e795f5bd1621b58916113135a1dc962c668efa86ddfd6a4a7975a859f8270a",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v17-direct-core-discover-42.json.gz",
+      "sha256": "cef17eab65d34a0dd4261c29f4af7547a0ae4124769bc90001e9c0dd404ca10f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v17-direct-dispatch-combined-42.json.gz",
+      "sha256": "6020cf18cf57df1eb4de98889679aba38a95f8fb85b0fd6a03974413ead6ae6c",
+      "originalPassed": false,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v17-direct-quote-combined-42.json.gz",
+      "sha256": "d65e10753acbae16e491e8d76c63b6c0a94c7005da0ebd8adcca8c34e88d21a4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v18-direct-core-contradiction-99.json.gz",
+      "sha256": "59aff252005a3281fc8147e4b0d437043efab1091bdd72647d236cef52a8f1ac",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v18-direct-core-discover-42.json.gz",
+      "sha256": "5a8a36c340c5cc23dbdad2845d93422bffa01d479a8d095402eeaa633fdb98a5",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v18-direct-dispatch-combined-42.json.gz",
+      "sha256": "fb71603d0846f53c96e484822a57bb99a52b34b140286631ad87eb44c77f00db",
+      "originalPassed": true,
+      "checkedFields": 4,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v18-direct-quote-combined-42.json.gz",
+      "sha256": "400453ce63508059594da1ffe41cf310ada6f19e09eb3bdc44fb34e1aa4dfcd1",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v4-combined-7.json.gz",
+      "sha256": "e886dafdc9c3ab3c54b2ac062e672210ee6e65fee7c58320fed582717a66491c",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v4-contradiction-99.json.gz",
+      "sha256": "b6b27cf47629ee0391f8dc3b26c160d5d7b0e6ca550cd5e8682364a9ecb139ac",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v4-discover-42.json.gz",
+      "sha256": "71231ea937095d11923683b67945e76affa9b5c991cdf512feea19feebcfb80e",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v4-dispatch-42.json.gz",
+      "sha256": "25c3098a1789b4635c9f6f169e85852d88cc5e168e3442688d874ab5de02d53b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v4-quote-42.json.gz",
+      "sha256": "09d5bcdeb0c75cefb4e83f3bf56dc120ebdf37bd72541c1d7b1fa3d1d4047d82",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v6-combined-7.json.gz",
+      "sha256": "a7e5debc34ea16e658d93b23c35267a47641ae3a8682ddbb7eaa31d7fe0252c6",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v6-contradiction-99.json.gz",
+      "sha256": "4cfec1b1ea2ac594c59e1d29d269d70b814b034c76533b5407d22d7acde517e7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v6-discover-42.json.gz",
+      "sha256": "5d5a09f4f18b4746d73e5e1ff5874836277de764351622eb7214142a05804b68",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v6-dispatch-42.json.gz",
+      "sha256": "5792650bcda486067181ee156fc4218d5608732e114471fe70ccbaa0699e6e1b",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v6-quote-42.json.gz",
+      "sha256": "aaf731fb36c8f83c02005be3e93b2793d4801804b0f94ee7b98c70f5420f3a26",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v7-discover-42.json.gz",
+      "sha256": "cd59485b8959da11c8c421fd5249a853953b2cf7299dc5924d05a60ff91fb0d7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v8-combined-7.json.gz",
+      "sha256": "8ad56f591c7c74cc7cd622e54b6ad35a22a271ceada4b631d8a30a92ad6610b5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v8-contradiction-99.json.gz",
+      "sha256": "1f2d4be9c40ede4be89f8de2b1b6246e833ddb2e9ea097feb4207edb5be6f484",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v8-discover-42.json.gz",
+      "sha256": "e9e63ffb32dbc62e472bba85861c4b3642ec369f8772489391c55fdcfda8af98",
+      "originalPassed": true,
+      "checkedFields": 6,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v8-dispatch-42.json.gz",
+      "sha256": "c37e9939dc6367a1969f1bd310a5e7caad80ed74dd292527c2b2cc3286d94827",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v8-quote-42.json.gz",
+      "sha256": "11816070c9229617fb4fa0f768be744022159f839497e0e18bfc08da95aa9814",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v9-contradiction-99.json.gz",
+      "sha256": "12f6566d0a6a961ecb671d8e1ce88a660cc6d3555341f5a6161c9756b8633be2",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v9-discover-42.json.gz",
+      "sha256": "51effde09844faf66d0c11a31e911a5dc71a597911d376788b0bf04f65e06061",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/feasibility",
+          "reported": "feasible",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/runtime",
+          "reported": "partial",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": true,
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": 2,
+          "observed": [
+            7
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/kind",
+          "reported": "entry-exit-state-map",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/status",
+          "reported": "partial-static-map",
+          "observed": [
+            "inconclusive"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/feasibility",
+          "reported": "feasible",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/runtime",
+          "reported": "partial",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": false,
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": 2,
+          "observed": [
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "file": "code-v9-dispatch-42.json.gz",
+      "sha256": "a1801791d48b36fcde48a59cb70f11f6244c34d4c08cf267e72453ee1fe3e196",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "code-v9-quote-42.json.gz",
+      "sha256": "6af99dab8d98812a8b449330809a2542f14e67800993b11a5ed3af10037692ab",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/proof/feasibility",
+          "reported": "static-feasible",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/runtime",
+          "reported": "static-runtime",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/behaviorVerified",
+          "reported": "static-verified",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/complete",
+          "reported": "partial",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": "partial",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": 0,
+          "observed": [
+            4
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/kind",
+          "reported": "value-propagation",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/status",
+          "reported": "partial-static",
+          "observed": [
+            "single-revision"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/feasibility",
+          "reported": "static-feasible",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/runtime",
+          "reported": "static-runtime",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/behaviorVerified",
+          "reported": "static-verified",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": "partial",
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/truncated",
+          "reported": "partial",
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": 0,
+          "observed": [
+            4
+          ]
+        }
+      ]
+    },
+    {
+      "file": "combined-v1-contradiction-42.json.gz",
+      "sha256": "c0bf47f5f8c7401e956712067d4ae1904e95a1872fa7c18c6f56b5d955419545",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "combined-v2-discover-42.json.gz",
+      "sha256": "cefc0ae7ef6b353ef4d3c44f784498a6edce539a1d71606698b11320623f0a2e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "control-v10-direct-combined-7.json.gz",
+      "sha256": "63a4dd3895afd3ed17d41aed1d1e1dc22d1751ee626eb4140f4480c65526c4fe",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "control-v10-direct-contradiction-99.json.gz",
+      "sha256": "0ca4ca75e796f97e441dbe873b0c4071a9cd5411dd4e45c37739ebd10a32c9e7",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "control-v10-direct-discover-42.json.gz",
+      "sha256": "1d66aea7fe5c1177978c6b3cc711f77a1295a3af4c8cb295665321ec1a258251",
+      "originalPassed": false,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/entryMap/proof/feasibility",
+          "reported": "partial",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/proof/runtime",
+          "reported": "partial",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/truncated",
+          "reported": true,
+          "observed": [
+            false
+          ]
+        },
+        {
+          "path": "/proofLimits/entryMap/sourceCoverage/gapCount",
+          "reported": 1,
+          "observed": [
+            7
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/kind",
+          "reported": "value-flow",
+          "observed": [
+            "selected-path-comparison"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/status",
+          "reported": "partial-static-map",
+          "observed": [
+            "inconclusive"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/feasibility",
+          "reported": "partial",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/proof/runtime",
+          "reported": "partial",
+          "observed": [
+            "unknown"
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/complete",
+          "reported": false,
+          "observed": [
+            null
+          ]
+        },
+        {
+          "path": "/proofLimits/valueTrace/sourceCoverage/gapCount",
+          "reported": 1,
+          "observed": [
+            8
+          ]
+        }
+      ]
+    },
+    {
+      "file": "control-v10-direct-dispatch-42.json.gz",
+      "sha256": "f0442e337796cc2f6862d6afeda66d07051ff7ab5ff56db7524eedb8559ff4ee",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "control-v10-direct-quote-42.json.gz",
+      "sha256": "1778eb1d3932fec7b327e7968992f88004315deb0dca8501171447ebd61959d3",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "final-navigation-combined-7.json.gz",
+      "sha256": "0b644c77843db56ef20b4539d4595a3cba319c2511dae7ccbb3398393a1cd835",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "final-navigation-quote-42.json.gz",
+      "sha256": "f2b34b5c475e5d2bbf1bcac6319f9170abd88414c3aa9ebca90d30fdc9bcf9ef",
+      "originalPassed": true,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "holdout-v1-dispatch-42.json.gz",
+      "sha256": "9df75e2b1abfe0196559939c27929da2be18bcde048ad54092c5f5df66432f61",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "holdout-v1-dispatch-7.json.gz",
+      "sha256": "7a2e89d2b18433422e104ad79b801b5c3180590fad37806793290b4ab491c9cf",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "holdout-v1-dispatch-99.json.gz",
+      "sha256": "37a9682c388f9223a169419230b254876bcb0cc5ee77f08c9e1813a580f3a78f",
+      "originalPassed": true,
+      "checkedFields": 5,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "holdout-v1-quote-42.json.gz",
+      "sha256": "a2e168dae7b746a0dde6d5412321716a6fac89cb32ebaa25dd51c7dccbf44cc5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "holdout-v1-quote-7.json.gz",
+      "sha256": "95dd21d28c9865a8495f75b0ef045876aeaf0dfd0500d4085ec686d82242ed26",
+      "originalPassed": true,
+      "checkedFields": 6,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "holdout-v1-quote-99.json.gz",
+      "sha256": "2a1b0c4cc32cae5ad136be9c3114541838b8fd75133b1a7c99c23d6499243646",
+      "originalPassed": true,
+      "checkedFields": 4,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "joint-v3-contradiction-99.json.gz",
+      "sha256": "67984f9932a44a8a24d3e67cc322622a7502b9b20619cd8426cc85bf14724e99",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "joint-v3-dispatch-42.json.gz",
+      "sha256": "fbdbf47800108e143024382041d4a9177af54418d80998a1e7e7ac7e0a29eb03",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "joint-v3-quote-42.json.gz",
+      "sha256": "ac062b2a7e3547e1154845a502ab7b29ecb39f5923f3cfb65f4d0c13716732ff",
+      "originalPassed": true,
+      "checkedFields": 7,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "map-v1-7.json.gz",
+      "sha256": "de9a029a41c587f269c5c7fe69fe0f8d2c560338ade7010600c402ebf0313530",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "map-v2-7.json.gz",
+      "sha256": "c79f72efbaa71a8f8bcc08d65b6ec49c5374104b0d8b2b68a905b74728e7743d",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "map-v3-42.json.gz",
+      "sha256": "1b87e2210b8662203c12c8e65c36f905efa0bf193fc0f005bbc774278f2dec0a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "map-v3-7.json.gz",
+      "sha256": "74e20c979fd88579a95244e258fdc455e133dc85dff3f4ebbd66f44100724bef",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "map-v3-99.json.gz",
+      "sha256": "2bdd203a4648b62c633806fd2fd463dfd95afe66367cb11a5b280e73eb5604a2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-combined-42.json.gz",
+      "sha256": "bfdcfaf192aaebfb0d81ae2090f9851ee8e6765e07c11eccca9c5e50eb7a3770",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-combined-7.json.gz",
+      "sha256": "7c5815680e97e2c5f7ab7acc5b41aa6294b9c52687b0ede67bb774e4435f347a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-combined-99.json.gz",
+      "sha256": "bb72d074690bf4d5daf2aaeb7cd507fc10aa0ecf86beff66af9b14d2340ac934",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-contradiction-99.json.gz",
+      "sha256": "c0e3ce0b6aaa45b810623b680622c6bc4a4ae935e393fe92fcd482c7852fb8be",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-cycle-42.json.gz",
+      "sha256": "cab2fe66e2f614b9b7d4f77757783ef11b5f8823b2e497bf76b9ade8229219c7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-cycle-7.json.gz",
+      "sha256": "63445a1813ee14545fd4386865f8e4d0bce5c78afc1a44f4d9a590ee1375f511",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-discover-42.json.gz",
+      "sha256": "9c99c795736ae1bbc33f686503a16eede7bb32d45ba7f9d6cb88c606e1c1bad6",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-map-7.json.gz",
+      "sha256": "2a1d766bccbad1c38df559b11f292d04280f6e80ca841b977f0b1244a903ae04",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-allocation-trace-7.json.gz",
+      "sha256": "a6371b6a3f65407b9f1dcc0a1a58836ea2dc55562b4986e2fb81ec721f9ab43e",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-combined-42.json.gz",
+      "sha256": "f1ffeb8349b4eadc1d88536de50743d7a7eb618f74d99da449239b2a5cf8adae",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-combined-7.json.gz",
+      "sha256": "9b6f854d3b13730e1228914742a034b11ce243227ff1fb79dd8fe5fe237133c6",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-combined-99.json.gz",
+      "sha256": "0c411305a593101a28274b1db1707fa593d52983ab7f3547001cbb9befdea793",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-contradiction-99.json.gz",
+      "sha256": "ce0143caf9a3a6a3acd493f897217bd4c162e8b214faf5ee71154bac420273b7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-cycle-42.json.gz",
+      "sha256": "5ef3ae077459b274505b4fcd38328f5f97beaa4de714bb61993ba0c6e7cb7ac5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-cycle-7.json.gz",
+      "sha256": "b2a8851d62fef71b668681e963d4cf864b71049dc550310ff97060814c13cdf2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-discover-42.json.gz",
+      "sha256": "c30bdb03fe3ce11bea80d030611389a9c2ae66e6d6d82b26f5776e1af2b9ec2f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-map-7.json.gz",
+      "sha256": "0fed172637b2e40135b2bc5994e2f89f88480747c2aaaaaef20bd94e9c082551",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-billing-trace-7.json.gz",
+      "sha256": "379fa1b9f50fd971851c8a253c59e1c299b36cb9c3aa759d212672b4b7ce8822",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-combined-42.json.gz",
+      "sha256": "2e4ae24e60d9e54a13193aa597b0f76b733c1cbf02f94b8a594e93b5d9ecd36a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-combined-7.json.gz",
+      "sha256": "dd9a143da2e054a0fb4c66fef605d6b154bf28498e6e6e52e0887bde674f8054",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-combined-99.json.gz",
+      "sha256": "56e2c94f123257a3a668ce7c9475fd5acfb56416fb3805d5a9463a4230d5d981",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-contradiction-42.json.gz",
+      "sha256": "ad83c7a5a5c3cb20e95f2de5d30789e6601e5c56a9d5af0527fd0189e585dc1f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-contradiction-7.json.gz",
+      "sha256": "1ae79aeb1ac803a4cf4932fc6abae9d573298867e23a738b40c42fba5f54214c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-contradiction-99.json.gz",
+      "sha256": "7d4a69171dfe3648c3acb9cd3e381054c1fcdc1fdfd89ab60604b4150815c833",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-discover-42.json.gz",
+      "sha256": "80d05335cec596b3f20b88b9206c0ab4b759e723367143b0562e8e1ab23af488",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-discover-7.json.gz",
+      "sha256": "e3e4a61f951fc689c70eaeed9ea94e7af3e56a14a9edb8fcf8a0a7a88a9e5fa5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-discover-99.json.gz",
+      "sha256": "6ce7aa8deee01467846653975a33cc494d7772008cb7f0250b19d51dc880c3c2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-map-42.json.gz",
+      "sha256": "2f072da47db7b2e6b16c65ed319fac41037129e609c23d17a8e72acaf6d00f8c",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-map-7.json.gz",
+      "sha256": "af00fb4e2c869972e6d659afc2578258202f9b344f9fc34506f48d0e0cc19e46",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-map-99.json.gz",
+      "sha256": "fe88bb7580bfc7e95796992cf6a7047b1e5bd42a23e26fb59d727652ed4f1f98",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-trace-42.json.gz",
+      "sha256": "ce75d1dbd43e28e618a10a701b398a024abf8b55289190d6871bf8f262968f0e",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-trace-7.json.gz",
+      "sha256": "9a0e7907ed903c4ddb86e1d53cfe611aba2f8742368a23115b3655de83c437a7",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-core-trace-99.json.gz",
+      "sha256": "eadb14f02356b3d3bb616f3382586c447042ca3a85682a21c3981ad9da3d5366",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-dispatch-combined-42.json.gz",
+      "sha256": "9dc7e90c024017192244e52cb13f41300f2347629254eadeaba16da5b1e6ce31",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-dispatch-combined-7.json.gz",
+      "sha256": "bed4dcc2971905aed98dcc2fc9ed1fee50ed3be603dcf5694dd29c5daa635980",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-dispatch-combined-99.json.gz",
+      "sha256": "73312322d28d8dd4bdd68fb8d2482e49b660746423e4585736f5e852b9a45dd0",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-combined-42.json.gz",
+      "sha256": "7e9061140c9365ba86abbf8d507b2f33d4e95ff90470bb5c12bf01d4654a3591",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-combined-7.json.gz",
+      "sha256": "6ccc52ab6d29ed85b3412833f7cf3f4381e88cbe3f7d539b4c2ccfcf769bbdfd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-combined-99.json.gz",
+      "sha256": "65b14b397f3a00ba8f767d2cefdf3023feb14e757311c11fbc05ef6f20909de6",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-contradiction-99.json.gz",
+      "sha256": "9fc628104443324b8d0a71984f6951ef55ef0b4474367710df8976616157736d",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-cycle-42.json.gz",
+      "sha256": "6588e47d0a2599f30c5211f7e7bd8b412e13e800e14d2633ca910a736ead1aa3",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-cycle-7.json.gz",
+      "sha256": "dd4f5c2303abff46016059fba10d48fbae4a543ea6063115021161c44770c22d",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-map-7.json.gz",
+      "sha256": "51b5934cd6035fe692f11645eed8bfe069bcaa896b43b6306d21495758bf75e0",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-drain-trace-7.json.gz",
+      "sha256": "f31f166ce7d0a5105dfac307763cc31030d696d1c3fc4938094c06ff1d9a5f9e",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-quote-combined-42.json.gz",
+      "sha256": "4ec42a5ac67a5fb4d5a108e8a77a332fb6a7539b8567eeb04184fe057c8ced9e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-quote-combined-7.json.gz",
+      "sha256": "367e2dbd27b173c2d1ab782a033461d5554b14b5953d886b2bff33fed49a6ac4",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v17-direct-quote-combined-99.json.gz",
+      "sha256": "ab0746b9eed2c8d04c4d5140b6e9ea18545aff0c8bc5267511ec1997fbca279f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-combined-42.json.gz",
+      "sha256": "20f48a251593c42803d0795a2d53b43b4b189ccfab67b4353c893dee28f655be",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-combined-7.json.gz",
+      "sha256": "51011ec84c2e455a21dbf1569b03539e5a74f6f3dc9abe65485611f2098c08e4",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-combined-99.json.gz",
+      "sha256": "93563a25b528c6124d3d76817627cafd2d3689494943f37ddff404bc6bd99e0f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-contradiction-99.json.gz",
+      "sha256": "6c58885b723ab5b263228c703c9733036fdc884520b84501ab864d1f8cebadf0",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-cycle-42.json.gz",
+      "sha256": "8176b3130094f4a7e7a55fb3775a2593ef45e1dfd978716b574165ac846c434e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-cycle-7.json.gz",
+      "sha256": "7fceeffd2a234ab8ee9e712b3a408baf815d4078be233cad3a1ce6483da6b28c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-discover-42.json.gz",
+      "sha256": "8f02d3612e8550fa2de3ad383595d36d62826d1065bf20bb379717512897174e",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-map-7.json.gz",
+      "sha256": "37dda467c4f2f8b1ebb9bee67e414747da33d524f2a5f8f3a8d3779858aa8ad3",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-allocation-trace-7.json.gz",
+      "sha256": "c09ccea6587b4b411a321a292e0b6d9337a80afdb32a7222df35a22dbef246cf",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-combined-42.json.gz",
+      "sha256": "8bfaf0300cf67cc7decbd7b08c61859358cd01c15db33a9d8dacf6176c7fcc87",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-combined-7.json.gz",
+      "sha256": "dac6b8f5010c830dbfc85c797ce5605bea85109a67323bf7912bb079e48c738c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-combined-99.json.gz",
+      "sha256": "1105e46721313cf66475ba55edb40866151ffce58a6bfd8b44c5fd36cd9ae721",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-contradiction-99.json.gz",
+      "sha256": "818c813ecdad31be9c71af4f9c11ddb4a8f0b17511a9c40272121eefc015def7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-cycle-42.json.gz",
+      "sha256": "91882fc278845efef142cdddcb1bad6da9dad84e0a83bccb896bea0ce7b3affd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-cycle-7.json.gz",
+      "sha256": "c6e2e8e3b2e000110adf9bb305ea9ca07cead71d8418a461b19caad213a3e31c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-discover-42.json.gz",
+      "sha256": "576e92ec0968897a8bce11cbcbabb35fbd1f6ade3216cfd651c065f2b2bdce4c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-map-7.json.gz",
+      "sha256": "47dd91b49ee7b0a4bf6c2a0945b43b0971c4f7fd3f2b82e45cc7478aea34ac29",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-billing-trace-7.json.gz",
+      "sha256": "67b928ce7e029130ac81a82be0c1535350354b12af822420fe96717b2c66920f",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-combined-42.json.gz",
+      "sha256": "40f309d3b582c708d291974be7f9ec5f8c990835abbfda0d0fc2f7ef8eaca0c5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-combined-7.json.gz",
+      "sha256": "d9fed3d21761183198bea69cf7b62531ed7b6e35c5f62a2816740d846aa1395a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-combined-99.json.gz",
+      "sha256": "e903c6fe09ae3c23d1205e1f841e7abf2c8feb58fbbfdbae250ec04b91cfaf15",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-contradiction-42.json.gz",
+      "sha256": "35d0f48c75c25c69d6229926d42918bc32b898f36e50cc5694cfdee7fda2c289",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-contradiction-7.json.gz",
+      "sha256": "84a633766c23e2c474e85d54f3f71e0500f880042eade7c2af6c816e925a47c4",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-contradiction-99.json.gz",
+      "sha256": "dba7ffa85aff8419fe23a1841959fed1510ccb722569ef16f7c4de76eed0d5bd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-discover-42.json.gz",
+      "sha256": "8eeef4eaa4b404f5c532d1b8eded1e6db62c3fa48e9dd4b71f6610b0de2a3a19",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-discover-7.json.gz",
+      "sha256": "ec27c7c7e826c1fe4fc429036a67091f95b65995f454e0d97b182d0252ddc49b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-discover-99.json.gz",
+      "sha256": "d3c82b10b446bfef149fc1b724c619c8faf27fe427628ed1240ceacf6eaf690c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-map-42.json.gz",
+      "sha256": "64218056827f87bcf8721d263a0cae7666fb462f30908ae9c9f7e8e9ff052b38",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-map-7.json.gz",
+      "sha256": "92ac85e597c3da7b862b9f8c5a266ab4661b319a6ca7ea4f8e30a6afb6a2e816",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-map-99.json.gz",
+      "sha256": "3285579cee774e6629aaee58c414a50a59cf15448bdc4437985d0da608acbc4e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-trace-42.json.gz",
+      "sha256": "ab5f4dd95b0d64718963296ce76b365b241cdc18534ab9a5365dd77c73456eea",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-trace-7.json.gz",
+      "sha256": "90cfaf2cb8c18123d2de39dcbc9e7cf4f187eaa283db4d65de7513d5abdf7a57",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-core-trace-99.json.gz",
+      "sha256": "90fc8b6abcaa8974dcd4943a4dd96eb497569b2847b29312130391c843185f85",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-dispatch-combined-42.json.gz",
+      "sha256": "b1efa57a9cccbb996c86e88642b7226b24ee15c9be2473ed81415caf71361f28",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-dispatch-combined-7.json.gz",
+      "sha256": "ddba7139b6a813d1992aaec1cf5e492646d94b5090004b1c175f94ff8384f1b4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-dispatch-combined-99.json.gz",
+      "sha256": "4228fc911029bd891da4c556d39f187ec907a500684aef50078798631706c548",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-combined-42.json.gz",
+      "sha256": "bd9b888f74caa1b522d44d72d167c2471b6f49ff87563823b4223ec9da62bcec",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-combined-7.json.gz",
+      "sha256": "8e5d4fdd2b578131713e610db4e0eea936a7ace6a97dd8c978de3cd4422b55bd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-combined-99.json.gz",
+      "sha256": "a984faa15b4a79bb8a46799accda2405d9e87d679d88d0c965aa6cd69acec621",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-contradiction-99.json.gz",
+      "sha256": "35cba0c013ef3c042f9e85c4537b807b0815d983aa99f63cbf4c48880c97708a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-discover-42.json.gz",
+      "sha256": "a304a0db8f64643dd3be5cbbdcc75ac237fe574bb190cb6557a3a163f8303802",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-map-7.json.gz",
+      "sha256": "c30fb85a405580a87ab6a9b11e0fa2e5b4606fa9016bb42c45f4973e07bc040f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-drain-trace-7.json.gz",
+      "sha256": "333647d486cac0310efe33040f2103e782261c32b22b6f2c94a18a14a8395d8c",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-quote-combined-42.json.gz",
+      "sha256": "aee920ef55147cb1995795a6a5f2eb33061502095991d9f73330a1671a8d2bfb",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-quote-combined-7.json.gz",
+      "sha256": "a8b73ab2e36c753b5c537200474564eac5174429c0137d68cb73bde8459c94ed",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v18-direct-quote-combined-99.json.gz",
+      "sha256": "2ac070bce9802b3aa1611d0ede182e4e0905eebce15533bb87e273920c63b139",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v2-combined-7.json.gz",
+      "sha256": "989cb8ae3dc25c3e9e3794857d502b9576594569169fe2056cffb1aeea84275e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-combined-42.json.gz",
+      "sha256": "2c23c7652fdedec361b44c25dac780b9f75673c53298426b6081bdbe8927c82f",
+      "originalPassed": true,
+      "checkedFields": 13,
+      "structuredProofClaimsConsistent": false,
+      "issues": [
+        {
+          "path": "/proofLimits/kind",
+          "reported": "source-or-tool-limit",
+          "observed": [
+            "entry-exit-state-map",
+            "selected-path-comparison"
+          ]
+        }
+      ]
+    },
+    {
+      "file": "native-v3-combined-7.json.gz",
+      "sha256": "086fbb486925c4e25a54af7d2657f640ffd7b6602ffe1b568f9d4470d8b77cdd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-combined-99.json.gz",
+      "sha256": "93c3d8d6ca4445bdb0da9fbd6aa894fec397607fb20c3242aa38b68a39690712",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-contradiction-42.json.gz",
+      "sha256": "c97a52949b173e9189fb5f2f948fdbf4ceae87d13397f7a35b31c46543f0fdbd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-contradiction-7.json.gz",
+      "sha256": "c448b897bd8a7fd7f5374f457c8ef1528d8cbc1e7995489a49cb486eaa55130f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-discover-42.json.gz",
+      "sha256": "ed924c71930b97908939bf0938d3ba1e81fbb7506358c41e7ca728b9c0772220",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-discover-7.json.gz",
+      "sha256": "ce8c6ae0396d65ee13bcb76322066b6911540546fa63b4ae6f3d1c27569e94b5",
+      "originalPassed": true,
+      "checkedFields": 5,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-dispatch-42.json.gz",
+      "sha256": "cd3c1e47737ded851dc9e9bafe4042a70590b0896dcbf970423412529a192d51",
+      "originalPassed": true,
+      "checkedFields": 8,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-dispatch-7.json.gz",
+      "sha256": "d0db63e439ee7334532ec5088463c04fe74903f282123ef690fabdeda123712a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-dispatch-99.json.gz",
+      "sha256": "6849647e96daac8a434d670939cef9bc62c2300968fb86b764a5151bd4caf777",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-quote-42.json.gz",
+      "sha256": "85b9d58118f568998d8ac7a0aa9602c050f5902c54d98210aa94f262e51f4f5f",
+      "originalPassed": true,
+      "checkedFields": 4,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v3-quote-99.json.gz",
+      "sha256": "42f7e5d8b78ce9ccf99683c6ab7dc219d324697cc6bbc9d029d93acc77ae8160",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-combined-42.json.gz",
+      "sha256": "2b4171d11d1f05428df14474aadef44a8abe29b53858a10f1d99e1f7376f1eaf",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-combined-7.json.gz",
+      "sha256": "0349f05d767076ac69c909153e3263d1139494d5dcbc89c8dcbcd14ca2a73ed9",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-combined-99.json.gz",
+      "sha256": "d086399a23d8711d7e55d82b0385fd95cabecdd5cbca1438d1c00e435421f6a7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-contradiction-42.json.gz",
+      "sha256": "1954ee67fe7451c599cd39a3582a75b6781ff6c636ecdeff231fd080fcde9a58",
+      "originalPassed": true,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-contradiction-7.json.gz",
+      "sha256": "34f8a45942c79d315a2d977d263ce075bc74f9ff27bf444f2c4aa736c9a21e89",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-contradiction-99.json.gz",
+      "sha256": "49d8b756c391d21749636a62e27400c5b25b84dd0fc7d14c4874f3992256970c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-discover-42.json.gz",
+      "sha256": "036760fcbd7c8828114ff9c773181e1a34e3ca940dfd409d42fccf9d054dd275",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-discover-7.json.gz",
+      "sha256": "47c01283b9ba85e3c81f5cb06f681a73e3bd33d0a8088f1acf831494b77a9fe5",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-discover-99.json.gz",
+      "sha256": "711d00603fd48676e1d48425186f26ac74ad57035b2053d756a1e5e5f5a4b090",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-dispatch-42.json.gz",
+      "sha256": "06eaf45087afcbce99d97986f0326aecd70aff6596126cf4b5e0805446b16f5a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-dispatch-7.json.gz",
+      "sha256": "bdf7dbf4508576fc2668ecaefeeac3d48796e1e37a209a3f574dc1c8793aab00",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-dispatch-99.json.gz",
+      "sha256": "96db1e386d463e7bb81ca8aac078c67dde9723901a55c76db2edbce24d5f844c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-map-42.json.gz",
+      "sha256": "54405f4f10006a1a5b4f9445f9126e1411b001de0572c9c43902c2f3ab8f0451",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-map-7.json.gz",
+      "sha256": "c0734b3914e95f4a542c4de720b2ea808d0bb174e3876882fb021c1684fb4eae",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-map-99.json.gz",
+      "sha256": "8677ebc59d10df027ce7adfe74715120a080e642e77cd7bc2a08d737841ec0a7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-quote-42.json.gz",
+      "sha256": "64fd83cbb73eee455e08d7a528a16a478d8784f885f220ae6a32f9ec4905b7c3",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-quote-7.json.gz",
+      "sha256": "340d649971fa4d8647844392bd14fb17bc247cf201685cb656093b99a9867d76",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-quote-99.json.gz",
+      "sha256": "9074154f8d102fde33a93af7ae59e952fa3a7ce15dba8c183d2f95a4b0989d65",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-trace-42.json.gz",
+      "sha256": "15b6145bfef0366d759cc8adf4073f71d8829f434f1b8881f3a73e0386d56dfd",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-trace-7.json.gz",
+      "sha256": "196d7458984a12d6f00dbec2443a844f33842f6e81d4e60af0253ee2b2f0bb92",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v4-trace-99.json.gz",
+      "sha256": "81f09446a35c309284c827d29a0f3ee93773e763ffe01e4505014b86893c3c59",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-combined-42.json.gz",
+      "sha256": "bf1ba9a591abb24cb0431b771a832101383aeed929593f1f889dc1a32004826f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-combined-7.json.gz",
+      "sha256": "2071981244c081e9e35509416768807300575baad1e89e66904a25125719476d",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-combined-99.json.gz",
+      "sha256": "0121144b056be2ce91c699d0a0fdc934bfb28c8ace75aed48f22f8f229369c2b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-contradiction-42.json.gz",
+      "sha256": "851f8b47bb7a56e700943d81c52992401c294060993bad39229c31cf8819bd46",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-contradiction-7.json.gz",
+      "sha256": "cb0b05e4c8149546fed0229eeba264bf5b2d7f7d011ce15e31aea38161cd78a1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-contradiction-99.json.gz",
+      "sha256": "743a67f5ad4de1c207677e0bc462c49ef78bacfd59ae52d93cc87e22fc5850ee",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-discover-42.json.gz",
+      "sha256": "196f57a00c44137b919cf83058a1e3ed1c2fb687ddc0851f1a05b4fe75fc4b2d",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-discover-7.json.gz",
+      "sha256": "8f2b8e5b9d5207f5368b5be2a08d6adf0e2dcad65fae867603a861a4a6abe95b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-discover-99.json.gz",
+      "sha256": "2693ff61362a034a8a307b564b85952f64d5b131c355816be7a50f880688bb50",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-dispatch-42.json.gz",
+      "sha256": "7bda8be637ea634ea95315a89845172ff439823233a506c9cb7ec0c1d5d14f96",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-dispatch-7.json.gz",
+      "sha256": "64a6e7dd2b7ee69d97b5af1135c9f9ef7f920d456ce9aa3c1550decfbee41108",
+      "originalPassed": false,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-dispatch-99.json.gz",
+      "sha256": "fa7ebb493e55dd62eeb5a53fb7dcbc2fe99b343c102c46ceb4a7ce0ced4ef32a",
+      "originalPassed": true,
+      "checkedFields": 6,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-map-42.json.gz",
+      "sha256": "2380a31c9ed3ef66ca05bf2e0b0f28b95cb29b946474a02b71e899a3f3deae5a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-map-7.json.gz",
+      "sha256": "a6c97dc3ec3f4ec2b1bf6f03adb3c9aa85a049114227eff1b1e28997cf1f78b2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-map-99.json.gz",
+      "sha256": "b65308f978172c13c29622a778e1ecbe48f8a51c9dc4db83ed03ef13c328be5b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-quote-42.json.gz",
+      "sha256": "5cbf0bed0dd9b49b25ae10dd2faa293be8b67dc19552fe238e5f9cb9fbb61583",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-quote-7.json.gz",
+      "sha256": "4fb17c2537fd44839e1292edbf2192e6d3f849ff69fde11e065c2abf506dba49",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-quote-99.json.gz",
+      "sha256": "d50fa1ca7afff374c2946ed9d0504279c8b93678fde1b6294d4a9bba249e8470",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-trace-42.json.gz",
+      "sha256": "0483213c65cccf47d6273c1e82ba82b4fef71718490a0ffcf6daae8fd7c38e53",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-trace-7.json.gz",
+      "sha256": "7c47f2883115053b5cb4eba87ba4657caf1390469503273578ece3f5cbe0bf20",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v5-trace-99.json.gz",
+      "sha256": "00e90b1f86d87593fc731083be7cb9601f84e576ce79e3f6c9a97b5c39f842ad",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-combined-42.json.gz",
+      "sha256": "c14bb5c72cf906ab1f771bb89189a69239158aacd04ebe080f3b4486e0f9fbfc",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-combined-7.json.gz",
+      "sha256": "4a8e85e897f8c88f005ad0333cc41eec87fe584341d192c8348539c6d6ef384c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-combined-99.json.gz",
+      "sha256": "58ad79c7cf086c22c8e9a0472985b06e53f1d641756ab5c7568d24156873b817",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-contradiction-42.json.gz",
+      "sha256": "c33329c5520de2f3ac1a7d43bfd7986edd12fb8c6c24e27db272c8d4238da2b8",
+      "originalPassed": false,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-contradiction-7.json.gz",
+      "sha256": "24afc09fbe880c72e76ebf0df77944dccf501e7318d025624cb0461c8c604dd7",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-contradiction-99.json.gz",
+      "sha256": "34bbb368f13b1c5fdb5c0cb3a00b9827e7f7bd5b93be73b69d1adf5e6bf77adb",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-discover-7.json.gz",
+      "sha256": "ae59e800b381827bd09724fa396d36aed905ec62550fb0c2892d2b163ac06ba9",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-discover-99.json.gz",
+      "sha256": "d275d29b5b99b1eeb9f0cd129400155408a423d1333107b57a2686411b8f2b34",
+      "originalPassed": true,
+      "checkedFields": 9,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-dispatch-42.json.gz",
+      "sha256": "c916027759957da37b48cb9567ddcf8e53866100f1706d3c28193eb1105aa891",
+      "originalPassed": true,
+      "checkedFields": 10,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-dispatch-7.json.gz",
+      "sha256": "47422894ea940fb3d290edd79f40452ad10cb24039b55b4cfd9f435a0b5edb6f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-dispatch-99.json.gz",
+      "sha256": "26628e53bcbdf72a2efc2917b9381d0489021c22fd16e0d1c8051779f49bcd88",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-map-42.json.gz",
+      "sha256": "593b7ab90103b82294dd7c6e8a4db1497e255cde90a22033ce9ebd035e360125",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-map-7.json.gz",
+      "sha256": "083f60adcb54431e408e61e8703a854ec3c017aff4ff25bb00b3b13aacf4071b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-map-99.json.gz",
+      "sha256": "6e37fccca85a4dd02e8127bf8e5f025cfe82deb2ab5c10ae495de3df86edebd1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-quote-42.json.gz",
+      "sha256": "e2c30a2e1dcd846133273151606262bb5febf6d3cc9718a7d2f8c58d062a61f9",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-quote-7.json.gz",
+      "sha256": "ae702aa9a9f5a131114890a8ae85b6c554b160425f3bac801fc4d1f580c3fa84",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-quote-99.json.gz",
+      "sha256": "b7a28e75e126a69b1bbe15abb208c0f7d233e1194c89cf13a155e3b2248ce494",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-trace-42.json.gz",
+      "sha256": "581887df8ac92f263e886611944be4c52bfa9bb4de0d3ddc285c3ea5d6a36ead",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-trace-7.json.gz",
+      "sha256": "0d4d79bd85d828f1d97a60de3db68f408ec0e4665a4b6999f3289e837a8d0772",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v6-trace-99.json.gz",
+      "sha256": "559cc341a1702d11eed04e21821a80953693114f9071d0ced56f58cf6e5cc7ec",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v7-combined-7.json.gz",
+      "sha256": "6b74a62869385fe52d9aaf08d12465d6273b8e2c94e8389fe59036cd15ab0956",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v7-discover-42.json.gz",
+      "sha256": "c93c98212bead28d700d4863c3c2950d711c9e202a7471709adaf4c2ce93b94c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v7-discover-7.json.gz",
+      "sha256": "f65d04605976ee1f1cfdca2a9808f28e0d47521c8f7817521abf8078c6d8f9c2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "native-v7-discover-99.json.gz",
+      "sha256": "b4ef6de387a11725c07fc6a76c57d5c6d0c10a08757110579bb360cd2e279c7b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v3-greedy-contradiction-99.json.gz",
+      "sha256": "b66705865a769a9e11c907186dfca03c45d56cac8196f64d7d0a37ba55e0a091",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v3-greedy-discover-42.json.gz",
+      "sha256": "23185db9bb39c73b85d5a866c8ca83c0be4fcc5b10b26c7257e93113b78f7e5c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v4-greedy-combined-7.json.gz",
+      "sha256": "0f4b19d760170449df80ba6f0f3b9f6a13ce76ee043098cc55d1c38492e14353",
+      "originalPassed": false,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v4-greedy-combined-99.json.gz",
+      "sha256": "4d4d9975f00d91fecb036960c3163a1c9d310e640aa66e6e434fded2c86510c0",
+      "originalPassed": false,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v4-greedy-discover-42.json.gz",
+      "sha256": "70d11da813568c8eda0a85ca614537890dfeae59d643bda253332eb317ff3ddd",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v5-thinking-combined-7.json.gz",
+      "sha256": "858edc3e8216f0a55168ca1efe34721d699304d3d2049da99a5734c99ac99681",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v5-thinking-combined-99.json.gz",
+      "sha256": "bdd0e68f5b05914d7d7303ef22d6f0708ec5bc89f4f69301ae0135d4d42d6982",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v5-thinking-contradiction-99.json.gz",
+      "sha256": "feaf2699503af23ef0691242f56a97c539763158fdba07ace648e8e3c38f8223",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "pinned-v5-thinking-discover-42.json.gz",
+      "sha256": "ba5fc975ab4d88d0142ebd9cb8134b4c2a856aa8a764292b95ca0f9330d17f87",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-combined-42.json.gz",
+      "sha256": "52d1ea17dd46bca0e99471057e78754d460737598174b3350409fdd307d63d74",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-combined-7.json.gz",
+      "sha256": "659a2ebb4225092fc87c1e773d135068440b2dd13fe114c989b0f9e872bc1792",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-combined-99.json.gz",
+      "sha256": "c19afc738969089a0f6b28db9571cf64d61c1d531673e72edafa2a2907a9edba",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-contradiction-99.json.gz",
+      "sha256": "dffc99da6c5373d64657a14a93de09c01c2ba1f2072ed7a6ff5f49a2b12be872",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-cycle-42.json.gz",
+      "sha256": "2197010a5a847507790f7449d8b25305fc59d110d094c52269b49bdbe07d42da",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-cycle-7.json.gz",
+      "sha256": "79c4b4e7006eaad7df9d19d2b8b7ed68a16381b592020c6423fce7f453fe384f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-discover-42.json.gz",
+      "sha256": "1f10667e410cfd81d642bea51a0816c1d586330f69360a216cd4686b92c4ffe4",
+      "originalPassed": false,
+      "checkedFields": 10,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-map-7.json.gz",
+      "sha256": "f8d9f5b198b09db921ac0e8f293cc6353624909ba77e44bcfc284d655ae44c97",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-allocation-trace-7.json.gz",
+      "sha256": "1929ba96886257cf1d99b4afc7dcc0e21118cbb2baab59618e11865bcea9b651",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-combined-42.json.gz",
+      "sha256": "ff07515caf56d5832e6056c442a91639a14cf811c05d910ee5ad7772da1d9966",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-combined-7.json.gz",
+      "sha256": "602962cf837997751883a4368aadb5abd73702e1460aa54369f943b32366fbc0",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-combined-99.json.gz",
+      "sha256": "2f74bc129e488644425310ffbb1f4d2c4d9a343f0a08d6b60b6b7d39f2cce5ad",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-contradiction-99.json.gz",
+      "sha256": "3ee175bdbdc502ea548733082eb496aae82f6a5c4e9625bd1cbfb0e871284bc9",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-cycle-42.json.gz",
+      "sha256": "2b60aa305a802c9a5ce7624564697c1c70ce6c4474591c6cc8d2912ceebfa527",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-cycle-7.json.gz",
+      "sha256": "13af6a7a79f6fdc776adbb25fb78c2cca138baa0f9527f5d435a23d897207a03",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-discover-42.json.gz",
+      "sha256": "0fe065eb793c548e2711824d975797f152870ff38c680fe6265f4ffc075a0a9b",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-map-7.json.gz",
+      "sha256": "a80df173386740cde5dae350eb0b1d57f230fb9f299e5d95ff289ad800416e17",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-billing-trace-7.json.gz",
+      "sha256": "16ea10f603072b73a2edf8f94d666882621a2f2897acd38e560b5e9e8658b873",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-combined-42.json.gz",
+      "sha256": "a8fcb1d823268e553a538421e9e39f204352ad4ce09a3331fc7187df57012669",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-combined-7.json.gz",
+      "sha256": "846f1e2739aa61c966ac4a1fbc7fd6df3b4567774131aa6012a9089792f7c62d",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-combined-99.json.gz",
+      "sha256": "8bc1070b7ebf69b732f1ccb43aba3b59a73c8df66a5587d1e6022596e10c97d1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-contradiction-42.json.gz",
+      "sha256": "4810cae4a1b11d4d54dbf5278addbc65154862eab355bb57baf185d0209028ea",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-contradiction-7.json.gz",
+      "sha256": "3c69014a56691d6d9683fcb21822ec73116fede6423de4365d9f49b6909bf714",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-contradiction-99.json.gz",
+      "sha256": "373a24f7d4484125eae0777172c1f3385c3e4445e77a865decf90c607f6e5dae",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-discover-42.json.gz",
+      "sha256": "65e1e1c00b751283b1301170a385737261c795304d56cc947049fa4ce9f295bc",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-discover-7.json.gz",
+      "sha256": "c63a89a7f9966936ca4030eca2a86050b6058c5050a33668994705ac3f380b93",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-discover-99.json.gz",
+      "sha256": "e5a0794b29e800ed7faae61b595aa176d18575fefaac457b71b2dd3e71bd209a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-map-42.json.gz",
+      "sha256": "c5199fdb64560695dfec8f389a0ec867c920c594d0a1e7f4b3d0bcb2111a67fe",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-map-7.json.gz",
+      "sha256": "7190e88e83b79e8f61b007f56ad93424c7ef08dfc691cc72841a4574874e7c3a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-map-99.json.gz",
+      "sha256": "fa4d57a28dcad89753168292f57b012337b9362c1550b741c0ae5b0e1d8d352f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-trace-42.json.gz",
+      "sha256": "3a5e0722bd1d2a9e230ee9a38ae5f7b0df73423dcc82c55a2e4901f7f8517438",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-trace-7.json.gz",
+      "sha256": "bd530da3feddebfbc61b3d1a5d9523b0b661966f7c7ce347d7d609ec1c4b6a6f",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-core-trace-99.json.gz",
+      "sha256": "840edef660a73fcf9ed9f8b50c3ca1f9fa671bc18645778f1e217c94087f5725",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-combined-42.json.gz",
+      "sha256": "4296c193899edc6f01c38edefe155f15a1445ae09cdb767dd8a2734b004914cf",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-combined-7.json.gz",
+      "sha256": "5f75b2f9a0784eaa0e9fe0884823e7f88763d5ad61bbc802b51608fb73569b75",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-combined-99.json.gz",
+      "sha256": "0359eb52385c256e7c4e4074564e9b877aa927e4fbe36928bef42f2dc23895f5",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-contradiction-99.json.gz",
+      "sha256": "f67a6e1197c37fc400802c404ee1071f587ed5a21d118b4748ccd36f7842955d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-cycle-42.json.gz",
+      "sha256": "3862f1a4e01768054acde127db75eb4f3b02431a087a2312c1b9dfdc2a07b77c",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-cycle-7.json.gz",
+      "sha256": "2cbd1f149a01255668d77130f4c342f9af2c15ad853190ddc5cb849f3237f588",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-map-7.json.gz",
+      "sha256": "9c35c6324f5f4ddcd532cffcc04e99af6b5a089aae82e536eba88163dd86bc0e",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-drain-trace-7.json.gz",
+      "sha256": "6e08b88fd363c184e51ae50cf80c612fb28f58dd17adfc115c1a269e4c59e03d",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-quote-combined-42.json.gz",
+      "sha256": "596d10ff51b751aae2a61f641ab88c1934d1f0e978de6e3de61e2df3e3ab1e69",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-quote-combined-7.json.gz",
+      "sha256": "a7666491d1d6227274b1ae62f296f08e29c67099260242cdb198aad7f6a59518",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v19-direct-quote-combined-99.json.gz",
+      "sha256": "f8d75678d79f54265c1037bfd2939e516c72acfe9fcec7cdfb1e72ee3b9bafab",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-combined-42.json.gz",
+      "sha256": "fe785c0ec929cc8d2871a93f5018e9cd7fe5c737c5a670fcd412f937dd4eb819",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-combined-7.json.gz",
+      "sha256": "0243a6e6d9e132576538855cef09186600ac9a121e07c7619cd26879b74a7afe",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-combined-99.json.gz",
+      "sha256": "7cda13ef1158b9d711b5fb67a9d757be61ef45f5af0862877a3cedf435b244a2",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-contradiction-99.json.gz",
+      "sha256": "6647304bcaa029d7ba65db70895a282808c558e6c642e73523e6350626431a99",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-cycle-42.json.gz",
+      "sha256": "a6725663ea700dfc100c0f54e9fa038936f826d572821edae627c9644fb70dbf",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-cycle-7.json.gz",
+      "sha256": "2d202f4f8050f6c065a65c7a07f36b2a7f9f379bb8721dad765141cc195e69c8",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-discover-42.json.gz",
+      "sha256": "b2780e3304b38007dbe90f7ea8d55492b7ea438212461e9fa8cb933d8e29382f",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-map-7.json.gz",
+      "sha256": "6eae324553c8fb41cdee6d868da43a9fcaab068fa7f2d0df24c98c92b8b090ce",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-allocation-trace-7.json.gz",
+      "sha256": "e9937f0312c28ea62a6ff17435ebbee6e704e435d430016754c905a824ec6222",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-combined-42.json.gz",
+      "sha256": "9e6a355a7d7a401b071a4293fd9e79220e888b3d4c22b8886c6fa792178c9ad7",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-combined-7.json.gz",
+      "sha256": "bb28b1c6c160427bab3c6b3a88c6b6da1df96d8d9adf1a36d8e3c0f109d656b4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-combined-99.json.gz",
+      "sha256": "173a188ab5f391f092e0ab818217b971e6082026b12269b9cf65e4cec9be7845",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-contradiction-99.json.gz",
+      "sha256": "60b7a5370b4f596fe805ace40360362e6bd7be479b89489954ae64713b554eb6",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-cycle-42.json.gz",
+      "sha256": "59e0b4e2e88cd49766dbf09b1f87c7323fa5851e6f47ab86efed467dce1b992a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-cycle-7.json.gz",
+      "sha256": "bcf86d180f85a30723d2a2f3e34c959497a3cc23fdf783e2ffd23b67e89b2362",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-discover-42.json.gz",
+      "sha256": "623f819a85cff09d69e1f3aa55c9390012f96364ce3ecf8a666db487368bb371",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-map-7.json.gz",
+      "sha256": "9df332ef32df1d24b662d5232ae70145aabf6fd36925e9d760edc3c7f43643eb",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-billing-trace-7.json.gz",
+      "sha256": "0201f6b37b04916c544893fc5e54e00ca3eb91d69606e9d8b2851350c9928e74",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-combined-42.json.gz",
+      "sha256": "d6e59d689bc107525ac2535c1602dfeb531a29b241653cf8498621bb8e1fdb4c",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-combined-7.json.gz",
+      "sha256": "c6f92124596c4aeb560fee0f91e3552a19ccc6b88ea3c0044065220a51113234",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-combined-99.json.gz",
+      "sha256": "5bf2d2422261993ff5cea28d33f844f447c7ed3351f1e4dfac66f603aaade30d",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-contradiction-42.json.gz",
+      "sha256": "94a3b29a615fa1f7b37cf91188c5bcc851479f66ef5f57b60f16498fe907abc7",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-contradiction-7.json.gz",
+      "sha256": "60cf599df95776ea0d47468782b73385b39f9c8e6306b64ea63aa1fe2127567c",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-contradiction-99.json.gz",
+      "sha256": "044f3f54c913339de66b8c7161ef3658144633eb75cdb2134b6c56371b434aea",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-discover-42.json.gz",
+      "sha256": "a3cc97a6f1b8fd7981b1702e1e9d0d6fb8de4f064c204501063275081565f55e",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-discover-7.json.gz",
+      "sha256": "3f56da1fb1693b5a182fa3a018138292239ac0328e76584a652fb3746a742c08",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-discover-99.json.gz",
+      "sha256": "d21a5e37b5f675fc6d1b19f493f3f31994955c13f526f15e87c0cf629f151c7a",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-map-42.json.gz",
+      "sha256": "93134c8de8abb3b73422ff6776fdcce0b2e4e8bd6fe9aad0b75938d6d314faee",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-map-7.json.gz",
+      "sha256": "84ca9dae44dfe4d4b30c997a69e27f908c2891d350d7fe8f8ee213550e92b3e9",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-map-99.json.gz",
+      "sha256": "4806278478459ab8a82257fda03fdef0799f0a10b01ab2ab6d03c5d3e54cd119",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-trace-42.json.gz",
+      "sha256": "11aba0d39366659e1d1c936546661522b283a414b1cb9528ad4ae3b7c94dcf24",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-trace-7.json.gz",
+      "sha256": "7a479916296732478df85fcb45b8cab2600608b84246fa95a01654ba052e11c3",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-core-trace-99.json.gz",
+      "sha256": "bdb57aace67098eb3587eb68ab7f6aae747552c5af9d7f21b0b845a2022c4199",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-dispatch-combined-42.json.gz",
+      "sha256": "05bc09cbbe58faa5678fe5f3fbe142b18b142289a7fcb21d229474e1618d38d2",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-dispatch-combined-7.json.gz",
+      "sha256": "e1382835e4a79d0e14ab1d3f18dbe82e2c96fbd59b3a91ae2e7ea57dba472d56",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-dispatch-combined-99.json.gz",
+      "sha256": "ef35533b3b3372c70f2d7b0c48ef25a68fd538d59b2d8953ccbf9d2fe32d28f4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-combined-42.json.gz",
+      "sha256": "5dba3fc7a747683aecaf4cebaadfaa9b5b894ab0e9f517671dafbec88d278c5f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-combined-7.json.gz",
+      "sha256": "5a6fcd88eeacafa26bb660d807a8a010142b68898adb71064442d646eebdff14",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-combined-99.json.gz",
+      "sha256": "d117af632ceb0928755919e7db6be0a7f02d687c3fc9a8c354ea59bd125e8ae1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-contradiction-99.json.gz",
+      "sha256": "06f46a03e0881063376411b4af58601aa82ee2e55194f4064ea8652576f7b3d1",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-cycle-42.json.gz",
+      "sha256": "1c5d68aa7148e3b1eaea82f7bde36b6eb5fee62808078427bea2d68b8692becd",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-cycle-7.json.gz",
+      "sha256": "84eb495c0625fc07bcd86aeea97bd5f2d9b4d1f7625e0f29cf4602244ac2ad7f",
+      "originalPassed": false,
+      "checkedFields": 0,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-discover-42.json.gz",
+      "sha256": "f37d27d6544b6bcfd0472f05514d440f5d693d330c4a738310d809da73b10623",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-map-7.json.gz",
+      "sha256": "d9400d4c036fd9af2bb46af837e73fa14fb12c385503e21625f1d90de4d4052a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-drain-trace-7.json.gz",
+      "sha256": "bc2f84b7a0ca5ad4b059dfb936d00a59f2693e71f4b6996081843383ee090eaa",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-quote-combined-42.json.gz",
+      "sha256": "66a2fdb0d281058334507b3e3b1658ca871a67b4ebff4feeb404ea03d3ecd4b0",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-quote-combined-7.json.gz",
+      "sha256": "fca9e5b97f004c607cd99a647ca082c0c2db880d58a3584da80b730bc8d78ab2",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v20-direct-quote-combined-99.json.gz",
+      "sha256": "c57c2107ac2a0d547a912c2028c44cff0a46959bfdd0b8906da31ce1fd98a75d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-combined-42.json.gz",
+      "sha256": "f0d5ba53a11274048eea6ea5f9b40d4b3e5422a95a845b442bccb191cd362eee",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-combined-7.json.gz",
+      "sha256": "160e93e60a33c8eb48f6805de9ce6e24142729f3b7258b65c99350ab90b75f6f",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-combined-99.json.gz",
+      "sha256": "df405bea3fc3a908c3d8c4748c427e6341861a2db34fb63c34f8af411ee18c17",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-contradiction-99.json.gz",
+      "sha256": "52e0cabd6059ad33c322d2426ed59768eba4722bd6eed9256259eafd28a17597",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-cycle-42.json.gz",
+      "sha256": "ee7064620804e5469431b3ec1a9c99d0ae46d281306b2a5379b08f854f1661bb",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-cycle-7.json.gz",
+      "sha256": "37d86921a5b345c0f3aba41a1b90740a35330536a5358cabe9df749da6d34839",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-discover-42.json.gz",
+      "sha256": "ae5b00c7df69a6b4aa1cc7ed8cd9d079da6d7e0d1959226d3c101dcb22da6d2d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-map-7.json.gz",
+      "sha256": "4b0a8c3200232c5e63b68778317230350f927997a6ee2c3fdabf63377d4ccad3",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-allocation-trace-7.json.gz",
+      "sha256": "f171b9b9d75159c2dc6884eb3aabbe33d4a7b08e261371e2528f65ca95e22bcb",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-combined-42.json.gz",
+      "sha256": "315eacf4acddfbeae1e17f0dc97c7fe1e9cef9f1d6ee2a4608f0286aabd1b2f0",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-combined-7.json.gz",
+      "sha256": "ddbb79f8fd936b579ef90f547f4339457dc1e9375c9f85ca0d4e25eb895dd19f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-combined-99.json.gz",
+      "sha256": "2e2b49223364685a67e163fb3a2cfed93fc6824eb4a35df00eddebb8aaa38662",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-contradiction-99.json.gz",
+      "sha256": "12e1d7f173fdaf796cefd4c9e149c40245291d6ee7491dcdcacc86bc32c0ffe1",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-cycle-42.json.gz",
+      "sha256": "6b8aabac184a8ecb53541aaf8b5749a478495905516f8b18a8b449db509286a1",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-cycle-7.json.gz",
+      "sha256": "2ce2b9a8699f6cbea13e9c753b077356da7b1b82edf13268e1b43d604af0bc83",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-discover-42.json.gz",
+      "sha256": "9f5fc3bae918335be5f0385b7be1dbd663bdec4e663b8ef5ff474600e38cc153",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-map-7.json.gz",
+      "sha256": "2dc117b38277ba91845c1471d6d830d0826817823d36e802f56b6f4e13d8eae8",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-billing-trace-7.json.gz",
+      "sha256": "1497e9f3389c6b2e1ab5374628b00b479c7a55fa03768a862fd09a33ee3c7589",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-combined-42.json.gz",
+      "sha256": "3ba5f506ee1d25d08aca05255d2c8acff211f16aa7d455fa49fc7391d2be0657",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-combined-7.json.gz",
+      "sha256": "42993e34fb5fa607d16c44c717c121c51d06e0a7d81e4da95ac0a08776d8fd16",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-combined-99.json.gz",
+      "sha256": "11bf2f18305c702e1ff7d39e6c604c207aae48a32b0f339668a9c79bb2c99666",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-contradiction-42.json.gz",
+      "sha256": "c845138d209bf8f1b6ba53cecc9a93433a0908886e5f9c2262a96ab844cab82f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-contradiction-7.json.gz",
+      "sha256": "e5d14f0ff5a9e258587c963d1c00c07986a933417541ec5b662907f1983dc96d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-contradiction-99.json.gz",
+      "sha256": "67fefe5170aaf84c526c97c8b0e00fcaf6ac2b2a68750b3d8af926f9a9d998a4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-discover-42.json.gz",
+      "sha256": "e3b34f8aaf8127b21a782469cfb1109f1e65c8d5d492b534621f4f3b477ad6ef",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-discover-7.json.gz",
+      "sha256": "247535f5def9d546249c0a3062af8a8a47cdb053bad8d954491a77361314c35d",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-discover-99.json.gz",
+      "sha256": "657a78f770392e4cfdd6a633c94a10c2c3b14f079f33fd1da89cc0fe17aa279a",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-map-42.json.gz",
+      "sha256": "1391ca9aec84b542477b6814530f9028ae0fb1113ffc9f2dc2b38f7b8baa200b",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-map-7.json.gz",
+      "sha256": "b7408dbeec69758c1af6d7f61045a2252a4547335debf545d9120735bcd34f85",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-map-99.json.gz",
+      "sha256": "946dbd49cdace51b5dc243b9fedc0f47fc1e1877eb9a2d2121bc4cd9265abc27",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-trace-42.json.gz",
+      "sha256": "e32224ec0087021bdf25d950c1758846f1f7c293deae47c1055514ba00d8d513",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-trace-7.json.gz",
+      "sha256": "4d4c57c65e9042d8189a7a3e1ce90a702400928ea8081480758b1639fb6a6914",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-core-trace-99.json.gz",
+      "sha256": "96e2ee8c360f146f0f17859916ab61a3c4620167b8f3c59e1c964dfcdec78e8d",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-dispatch-combined-42.json.gz",
+      "sha256": "60eb12107021b3a8ac61b895a6c491af3ee047d5eb7eebc9e8d2dcb5e8108dc4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-dispatch-combined-7.json.gz",
+      "sha256": "13479ae7a8f628d87c8799404aa772b1eed093d22321b41c919d23c1f36202b4",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-dispatch-combined-99.json.gz",
+      "sha256": "b08589fb859cbce32f036776a21329e40193a2f4bea91d00cae7fc3289bbdf01",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-combined-42.json.gz",
+      "sha256": "3401d3f8c78fc39826e4a6b874162ac50e9ed2b8ec92a2adeb63abca32c7bbd8",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-combined-7.json.gz",
+      "sha256": "8c574610ab1bc6d450c1a7928e15af6d72d60670c6437d4d102da9783f6c956e",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-combined-99.json.gz",
+      "sha256": "aa396fa12f1e350d644fe7206c0e2b0a42da83ee7db4c54dc7af59e179bd5986",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-contradiction-99.json.gz",
+      "sha256": "08ab2c17ccc722f53632dada5fc381e524847b6a12ea7a1a5d18bbfcde4ef667",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-cycle-42.json.gz",
+      "sha256": "d726b5ce2181e1ef96d258d17a8023c4fc46479d11d8691531eb72047ede3801",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-cycle-7.json.gz",
+      "sha256": "c757d5e98c74a61a88a470a793d9003a23d9d32af6ff88fb4bca7a41ec215f5f",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-discover-42.json.gz",
+      "sha256": "ea1a04af00a08b9e10a6e2d8fdb8f5f5e13a95df88e6c282a78551111cd8b2ff",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-map-7.json.gz",
+      "sha256": "67942da32a86819066d526ead75ec663eaed97f4ab3c3a909ae45c13b274f577",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-drain-trace-7.json.gz",
+      "sha256": "54508f2825e5ef47e1f2041674d727778384cb1cc951789a6da2d84ee1017849",
+      "originalPassed": true,
+      "checkedFields": 1,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-quote-combined-42.json.gz",
+      "sha256": "b36867d2ae99a9af675e757637d17f8158fca0ab7bf2f35075de75d098742a24",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-quote-combined-7.json.gz",
+      "sha256": "12cbb680c1316974de9b5910616a9e5766d71395df198b71920cad11124c01f6",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "questions-v21-direct-quote-combined-99.json.gz",
+      "sha256": "306c55e4a06b7838924f3350736ce408e7231b4c58580e6e90a4b18a60295e4c",
+      "originalPassed": true,
+      "checkedFields": 18,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "sampled-v1-combined-7.json.gz",
+      "sha256": "e7674710cf5a1ca589114c943bb7259ffb475bb2a409ac03f76a50e54e9f50ce",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "sampled-v1-contradiction-42.json.gz",
+      "sha256": "f16604f51343fa1fe20703c6e346b24ac53d7f71ad9524d078c706d81401da74",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "sampled-v1-discover-42.json.gz",
+      "sha256": "ae9c13e0cc21d13e201a0fd9ed9b9926a1c6193b577aef7c143ddc563afa648a",
+      "originalPassed": false,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "sampled-v2-combined-99.json.gz",
+      "sha256": "597d5761fd1d479ddb14b8caa33cd8e3ce3f8d0a4947db7411283446b10ff4df",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "sampled-v2-contradiction-42.json.gz",
+      "sha256": "1658f27a54a4f7428352f90479356f67db98ef4e15e4080da2a74ea4d21cf635",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "value-alias-v1-combined-7.json.gz",
+      "sha256": "e089c6708f79850a41388aa9e44e64f181ae45056f7af9131ca7aad539121836",
+      "originalPassed": true,
+      "checkedFields": 2,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "value-alias-v1-discover-42.json.gz",
+      "sha256": "d446150b9f5844f65d262ffbbb67e36489d5a414983abd4ca2202220cbc05f92",
+      "originalPassed": true,
+      "checkedFields": 15,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    },
+    {
+      "file": "value-alias-v1-quote-42.json.gz",
+      "sha256": "1808db93b94e7493c54344dbd7fc0f2898f3e0138d3639ea8641d716cfbfa2f0",
+      "originalPassed": true,
+      "checkedFields": 7,
+      "structuredProofClaimsConsistent": true,
+      "issues": []
+    }
+  ]
+}

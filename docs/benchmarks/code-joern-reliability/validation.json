@@ -1,27 +1,27 @@
 {
   "protocol": "dt.code-joern-reliability-validation/v1",
-  "implementationCommit": "ac611194cfa901e75b65ff5b43e5ff3c990b5d89",
-  "sourceDigest": "e5db854d83a42d4ef2546217994247066f85a076debfb105ebc0546e82e0aede",
+  "implementationCommit": "088cd4c1ab6cfe7e4b3c8080a43782e480e5fdd6",
+  "sourceDigest": "2d489287b84d331554dd0375077baa25d580e778a62857c037206618d6133abf",
   "runtimeVersions": {
     "node24": "v24.22.0",
     "node22": "v22.23.5"
   },
   "suites": [
     {
-      "file": "full-tests-v8-shipping-node24.log",
-      "tests": 1502,
-      "passed": 1436,
+      "file": "full-tests-shipping-node24.log",
+      "tests": 1537,
+      "passed": 1471,
       "failed": 0,
       "skipped": 66,
-      "sha256": "f8a006a5aa57d56b8df5b5c65eede588e4a5ad70d585602f2140fbc3e5d6707b"
+      "sha256": "2ce06906cb76fccb9b96f9cb9a1f1fbf370104194c1dcb3d8f6e2728fdaf35e0"
     },
     {
-      "file": "full-tests-v8-shipping-node22.log",
-      "tests": 1502,
-      "passed": 1436,
+      "file": "full-tests-shipping-node22.log",
+      "tests": 1537,
+      "passed": 1471,
       "failed": 0,
       "skipped": 66,
-      "sha256": "cf49b8ba93d4da866f7a7230a8c47dc4a5e8276cf5d616729796fd7d33ed630f"
+      "sha256": "c28018215835f574693690d92b54648e697d959beb2c5d7d3a3036d681b2b17b"
     }
   ],
   "live": {
@@ -32,7 +32,7 @@
     "skipped": 0,
     "sha256": "b01f909502cd0531571f65c699029070967c90210433636ac63e4c481fce4268"
   },
-  "liveScope": "Pinned Joern 4.0.564 Java/JS/loops/line selectors/budgets/ownership with independent runtime oracles; worker and query scripts unchanged afterward.",
+  "liveScope": "Pinned Joern 4.0.564 Java/JS/loops/line selectors/budgets/ownership with independent runtime oracles; worker and query scripts unchanged afterward. Additional fresh Java allocation, Java loop and JS billing fixtures parsed by actual worker and checked with independent before-fails/after-passes runtime oracles.",
   "gates": [
     "build:check",
     "handbook --check",
@@ -40,5 +40,18 @@
     "docs-check (7 registered files/168 links)",
     "release-inventory --check",
     "git diff --check"
+  ],
+  "latestModelCommit": "3fa650eedc7e16b20df467b544b4b8b08dc342dd",
+  "latestModelSourceDigest": "d749f6ae0e1d79a7167cd7e61871265ded60fbf7791df03522e2f276677c0b2c",
+  "shippingDifference": "Explicit MCP URL profile selection and matching prompt; profile schemas and evaluated guidance unchanged. HTTP integration tests verify the shared functions.",
+  "modelEvaluationCommits": [
+    "92ea4418a7beed2bcd1f2d9ca6f0e0535b485b64",
+    "d7258c03982a8e557d0d15e8585b94d0de8d8c5f",
+    "3b46e91c5d26b9233007d041bcbac32513eca289",
+    "6ec3d593ef0a0e04522547dd00e6b17de3c4b721",
+    "8b2e72bd8b7b4ca425db549a60ea13837e9f8871",
+    "fa0fec3f76b7a73847b22da022e3a58048dd4b7f",
+    "99deb2e9b090f06c07837cd7662748abe2ff410b",
+    "3fa650eedc7e16b20df467b544b4b8b08dc342dd"
   ]
 }

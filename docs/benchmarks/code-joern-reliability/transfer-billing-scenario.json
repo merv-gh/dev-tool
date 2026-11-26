@@ -1,0 +1,18 @@
+{
+  "key": "billing",
+  "entry": "invoice",
+  "parameter": "fee",
+  "sink": "publish",
+  "argument": 2,
+  "predicate": "fee > total",
+  "expectedExpression": "net",
+  "repo": "DEMO/billing-transfer",
+  "sha": "0a843d23675db436109942c6db0a9bc36bee0ebf",
+  "language": "js",
+  "oracle": {
+    "beforeFailed": true,
+    "afterPassed": true,
+    "beforeStderr": "node:assert:152\n  throw new AssertionError(obj);\n  ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n37 !== 31\n\n    at [eval]:1:140\n    at runScriptInThisContext (node:internal/vm:219:10)\n    at node:internal/process/execution:451:12\n    at [eval]-wrapper:6:24\n    at runScriptInContext (node:internal/process/execution:449:60)\n    at evalFunction (node:internal/process/execution:283:30)\n    at evalTypeScript (node:internal/process/execution:295:3)\n    at node:internal/main/eval_string:71:3 {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 37,\n  expected: 31,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.22.0\n",
+    "afterStdout": "OK billing\n"
+  }
+}
