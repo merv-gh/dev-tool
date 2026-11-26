@@ -88,3 +88,17 @@ test('project exports preserve typed map/trace aliases and raw-read scope across
     await A.run(actor('bob'),()=>assert.equal(R.load(id(exposed.mapView)),null));
   });
 });
+
+test('project exports copy a source-only retained read into the requesting chat',()=>A.run(actor(),()=>{
+ const R=require('../lib/results');G.open({id:'source-only'});
+ const requesting=A.owner();
+ const exposed=G.within('source-only',()=>{
+  const sourceView=R.saveView('json',{rows:[{amount:17}]});
+  return G.expose({sourceView,retainedComplete:true,value:{rows:[{amount:17}]}},requesting);
+ });
+ assert.deepEqual(R.load(R.referenceId(exposed.sourceView)).data.rows,[{amount:17}]);
+ assert.equal(exposed.retainedComplete,true);
+ const date=new Date();assert.equal(G.expose(date,requesting),date);
+ const rows=[1,2];assert.equal(G.expose(rows,requesting),rows);
+ A.run(actor('bob'),()=>assert.equal(R.load(R.referenceId(exposed.sourceView)),null));
+}));

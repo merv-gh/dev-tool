@@ -179,3 +179,16 @@ test('list_analyses inside code is an explicit permission-checked alias with can
  const denied=await access.run({principalId:'limited',storyId:'limited',multiUser:true,role:'user',tools:['code']},()=>T.call('code',{code:'return await tools.list_analyses({});'}));
  assert.equal(denied.ok,false);assert.equal(reads,1,'alias cannot bypass target grants');
 });
+
+test('all question results preserve their protocol, full proof and retained-evidence scope',async()=>{
+ S.query=async()=>({...raw(),protocol:'dt.semantic/v1',proof:{...raw().proof,detail:'full-proof-detail'}});
+ const r=await T.call('where_value_flows',{analysis:'pin',entry:'charge',parameter:'discount',sink:'store',argument:2,all:true});
+ assert.equal(r.protocol,'dt.semantic-navigation/v1');
+ assert.equal(r.proof.detail,'full-proof-detail');
+ assert.equal(r.truncated,true,'upstream bounds remain explicit');
+ assert.equal(r.output.status,'all');
+ const delivered=require('../lib/chat-pressure').response('where_value_flows',r,{all:true}).value;
+ assert.equal(delivered.protocol,'dt.semantic-navigation/v1');
+ assert.equal(delivered.modelContext.output.status,'all','all retained evidence is delivered');
+ assert.equal(delivered.modelContext.output.source,'partial','source is separately bounded');
+});

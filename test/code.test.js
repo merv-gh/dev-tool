@@ -326,3 +326,20 @@ test('business row flags are data and do not become upstream truncation metadata
  assert.equal(delivered.modelContext.output.source,'unknown');
  assert.equal(delivered.retainedComplete,true);
 });
+
+test('nested selected summaries and evidence URLs survive large code-return previews',()=>{
+ const summary={entry:'run',decisionCount:2,methodExitCount:1,mapComplete:false,mapView:'http://127.0.0.1:4000/show/ownedmap',proofLimits:{proof:{runtime:'unknown',behaviorVerified:false},sourceCoverage:{complete:false,truncated:false,gapCount:1}}};
+ const returned={job:'query',state:'done',analyses:[{id:'a'.repeat(97)}],flowMap:{nodes:Array.from({length:100},(_,id)=>({id,code:'x'.repeat(1000)})),edges:Array.from({length:100},(_,id)=>({id,from:id,to:id+1}))},gaps:Array.from({length:20},()=>({detail:'g'.repeat(700)})),summary,mapView:summary.mapView};
+ const r=require('../lib/chat-context').prepare('code',{ok:true,returned,views:[summary.mapView]});
+ assert.deepEqual(r.returned.summary,summary);
+ assert.equal(r.returned.mapView,summary.mapView);
+ assert.ok(r.views.includes(summary.mapView));
+ assert.equal(r.modelContext.compacted,true);
+ assert.ok(Buffer.byteLength(JSON.stringify(r))<=12288);
+});
+test('large previews preserve JSON wire values for native date objects',()=>{
+ const date=new Date('2024-04-05T06:07:08.000Z'),value={rows:[{at:date}],large:'x'.repeat(20000)};
+ const r=require('../lib/chat-context').prepare('dated-result',value);
+ assert.equal(r.rows[0].at,date.toISOString());
+ assert.equal(value.rows[0].at,date,'preview must not mutate native caller data');
+});

@@ -18248,7 +18248,7 @@ var require_self_model_catalog = __commonJS({
     module2.exports = {
       protocol: "dt.repo-source/v1",
       repo: "dev-tool",
-      sourceDigest: "2bb8cdaf24c045a4b9e8caf34891f0a32d86f7911296fbc7d9c77514687026d4",
+      sourceDigest: "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b",
       machines: [
         {
           id: "IO.atomic-file",
@@ -71975,7 +71975,7 @@ var require_global_context = __commonJS({
       });
     }
     function expose(result, actor) {
-      if (!result || typeof result !== "object" || typeof result.view !== "string") return result;
+      if (!result || typeof result !== "object" || Array.isArray(result) || !["view", "mapView", "traceView", "analysisView", "sourceView"].some((key) => typeof result[key] === "string")) return result;
       const R = require_results(), memo = /* @__PURE__ */ new Map(), active = /* @__PURE__ */ new Set(), errors = [];
       const idOf = (url) => R.referenceId(url);
       function copy(url) {
@@ -72043,7 +72043,7 @@ var require_semantic_claims = __commonJS({
   "lib/semantic-claims.js"(exports2, module2) {
     var proofFields = /* @__PURE__ */ new Set(["kind", "status", "feasibility", "runtime", "behaviorVerified"]);
     function limits(raw) {
-      return { proof: Object.fromEntries([...proofFields].filter((k) => raw?.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])), sourceCoverage: { complete: raw?.flowMap?.complete ?? null, truncated: !!raw?.truncated, gapCount: (raw?.gaps || []).length } };
+      return { ...raw?.flowMap ? { mapComplete: raw.flowMap.complete ?? null } : {}, proof: Object.fromEntries([...proofFields].filter((k) => raw?.proof?.[k] !== void 0).map((k) => [k, raw.proof[k]])), sourceCoverage: { complete: raw?.flowMap?.complete ?? null, truncated: !!raw?.truncated, gapCount: (raw?.gaps || []).length } };
     }
     function verify(value, sources = {}) {
       const available = Object.fromEntries(Object.entries(sources).filter(([, v]) => v).map(([k, v]) => [k, limits(v)])), issues = [];
@@ -72056,6 +72056,7 @@ var require_semantic_claims = __commonJS({
           const candidates = nextScope ? available[nextScope] ? [available[nextScope]] : [] : Object.values(available);
           let observed;
           if (["feasibility", "runtime", "behaviorVerified"].includes(k) || (inProof || /\/(?:proofLimits|entryMap|valueTrace|map|trace)$/.test(path3)) && proofFields.has(k)) observed = candidates.map((s) => s.proof[k]).filter((x2) => x2 !== void 0);
+          else if (k === "mapComplete") observed = candidates.map((s) => s.mapComplete).filter((x2) => x2 !== void 0);
           else if (inCoverage && ["complete", "truncated", "gapCount"].includes(k)) observed = candidates.map((s) => s.sourceCoverage[k]);
           if (observed?.length) {
             checkedFields++;
@@ -79428,7 +79429,7 @@ var require_tool_output = __commonJS({
     var ALL = { type: "boolean", description: "Full available output; source and model context limits apply." };
     var canonicalName = (name) => name === "search_tools" ? "tool_search" : name;
     function full(value, depth = 0) {
-      if (value?.completeScope === "retained-value" || value?.retainedComplete === true) return value;
+      if (value?.completeScope === "retained-value" || value?.retainedComplete === true || value?.output?.status === "all" && value.output.scope === "retained-evidence") return value;
       if (depth < 3 && value && typeof value === "object" && !Array.isArray(value)) {
         for (const key of ["result", "value"]) if (value[key] && typeof value[key] === "object") value = { ...value, [key]: full(value[key], depth + 1) };
       }
@@ -79491,7 +79492,7 @@ var require_tool_output = __commonJS({
     function annotate(original, delivered, { all = false } = {}) {
       const { reasons, omissions } = facts(original);
       const compacted = !!delivered?.modelContext?.compacted;
-      const retainedReceipt = original?.retainedComplete === true || !!original?.completeScope;
+      const retainedReceipt = original?.retainedComplete === true || !!original?.completeScope || original?.output?.status === "all" && original.output.scope === "retained-evidence";
       const output = {
         status: compacted || !retainedReceipt && reasons.includes("source-or-tool-limit") ? "truncated" : omissions.length || reasons.includes("more-pages") ? "part" : "all",
         source: reasons.length ? "partial" : "unknown",
@@ -79548,6 +79549,9 @@ var require_chat_context = __commonJS({
       while (end < b.length && end > 0 && (b[end] & 192) === 128) end--;
       return b.subarray(0, end).toString("utf8");
     }
+    var PRIORITY = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "views", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "sourceComplete", "retainedComplete", "completeScope", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where"];
+    var PRIORITY_SET = new Set(PRIORITY);
+    var orderedEntries = (value) => [...PRIORITY.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !PRIORITY_SET.has(k))];
     function short(value, depth = 0, budget = { left: 5e3 }, omissions = [], pointer = "") {
       const omit = (info) => omissions.push({ path: pointer, ...info }), child = (k) => pointer + "/" + String(k).replace(/~/g, "~0").replace(/\//g, "~1");
       const maxDepth = /(?:^|\/)summary(?:\/|$)/.test(pointer) ? 7 : 4;
@@ -79572,7 +79576,7 @@ var require_chat_context = __commonJS({
         return out2;
       }
       if (value && typeof value === "object") {
-        const out2 = {}, entries = Object.entries(value);
+        const out2 = {}, entries = orderedEntries(value);
         for (const [k, v] of entries.slice(0, 35)) {
           if (budget.left < 30) break;
           if (k.length > 200) continue;
@@ -79592,6 +79596,7 @@ var require_chat_context = __commonJS({
       const limit = Math.max(1024, Math.min(configured, maxBytes ?? configured) - Math.min(1024, reserveBytes));
       const serialized = JSON.stringify(value), originalBytes = Buffer.byteLength(serialized);
       if (originalBytes <= limit) return value;
+      value = JSON.parse(serialized);
       let stored, saveError;
       try {
         stored = require_results().saveTool(tool, serialized);
@@ -79599,8 +79604,7 @@ var require_chat_context = __commonJS({
         saveError = require_redact().clean(error.message);
       }
       const id = stored?.split("/").pop();
-      const priority = ["ok", "outcome", "job", "id", "state", "status", "workspace", "executionId", "error", "requiredParams", "complete", "truncated", "nextCursor", "evidenceType", "summary", "answerHint", "toolResults", "guidance", "mapView", "traceView", "analysisView", "sourceView", "mapComplete", "counts", "selectedSinks", "controlAssumptionStatus", "dataAssumptionStatus", "sourceCoverage", "sourceComplete", "retainedComplete", "completeScope", "gaps", "proof", "cleanupErrors", "total", "view", "entries", "methodExits", "externalCallBoundaries", "retainedRows", "matchedRows", "where"];
-      const ordered = value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries([...priority.filter((k) => Object.hasOwn(value, k)).map((k) => [k, value[k]]), ...Object.entries(value).filter(([k]) => !priority.includes(k))]) : null;
+      const ordered = value && typeof value === "object" && !Array.isArray(value) ? Object.fromEntries(orderedEntries(value)) : null;
       const omissions = [];
       const out2 = {
         ...ordered ? short(ordered, 0, { left: 5e3 }, omissions) : { preview: short(value, 0, { left: 5e3 }, omissions) },
@@ -83714,7 +83718,7 @@ var require_source_version = __commonJS({
       return ["server.js", "cli.js", ...["lib", "web"].flatMap((dir) => fs3.readdirSync(path3.join(root, dir), { recursive: true }).map((file) => dir + "/" + file.split(path3.sep).join("/")).filter((file) => /\.(js|html|css|md|java)$/.test(file) && !file.startsWith("web/vendor/")))].sort();
     }
     function digest(root = path3.join(__dirname, "..")) {
-      if (true) return "2bb8cdaf24c045a4b9e8caf34891f0a32d86f7911296fbc7d9c77514687026d4";
+      if (true) return "a3815739f1e981110c5a2127a2b2d67cc90c0e1024f4166d14a8c59ad33ee66b";
       const h = crypto.createHash("sha256");
       for (const file of files(root)) {
         h.update(file).update("\0").update(fs3.readFileSync(path3.join(root, file))).update("\0");
@@ -90323,7 +90327,7 @@ var require_semantic_navigation = __commonJS({
           selected.entryCandidatesView = present(symbols, { title: "Retained method candidates" }).view;
           selected.guidance = "An endpoint did not resolve. Read availableEntries and use the exact requested method/parameter name; retry the same tool with corrected selectors. Do not answer a flow question from unresolved endpoints.";
         }
-        return a.all ? { ...retained, ...selected, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
+        return a.all ? { ...retained, ...selected, proof: retained.proof, output: { status: "all", scope: "retained-evidence" } } : require_semantic_response().compact(selected, 8192);
       }
       return [
         { name: "which_analyses_exist", description: "List retained code analyses; optional exact workspace, repo and sha filters never parse code. Returns analyses:[{id,repo,sha,workspace,...}], total, analysisView; read result.analyses, not result.value. Choose the requested revision once and reuse its id.", input: { env, versions: { type: "boolean", default: false }, workspace: text("Exact workspace id; filter retained records only"), repo: text("Exact repository identity; filter retained records only"), sha: text("Exact source revision; filter retained records only") }, run: async (a) => {

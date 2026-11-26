@@ -22,3 +22,8 @@ test('direct proof-limit kinds and statuses are evidence-scoped',()=>{
  assert.equal(C.verify({proofLimits:{entryMap:{status:'inconclusive'}}},{map,trace}).valid,false);
  assert.equal(C.verify({proofLimits:{valueTrace:{status:'inconclusive',kind:'selected-path-comparison'}}},{map,trace}).valid,true);
 });
+
+test('mapComplete is checked against the linked graph, never retained-read completeness',()=>{
+ assert.equal(C.verify({mapComplete:true},{map,trace}).valid,false);
+ assert.equal(C.verify({mapComplete:false},{map,trace}).valid,true);
+});
